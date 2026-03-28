@@ -13,15 +13,16 @@ Two people who want to go on a first date each enter their preferences, swipe on
 ## The User Flow (End to End)
 
 ```
-Person A opens Dateflow → enters location, budget, categories
-    → gets a share link → sends it to Person B
-Person B opens the link → enters their preferences
+Person A opens Dateflow → enters name, location, budget, categories
+    → gets a share link → pastes it into iMessage / WhatsApp / Instagram DM
+Person B sees a rich link preview ("Alex wants to plan your date")
+    → taps the link → sees hook screen (1 button) → 2-screen preference input
     → AI generates 12 nearby venues in 3 rounds of 4
 Both swipe independently (private until match)
     → First mutual like = match → directions + calendar export
 ```
 
-No account required. No app install. Works on any mobile browser.
+No account required. No app install. Works on any mobile browser. The share link lands in a messaging app — the OG preview and Person B's landing page are the product's first impression.
 
 ---
 
@@ -63,11 +64,13 @@ DS-01 Session Management ← start here, everything depends on this
 
 ### [DS-02 — Preference Input](./ds-02-preference-input.md)
 
-**What it does:** Collects each person's location, budget, and activity category preferences. When both people have submitted, the session transitions to `both_ready` and triggers venue generation.
+**What it does:** Collects each person's location, budget, and activity category preferences. When both people have submitted, the session transitions to `both_ready` and triggers venue generation. **Person A and Person B have distinct client-side flows** — same API, same data model, different UX.
 
-**Why it matters:** These inputs are what make the recommendation engine personal. Location drives the midpoint calculation (where to search), budget sets the price ceiling, and categories determine what types of venues to surface. Without both sets of preferences, the AI has nothing to work with.
+**Why it matters:** These inputs are what make the recommendation engine personal. But equally important: Person B's preference flow is the most critical conversion point in the entire product. Person B clicked a link from a near-stranger in a text message. If this flow is slow, confusing, or heavy, they close the tab and the two-person mechanic never fires. The DS-02 spec splits the Person A and Person B paths explicitly.
 
 **Key decisions:**
+- **Person B gets a 3-screen flow (hook → location → vibe) targeting 30–45 seconds.** Screen 1 is not a form — it's a single sentence with Person A's name and one button. Screen 2 makes GPS the primary CTA. Screen 3 uses visual chips, not dropdowns.
+- **Person A's flow is inline with session creation** — more tolerance for a standard form since they initiated the session voluntarily
 - Location can come from GPS (browser Geolocation API) or manual entry (zip/city, geocoded via Google)
 - Budget uses three tiers: `BUDGET`, `MODERATE`, `UPSCALE` — maps to Google Places price levels
 - "Surprise me" selects all four categories (restaurant, bar, activity, event)

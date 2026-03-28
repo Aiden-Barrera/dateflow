@@ -113,9 +113,21 @@ Execution:
 
 ### Channel 2: The Share Link as the Ad
 
-Every session Person A starts ends with a link sent to Person B. Person B has never heard of Dateflow. They open a link that says "Aiden wants to plan a date. Here's how it works." and in 60 seconds they've joined a session, answered a few questions, and see venue matches appearing.
+The share link does not live inside a dating app. By the time two people are planning to meet, they have almost always moved to iMessage, WhatsApp, or Instagram DMs. Person A pastes the Dateflow URL into a text conversation. That URL — and the preview it generates — is the product's entire first impression on Person B.
 
-That experience IS the ad. If Person B's experience is smooth, delightful, and obviously useful, they become a Person A the next time they want to plan a date. This is a double-sided viral loop with no incremental marketing cost. The most important investment you can make is in Person B's first 60 seconds.
+**The link preview is the ad, not the link itself.** A bare URL (`dateflow.app/s/a7f3bc2`) from a near-stranger looks like a phishing link. A rich Open Graph preview that shows Person A's name, a one-line description, and a clean product image looks like a real tool. The OG tags must be built and shipped with the first version of the share link — they are not launch polish.
+
+**Platform reality:** iMessage and WhatsApp render rich previews reliably. Instagram DMs largely suppress external link previews to keep users on-platform. If a significant share of users coordinate via Instagram DMs, the preview won't help there — Person A's accompanying message ("try this for planning our date") becomes the only trust signal. This is a platform risk worth monitoring but not worth blocking the launch over, since iMessage + WhatsApp cover the majority of the target audience.
+
+**Person B's experience IS the growth engine.** If Person B's first 60 seconds are smooth — one clear landing screen, fast preference input, obvious value — they become Person A the next time they have a match. This is the real retention flywheel:
+
+```
+Person B has a seamless setup → sees a great match → goes on a good date
+    → next match leads to the same "we should hang out" moment
+    → Person B, now Person A, remembers Dateflow and sends the next link
+```
+
+This loop only fires if Person B completes their preferences. Every percentage point of improvement in Person B's setup completion rate compounds directly into growth. The Person B landing page and preference flow should be treated with the same engineering priority as the core swipe mechanic.
 
 Design principle: Person B should never be confused, never need to create an account, and should finish the process feeling like the whole thing was almost magically easy.
 

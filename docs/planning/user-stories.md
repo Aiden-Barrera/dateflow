@@ -37,7 +37,12 @@ Each story is evaluated across six dimensions, scored 1–5:
 ### US-02 — Send an invite link to a match
 **As a first-dater (Person A), I want to share a generated link with my match so that they can join the planning session from any device without installing anything.**
 
-**What this is really about:** This is the product's entire acquisition flywheel in a single feature. Every session that gets started must produce a shareable link that works immediately on mobile web. The quality of this handoff — how easy it is to copy, share, and receive — determines whether the two-person mechanic ever fires. It also doubles as the primary growth mechanism: every link sent is a potential new Dateflow user.
+**What this is really about:** This is the product's entire acquisition flywheel in a single feature. The link is almost always pasted into iMessage, WhatsApp, or Instagram DMs — not sent from inside a dating app. That means the link preview is Person B's actual first impression of Dateflow. A bare UUID URL from a near-stranger looks like a phishing link; a rich preview with Person A's name and a one-line product description looks like a real tool. The quality of this handoff — how easy it is to copy, share, and receive, and what it looks like when it lands — determines whether the two-person mechanic ever fires.
+
+**Acceptance criteria:**
+- Generated URL works immediately on mobile web (no app install required)
+- URL produces a rich Open Graph preview in iMessage and WhatsApp with: app name, Person A's first name in the title (e.g., "Alex wants to plan your date"), a one-line description, and a preview image
+- Copy-to-clipboard action works on iOS and Android mobile browsers
 
 **Size: Small**
 
@@ -50,7 +55,13 @@ Each story is evaluated across six dimensions, scored 1–5:
 ### US-03 — Join a session via link with no install required
 **As a first-dater (Person B), I want to join a planning session by opening a link so that I can participate without downloading an app or creating an account.**
 
-**What this is really about:** Person B is the most fragile point in the entire flow. They didn't seek out Dateflow — they received a link from someone they may barely know. Any friction (App Store redirect, account creation, email verification) will cause them to abandon before they deliver the mutual preference input that makes the whole product work. This story protects the most vulnerable conversion point in the funnel.
+**What this is really about:** Person B is the most fragile point in the entire flow. They didn't seek out Dateflow — they received a link in a text conversation from someone they may barely know. They have zero context about the product and higher skepticism than a user who found Dateflow on their own. However, they also have genuine social motivation (they want the date to happen), which means the bar is not as extreme as cold landing page traffic — but it is higher than Person A's. Any unnecessary friction (App Store redirect, account creation, email verification, a form-heavy first screen) will cause abandonment before Person B delivers the preference input that makes the whole product work.
+
+**Acceptance criteria:**
+- No app install, no account creation, no email required
+- Person B's first screen communicates what the product is and what to do next clearly and quickly — a single primary action, no scrolling required on a standard mobile viewport
+- Person B's total preference input flow is maximum 3 screens and completable in under 60 seconds
+- Page load is fast enough on a mobile connection that Person B does not see a blank screen (SSR or skeleton UI)
 
 **Size: Small**
 

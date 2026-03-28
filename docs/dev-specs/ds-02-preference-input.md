@@ -7,16 +7,29 @@
 
 ---
 
+## Critical Design Context: Person A and Person B Are Not the Same User
+
+Person A initiated this session voluntarily. They have context, know what Dateflow is, and are motivated — they want the date to happen. Person A can tolerate a slightly longer setup.
+
+Person B clicked a link in a text message from someone they may barely know. They have zero context about Dateflow, zero prior investment in the product, and full permission to close the tab at any moment. Person B needs a fundamentally different experience.
+
+**The preference form described in this spec collects the same data from both roles.** The API and data model are identical. What differs is the **client-side UX flow** — Person B's path through the form is compressed into fewer screens with a dedicated hook screen before any input is requested. See the Flow Chart section for both paths.
+
+---
+
 ## Architecture Diagram
 
 ```mermaid
 flowchart LR
     subgraph Client["Client (Browser)"]
-        PrefForm["Preference Form<br/>/plan or /plan/[id]"]
+        PersonAForm["Person A Form<br/>/plan<br/>(inline with session creation)"]
+        HookScreen["Person B Hook Screen<br/>/plan/[id]<br/>'Alex wants to plan your date'"]
+        PersonBForm["Person B Form<br/>/plan/[id]<br/>(location → vibe, 2 screens)"]
         GeoAPI["Browser Geolocation API"]
     end
 
     subgraph Server["Server (Vercel Serverless)"]
+        SessionAPI["Session API<br/>GET /api/sessions/[id]"]
         PrefAPI["Preference API Route<br/>POST /api/sessions/[id]/preferences"]
     end
 
@@ -24,24 +37,31 @@ flowchart LR
         Postgres["Postgres<br/>preferences table<br/>sessions table"]
     end
 
-    GeoAPI -- "lat/lng (if permitted)" --> PrefForm
-    PrefForm -- "Location + budget + categories + role" --> PrefAPI
+    HookScreen -- "Fetch session (for Person A's name)" --> SessionAPI
+    SessionAPI -- "Return session + Person A display name" --> HookScreen
+    HookScreen -- "Person B taps 'Add my preferences'" --> PersonBForm
+    GeoAPI -- "lat/lng (if permitted)" --> PersonAForm
+    GeoAPI -- "lat/lng (if permitted)" --> PersonBForm
+    PersonAForm -- "Location + budget + categories + role=a" --> PrefAPI
+    PersonBForm -- "Location + budget + categories + role=b" --> PrefAPI
     PrefAPI -- "Insert preference row" --> Postgres
     PrefAPI -- "Check if both roles submitted" --> Postgres
     PrefAPI -- "Update session status to both_ready" --> Postgres
-    PrefAPI -- "Return confirmation" --> PrefForm
+    PrefAPI -- "Return confirmation" --> PersonAForm
+    PrefAPI -- "Return confirmation" --> PersonBForm
 ```
 
 **Where components run:**
-- **Client:** Browser — renders preference form, optionally accesses Geolocation API for GPS coordinates
+- **Client:** Browser — renders the hook screen (Person B only) and preference forms. Person A's form is part of the `/plan` session creation page. Person B's flow starts with a hook screen at `/plan/[id]` followed by a compressed 2-screen preference input.
 - **Server:** Vercel serverless — validates input, inserts preference, checks if both roles are filled, transitions session status
 - **Cloud:** Supabase Postgres — stores preferences and session state
 
 **Information flows:**
-- Client → Server: preference data (location, budget, categories, role)
+- Client → Server: preference data (location, budget, categories, role) — identical payload for both roles
 - Server → Cloud: insert preference row, conditional update on session status
 - Server → Client: confirmation with updated session status
 - Browser Geolocation API → Client: lat/lng coordinates (optional, user-initiated)
+- Server → Client (Person B only): session metadata including Person A's display name, used for the hook screen copy
 
 ---
 
@@ -130,11 +150,13 @@ classDiagram
 
 ```mermaid
 stateDiagram-v2
+    pending_b --> pending_b : Person B views hook screen (no state change)
     pending_b --> both_ready : Person B submits preferences<br/>(both roles now present)
 
     note right of pending_b
-        Person A's preferences are saved on session creation.
-        Person B's preferences trigger the transition.
+        Person A's preferences saved on session creation.
+        Person B sees the hook screen, then the preference form.
+        Status remains pending_b until Person B submits.
     end note
 
     note right of both_ready
@@ -143,49 +165,63 @@ stateDiagram-v2
     end note
 ```
 
-DS-02 owns the `pending_b → both_ready` transition. Person A submits preferences during session creation (status remains `pending_b`). When Person B submits, the service detects both roles are present and transitions to `both_ready`.
+DS-02 owns the `pending_b → both_ready` transition. Person A submits preferences during session creation (status remains `pending_b`). Person B first sees the hook screen (a client-side state, no server transition), then completes the preference form. When Person B submits, the service detects both roles are present and transitions to `both_ready`.
 
 ---
 
-## Flow Chart
+## Flow Charts
+
+Person A and Person B have distinct client-side flows that converge at the same API call.
+
+### Person A Flow (Inline with Session Creation)
 
 ```mermaid
 flowchart TD
-    A["User opens preference form<br/>(Person A on /plan, Person B on /plan/[id])"]
-    B{"GPS requested?"}
-    C["Browser Geolocation API<br/>returns lat/lng"]
-    D["User enters zip code or city manually"]
-    E["User selects budget: $ / $$ / $$$"]
-    F["User selects categories:<br/>restaurant, bar, activity, event, or 'surprise me'"]
-    G["Client sends POST /api/sessions/[id]/preferences"]
-    H["PreferenceService.submitPreference()"]
-    I{"Input valid?"}
-    J["Return 400 with validation errors"]
-    K["Insert preference row"]
-    L{"Both roles<br/>now submitted?"}
-    M["Update session status → both_ready"]
-    N["Return 201 with preference + session status"]
-    O["Client shows 'Waiting for partner...'<br/>(if Person A finished first)"]
-    P["Client triggers DS-03<br/>(if both_ready)"]
-
-    A --> B
-    B -- "Yes + permitted" --> C
-    B -- "No or denied" --> D
-    C --> E
-    D --> E
-    E --> F
-    F --> G
-    G --> H
-    H --> I
-    I -- "No" --> J
-    I -- "Yes" --> K
-    K --> L
-    L -- "No (only one role)" --> N
-    L -- "Yes (both roles)" --> M
-    M --> N
-    N --> O
-    N --> P
+    A1["Person A opens /plan"] --> A2{"GPS requested?"}
+    A2 -- "Yes + permitted" --> A3["Browser Geolocation API returns lat/lng"]
+    A2 -- "No or denied" --> A4["Enter zip code or city manually"]
+    A3 --> A5["Select budget: $ / $$ / $$$"]
+    A4 --> A5
+    A5 --> A6["Select categories:<br/>restaurant, bar, activity, event, or 'surprise me'"]
+    A6 --> A7["Client sends POST /api/sessions<br/>(creates session + saves Person A's preferences)"]
+    A7 --> A8["ShareLinkService generates share URL"]
+    A8 --> A9["Person A copies link, sends to Person B<br/>via iMessage / WhatsApp / Instagram DM"]
+    A9 --> A10["Client shows 'Waiting for partner...'"]
 ```
+
+Person A's flow is straightforward — they know what Dateflow is and are motivated to complete setup.
+
+### Person B Flow (3 Screens, Under 60 Seconds)
+
+```mermaid
+flowchart TD
+    B1["Person B opens link /plan/[id]<br/>in iMessage / WhatsApp"]
+    B1 --> B2["Client fetches GET /api/sessions/[id]<br/>to get Person A's display name"]
+    B2 --> B3["SCREEN 1 — Hook Screen<br/>'Alex wants to plan your first date.'<br/>'It takes 60 seconds. No account needed.'<br/>Single button: 'Add my preferences'"]
+    B3 --> B4["Person B taps the button"]
+    B4 --> B5["SCREEN 2 — Location<br/>Primary CTA: 'Use my location' (GPS)<br/>Fallback: type a neighborhood or zip"]
+    B5 --> B6{"GPS permitted?"}
+    B6 -- "Yes" --> B7["Geolocation API returns lat/lng<br/>(~2 seconds, auto-advances)"]
+    B6 -- "No or denied" --> B8["Person B types zip/city manually"]
+    B7 --> B9["SCREEN 3 — Vibe<br/>Visual chips (large tap targets):<br/>Food / Drinks / Activity / Surprise me<br/>Budget: Casual / Mid-range / Upscale<br/>Button: 'Find our places'"]
+    B8 --> B9
+    B9 --> B10["Client sends POST /api/sessions/[id]/preferences<br/>role = b"]
+    B10 --> B11["PreferenceService.submitPreference()"]
+    B11 --> B12{"Input valid?"}
+    B12 -- "No" --> B13["Return 400 with validation errors"]
+    B12 -- "Yes" --> B14["Insert preference row"]
+    B14 --> B15{"Both roles<br/>now submitted?"}
+    B15 -- "Yes" --> B16["Update session status → both_ready"]
+    B16 --> B17["Loading state:<br/>'Finding the best spots for both of you...'<br/>Animated visual, not a spinner"]
+    B15 -- "No (edge case)" --> B18["Show 'Waiting for your partner...'"]
+```
+
+**Key design decisions for Person B:**
+- **Screen 1 is not a form.** It is a hook — one sentence, one button. Nothing else. Its job is to establish trust and context, not to collect data.
+- **Screen 2 makes GPS the primary action.** "Use my location" is a large, prominent button. Manual input is a secondary fallback link below it. If GPS is permitted, this screen auto-advances in ~2 seconds.
+- **Screen 3 uses visual chips, not dropdowns or text fields.** Category and budget are both on the same screen to reduce navigation. Large tap targets, no typing required.
+- **The loading state does trust work.** "Finding the best spots for both of you" communicates that the result will be personalized to both people. An animated visual (not a spinner) signals that real computation is happening.
+- **Target: Person B completes all 3 screens in 30–45 seconds.** This is achievable because Screen 1 is one tap, Screen 2 is one tap (with GPS), and Screen 3 is a few taps on visual chips.
 
 ---
 
@@ -193,7 +229,10 @@ flowchart TD
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| User denies GPS permission | Preference form stalls without location | Always offer manual input (zip code or city search) as a fallback. GPS is convenience, not a requirement. |
+| Person B bounces at the hook screen without tapping the button | Session never completes, growth loop breaks | The hook screen must be minimal: one sentence with Person A's name, one button, no other distractions. Track hook-screen-to-form conversion rate in PostHog as a top-level metric. |
+| Person B bounces during the preference form (screens 2–3) | Same as above | Keep Person B to 3 screens max, 30–45 second target. Visual chips and GPS auto-advance minimize required effort. Monitor per-screen drop-off. |
+| User denies GPS permission | Person B's location screen requires manual input, adding friction | Always offer manual input (zip code or city search) as an immediately visible fallback. GPS is the primary CTA but manual input is not hidden behind a secondary menu. |
+| Rich link preview doesn't render (Instagram DMs, some Android clients) | Person B sees a bare URL from a stranger, lower trust | The link path should be short and readable (`/plan/[id]`). Person A should see UI copy encouraging them to add a personal message alongside the link. This is a platform limitation, not a product failure. |
 | Both users submit preferences simultaneously | Race condition on `both_ready` transition | Use `UPDATE sessions SET status = 'both_ready' WHERE id = $1 AND status = 'pending_b'` — only one UPDATE will return rowcount = 1. The "loser" still saves their preference row correctly; only the transition guard is contended. |
 | Person A submits but Person B never opens the link | Session stuck in `pending_b` forever | 48h expiry (DS-01) handles cleanup. No user-facing issue. |
 | Invalid lat/lng submitted | Bad midpoint calculation in DS-03 | Validate lat range (-90 to 90) and lng range (-180 to 180) server-side. Reject with 400 if out of bounds. |
@@ -337,6 +376,8 @@ type Preference = {
 
 | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
+| Person B hook screen design takes multiple iterations to get right | High | Medium — delays the most critical conversion point | Design the hook screen first, before building the preference form. Test with 5–10 real people sending links to real matches. Iterate on copy and layout before writing production code. |
 | Google Geocoding API adds cost for manual location input | Medium | Low — cost is negligible at MVP volume (<$1/day) | Monitor usage. Consider free alternatives (Nominatim) if cost becomes meaningful. |
 | Zod validation schema drifts from DB constraints | Low | Medium — server accepts data the DB rejects, or vice versa | Single source of truth: define Zod schema first, derive DB constraints from it. Review both in PR. |
 | "Surprise me" category mapping is ambiguous to users | Medium | Low — user selects it expecting magic but gets all four categories | UI copy should clarify: "Surprise me — show everything nearby" |
+| OG meta tags require dynamic rendering (Person A's name in the preview) | Low | Low — requires SSR or edge function to inject per-session metadata | The `/plan/[id]` page already uses SSR (Next.js). OG tags are rendered server-side from the session's `creator_display_name` field. |

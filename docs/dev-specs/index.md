@@ -38,7 +38,7 @@ All 27 classes across all specs, tracked here to prevent cross-spec inconsistenc
 
 | Class | Spec | Type | Purpose |
 |---|---|---|---|
-| Session | DS-01 | Entity | Planning session between two people |
+| Session | DS-01 | Entity | Planning session between two people (includes creator display name for OG preview) |
 | SessionService | DS-01 | Service | Session lifecycle business logic |
 | ShareLink | DS-01 | Value Object | Session invite link with expiry |
 | ShareLinkService | DS-01 | Service | Link generation and validation |

@@ -31,10 +31,20 @@ No single product bridges the gap. The closest competitor — Cobble — had the
 
 The handoff from "matched" to "booked date" is completely unowned. Dateflow owns it.
 
+## Where the Planning Conversation Actually Happens
+
+By the time two people are genuinely close to meeting, they have almost always left the dating app. The real conversation — "we should actually hang out," "what are you doing this weekend," "where should we go" — is happening in iMessage, WhatsApp, or Instagram DMs.
+
+This means:
+- The Dateflow share link lands in a messaging app, not inside a dating app
+- The link preview (Open Graph tags) is Person B's actual first impression of the product
+- Person B clicks the link with zero prior context about Dateflow and higher skepticism than someone who found the product on their own
+- The link preview and Person B's landing screen are not polish — they are the core distribution mechanism
+
 ## Who It's For
 
 **Primary:** People actively dating — on apps like Hinge, Bumble, Tinder, or meeting organically — who want to go on a first date without the planning friction.
 
 **Secondary:** Anyone early in a new relationship (first few dates) navigating the same uncertainty.
 
-**Key insight:** The user has a specific person in mind when they open Dateflow. This is not a "browse date ideas" tool. It is a "I have a match and I want to make this happen" tool.
+**Key insight:** The user has a specific person in mind when they open Dateflow. This is not a "browse date ideas" tool. It is a "I have a match and I want to make this happen" tool. The link they send will land in a text conversation, not inside a product — and Person B's experience with that link determines whether the two-person mechanic ever fires.

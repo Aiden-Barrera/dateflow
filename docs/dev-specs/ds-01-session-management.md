@@ -54,6 +54,7 @@ classDiagram
     class Session {
         +id: string
         +status: SessionStatus
+        +creatorDisplayName: string
         +createdAt: Date
         +expiresAt: Date
         +matchedVenueId: string | null
@@ -91,7 +92,7 @@ classDiagram
 ### Session
 **Type:** Entity
 **Purpose:** Represents a planning session between two people. Created when Person A starts the flow, persists until matched or expired.
-**Key fields:** `id` (UUID v4), `status` (enum), `createdAt`, `expiresAt` (createdAt + 48h), `matchedVenueId` (null until DS-04 sets it)
+**Key fields:** `id` (UUID v4), `status` (enum), `creatorDisplayName` (Person A's first name, used in OG preview and Person B's hook screen), `createdAt`, `expiresAt` (createdAt + 48h), `matchedVenueId` (null until DS-04 sets it)
 **Key methods:** `isExpired()` — compares `expiresAt` against current time
 
 ### SessionService
@@ -185,13 +186,21 @@ flowchart TD
 **Purpose:** Create a new planning session.
 **Auth:** None (no account required per US-01).
 **Rate limit:** 5 per IP per hour.
-**Request body:** None.
+**Request body:**
+```json
+{
+  "creatorDisplayName": "Alex"
+}
+```
+`creatorDisplayName` is required — a first name or nickname used in the share link's OG preview ("Alex wants to plan your date") and on Person B's hook screen. This is the only piece of identity Person A provides and it is not used for authentication.
+
 **Response (201):**
 ```json
 {
   "session": {
     "id": "a1b2c3d4-...",
     "status": "pending_b",
+    "creatorDisplayName": "Alex",
     "createdAt": "2026-03-27T12:00:00Z",
     "expiresAt": "2026-03-29T12:00:00Z",
     "matchedVenueId": null
@@ -254,12 +263,13 @@ interface IShareLinkService {
 ### sessions table
 ```sql
 CREATE TABLE sessions (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  status          text NOT NULL DEFAULT 'pending_b'
-                  CHECK (status IN ('pending_b','both_ready','generating','generation_failed','ready_to_swipe','matched','expired')),
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  expires_at      timestamptz NOT NULL DEFAULT now() + interval '48 hours',
-  matched_venue_id text
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  status               text NOT NULL DEFAULT 'pending_b'
+                       CHECK (status IN ('pending_b','both_ready','generating','generation_failed','ready_to_swipe','matched','expired')),
+  creator_display_name text NOT NULL,
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  expires_at           timestamptz NOT NULL DEFAULT now() + interval '48 hours',
+  matched_venue_id     text
 );
 
 CREATE INDEX idx_sessions_status_expires ON sessions (status, expires_at)
@@ -280,6 +290,7 @@ type SessionStatus =
 type Session = {
   readonly id: string;
   readonly status: SessionStatus;
+  readonly creatorDisplayName: string;
   readonly createdAt: Date;
   readonly expiresAt: Date;
   readonly matchedVenueId: string | null;
@@ -296,7 +307,7 @@ type ShareLink = {
 
 ## Security and Privacy
 
-- **No PII collected.** Session creation requires no personal data — no name, email, or phone number.
+- **Minimal PII collected.** Session creation requires only a display name (first name or nickname) for the OG preview and Person B's hook screen. No email, phone number, or full name. The display name is cascade-deleted with the session after expiry.
 - **UUIDs are not guessable.** Session IDs are UUID v4 (122 bits of randomness). An attacker cannot enumerate sessions.
 - **Rate limiting** on session creation (5/hr per IP) prevents resource exhaustion.
 - **Expiry enforcement** at both the DB level (pg_cron marks expired) and application level (`isExpired()` check) ensures no stale session is ever served as active.
