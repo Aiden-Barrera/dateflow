@@ -83,32 +83,55 @@ No account required on first use. Friction must be near-zero for Person B (the r
 | Layer | Choice | Reason |
 |---|---|---|
 | Frontend | Next.js (App Router) | Fast mobile web, easy share links, SSR for SEO |
-| Backend | Next.js API routes or tRPC | Keeps stack unified |
-| Database | Supabase (Postgres) | Auth + DB + realtime in one |
-| AI | Claude API (Sonnet) | Itinerary generation, preference parsing |
+| Backend | Next.js API routes | Keeps stack unified, serverless auto-scaling |
+| Database | Supabase (Postgres) | Auth + DB + realtime + pg_cron in one |
+| Cache | Upstash Redis | Venue result caching, rate limiting (serverless-compatible) |
+| Job queue | Upstash QStash | Async venue generation, retries, exponential backoff |
+| AI | Claude API (Sonnet 4.6) | Venue curation, scoring, preference parsing |
 | Venue data | Google Places API | Best coverage, ratings, photos, hours |
-| Events | Eventbrite API / Fever API | Live event supply |
-| Booking | OpenTable API / Resy API | Restaurant reservations |
-| Hosting | Vercel | Zero-config deploys, edge functions |
-| Analytics | PostHog | Session funnels, drop-off analysis |
+| Events | Eventbrite API / Fever API | Live event supply (Phase 2) |
+| Booking | OpenTable API / Resy API | Restaurant reservations (Phase 2) |
+| Hosting | Vercel | Zero-config deploys, serverless auto-scaling |
+| Analytics | PostHog | Session funnels, drop-off analysis per step |
+| Error monitoring | Sentry | Error capture with session context |
+| B2B API | Same Next.js app | Partner API routes under `/api/v1/` with API key auth |
 
 ---
 
 ## Go-to-Market
 
-**Channel 1 — Dating app communities**
-Reddit (r/Tinder, r/hingeapp, r/dating_advice), TikTok creators in the dating space. The "handoff problem" is a known pain point — it resonates immediately.
+See `docs/strategy.md` for the full marketing rationale. Summary:
 
-**Channel 2 — Organic from the share link**
-Every Person A who sends an invite is an implicit referral. The Person B experience must be so smooth that they want to use it the next time they have a date.
+**Channel 1 — Creator content (highest ROI)**
+Seed 15–20 mid-tier dating/relationship creators on TikTok and Instagram Reels (50K–500K followers). The product is demonstrable in 30 seconds. Don't pay for placements initially — let them organically discover the utility. The "stop texting, start planning" moment is inherently relatable content.
 
-**Channel 3 — City-by-city launch**
-Start in one city (dense, dating-app-heavy — NYC, LA, Chicago, Austin). Build local venue quality before expanding.
+**Channel 2 — The share link as the ad**
+Person B's first experience IS the acquisition channel. Every invite sent is a potential new Person A. The most important design investment at launch is Person B's first 60 seconds — zero friction, no account, obvious value.
+
+**Channel 3 — Dating community presence**
+Reddit (r/Tinder, r/hingeapp, r/dating_advice, r/datingoverthirty). Don't spam — contribute authentically to conversations about planning friction. Let the community discover the product.
+
+**Channel 4 — City-first depth**
+Launch in Austin or Chicago (dense, word-of-mouth-driven, strong venue scene, not so large that traction gets diluted). Manually curate the top 150–200 venues in the launch city before going live. Venue depth is the quality moat. Expand only after achieving 500 completed session pairs with >60% match rate.
+
+**Channel 5 — Press**
+Two strong editorial angles: (1) "The planning layer dating apps refuse to build" — the structural misalignment argument. (2) "The date planning app that puts women's safety first" — default first-date-safe venue filters. Both angles have clear placement targets (TechCrunch, The Cut, Refinery29, Global Dating Insights).
+
+**Channel 6 — B2B / dating app partnerships**
+Approach Thursday, The League, and Coffee Meets Bagel at launch. Position as: "We built the planning layer so you don't have to." See `docs/strategy.md` section 4 for the full B2B strategy.
 
 ---
 
-## Monetization (Future)
+## Monetization
 
-1. **Booking commission** — small % on restaurant reservations and event tickets (same model as OpenTable/Fever)
-2. **Venue promotion** — restaurants and bars pay to be surfaced in Dateflow results
-3. **Premium features** — "Dateflow Plus" for unlimited sessions, AI-generated full itineraries, post-date recap
+**Consumer (Phase 2+):**
+1. **Booking commission** — small % on restaurant reservations and event tickets booked through Dateflow (OpenTable / Resy / Eventbrite model)
+2. **Venue promotion** — local venues pay to be surfaced in results for relevant sessions
+3. **Dateflow Plus** — premium tier: unlimited session history, full itinerary mode, post-date recaps, priority venue curation
+
+**B2B (Phase 2+):**
+1. **API licensing** — per-session fee for dating apps embedding Dateflow's planning engine
+2. **Revenue share** — % of bookings originating from embedded sessions flows back to Dateflow
+3. **White-label** — branded Dateflow engine inside a dating app's native UI (higher tier, higher margin)
+
+The B2B licensing model has the better unit economics at scale — one API deal with a mid-size dating app can deliver more session volume than months of consumer marketing.
