@@ -14,6 +14,7 @@ Dateflow owns the planning layer that every dating app abandons — the gap betw
 - [Execution Plan — phased roadmap and go-to-market](docs/execution-plan.md)
 - [Implementation Guide — architecture, distributed systems, swipe algorithm, data model](docs/implementation.md)
 - [User Stories — INVEST-evaluated backlog](docs/user-stories.md)
+- [Dev Specs — 6 implementation specifications](docs/dev-specs/index.md)
 
 ---
 
