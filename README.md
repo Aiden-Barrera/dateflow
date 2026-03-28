@@ -8,13 +8,17 @@ Dateflow owns the planning layer that every dating app abandons — the gap betw
 
 ## Docs
 
-- [Overview — goal, intention, and why it's needed](docs/overview.md)
-- [Competitive Landscape](docs/competitive-landscape.md)
-- [Strategy — couples question, deep marketing, B2B embed play](docs/strategy.md)
-- [Execution Plan — phased roadmap and go-to-market](docs/execution-plan.md)
-- [Implementation Guide — architecture, distributed systems, swipe algorithm, data model](docs/implementation.md)
-- [User Stories — INVEST-evaluated backlog](docs/user-stories.md)
-- [Dev Specs — onboarding summary](docs/dev-specs/onboarding.md) | [full index](docs/dev-specs/index.md)
+### [`docs/planning/`](docs/planning/) — Strategy and product planning
+- [Overview — goal, intention, and why it's needed](docs/planning/overview.md)
+- [Competitive Landscape](docs/planning/competitive-landscape.md)
+- [Strategy — couples question, deep marketing, B2B embed play](docs/planning/strategy.md)
+- [Execution Plan — phased roadmap and go-to-market](docs/planning/execution-plan.md)
+- [Implementation Guide — architecture, distributed systems, swipe algorithm, data model](docs/planning/implementation.md)
+- [User Stories — INVEST-evaluated backlog](docs/planning/user-stories.md)
+
+### [`docs/dev-specs/`](docs/dev-specs/) — Implementation specifications
+- [Onboarding Summary — start here](docs/dev-specs/onboarding.md)
+- [Full Index — class registry, API registry, state machine](docs/dev-specs/index.md)
 
 ---
 
