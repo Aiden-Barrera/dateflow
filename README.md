@@ -16,6 +16,11 @@ Dateflow owns the planning layer that every dating app abandons — the gap betw
 - [Implementation Guide — architecture, distributed systems, swipe algorithm, data model](docs/planning/implementation.md)
 - [User Stories — INVEST-evaluated backlog](docs/planning/user-stories.md)
 
+### [`docs/business/`](docs/business/) — Business strategy and team operations
+- [User Acquisition Strategy — tiered playbook for 100 session pairs](docs/business/user-acquisition-strategy.md)
+- [Team Tooling — GitHub Projects setup and alternatives](docs/business/team-tooling.md)
+- [First Sprint — pre-launch and launch week task checklist](docs/business/first-sprint.md)
+
 ### [`docs/dev-specs/`](docs/dev-specs/) — Implementation specifications
 - [Onboarding Summary — start here](docs/dev-specs/onboarding.md)
 - [Full Index — class registry, API registry, state machine](docs/dev-specs/index.md)
