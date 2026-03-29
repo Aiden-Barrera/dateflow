@@ -119,6 +119,7 @@ export async function expireStaleSessions(): Promise<number> {
     .from("sessions")
     .update({ status: "expired" }, { count: "exact" })
     .neq("status", "expired")
+    .neq("status", "matched")
     .lte("expires_at", new Date().toISOString());
 
   if (error) {

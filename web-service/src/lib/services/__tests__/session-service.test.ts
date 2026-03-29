@@ -30,7 +30,7 @@ const mockQuerySelect = vi.fn(() => ({ eq: mockEq }));
 // UPDATE chain: from().update().neq().lte()
 // .lte() is the terminal call that returns { data, error, count }
 const mockLte = vi.fn();
-const mockNeq = vi.fn(() => ({ lte: mockLte }));
+const mockNeq = vi.fn(() => ({ neq: mockNeq, lte: mockLte }));
 const mockUpdate = vi.fn(() => ({ neq: mockNeq }));
 
 // from() returns all three chains
@@ -248,8 +248,9 @@ describe("expireStaleSessions", () => {
       { status: "expired" },
       { count: "exact" }
     );
-    // Should exclude already-terminal statuses
+    // Should exclude already-terminal statuses (expired and matched)
     expect(mockNeq).toHaveBeenCalledWith("status", "expired");
+    expect(mockNeq).toHaveBeenCalledWith("status", "matched");
     // Should only expire sessions past their expiresAt
     expect(mockLte).toHaveBeenCalledWith(
       "expires_at",
