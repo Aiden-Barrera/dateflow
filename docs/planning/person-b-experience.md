@@ -1,223 +1,176 @@
 # Dateflow — Person B Experience: The Critical Gap
 
+> **TL;DR:** Person B — who clicks a link from a near-stranger — decides in 3 seconds whether to continue or close the tab. Their landing screen has more leverage than any other screen in the product. If Person B bounces, the entire two-person mechanic is dead.
+
+---
+
 ## The Missing Insight
 
-Every existing document assumes the planning conversation happens inside a dating app. It doesn't.
+By the time two people are close to meeting, they've left the dating app. The real conversation is in **iMessage, WhatsApp, or Instagram DMs.**
 
-By the time two people are genuinely close to meeting, they have almost always moved to a different platform — iMessage, WhatsApp, Instagram DMs. The dating app becomes a notification inbox. The real conversation — "we should actually hang out," "what are you doing this weekend," "where should we go" — is happening somewhere else entirely.
+```mermaid
+flowchart LR
+    A["Match on\ndating app"] --> B["Move to\niMessage / WhatsApp"]
+    B --> C["'We should\nhang out'"]
+    C --> D["Person A sends\nDateflow link HERE"]
 
-This has two immediate consequences that are not addressed anywhere in the current documentation:
+    style A fill:#3498DB,stroke:#2980B9,color:#fff
+    style B fill:#9B59B6,stroke:#8E44AD,color:#fff
+    style C fill:#F39C12,stroke:#D68910,color:#fff
+    style D fill:#E74C3C,stroke:#C0392B,color:#fff
+```
 
-**1. The B2B dating app embed solves for a minority of sessions.** The users who plan a date without ever leaving the dating app are the outliers, not the norm. The embed strategy is still worth pursuing, but it captures a narrower slice of the actual planning moment than the docs suggest.
+**Two consequences:**
 
-**2. The share link lands in a messaging app, not a dating app.** Person A is not sending this link from inside a product — they're pasting a URL into iMessage or typing it into an Instagram DM. The link is the product's entire first impression on Person B, and it exists in an environment Dateflow does not control.
+| Reality | Impact |
+|---------|--------|
+| The B2B dating app embed solves for a **minority** of sessions | Most planning happens outside the dating app |
+| The share link lands in a **messaging app** | The link preview IS Dateflow's first impression on Person B |
 
 ---
 
-## The Rich Link Preview: Entry Point, Not Solution
+## The Rich Link Preview
 
-When a URL is pasted into iMessage, WhatsApp, or other messaging platforms, the platform fetches the page's Open Graph tags and renders a visual preview inline — app name, title, description, and an image. This preview is the first thing Person B sees before they've clicked anything.
+A bare URL from a near-stranger looks like a phishing link. A rich preview looks like a real product.
 
-A bare URL (`dateflow.app/s/a7f3bc2`) looks like a phishing link from a near-stranger.
+```mermaid
+flowchart LR
+    subgraph Bad["❌ Bare URL"]
+        A["dateflow.app/s/a7f3bc2"]
+    end
+    subgraph Good["✅ Rich Preview"]
+        B["🟣 Dateflow · dateflow.app\nAlex wants to plan your date\nAdd your preferences in 60 sec\n— no account needed"]
+    end
 
-A properly constructed rich preview looks like a real product:
-
+    style Bad fill:#E74C3C,stroke:#C0392B,color:#fff
+    style Good fill:#2ECC71,stroke:#27AE60,color:#fff
+    style A fill:#E74C3C,stroke:#C0392B,color:#fff
+    style B fill:#2ECC71,stroke:#27AE60,color:#fff
 ```
-┌─────────────────────────────────────┐
-│  [Dateflow logo]  dateflow.app      │
-│                                     │
-│  Alex wants to plan your date       │
-│  Add your preferences in 60 seconds │
-│  — no account needed.               │
-│                                     │
-│  [preview image: the UI in action]  │
-└─────────────────────────────────────┘
-```
 
-That is a meaningfully different first impression. It communicates:
-- What the product is
-- That someone they know initiated it
-- That it's fast and low-friction
-- That they don't need to create anything
+### Platform Support
 
-**This needs to be built. It's not a nice-to-have.**
+| Platform | Rich preview? |
+|----------|:------------:|
+| iMessage (iOS) | ✅ Full preview |
+| WhatsApp | ✅ Full preview |
+| Instagram DMs | ❌ Suppressed by Meta |
+| Android Messages (RCS) | ⚠️ Varies |
+| Snapchat | ❌ Not rendered |
 
-### Platform Reality Check
-
-Rich link previews do not behave uniformly across platforms:
-
-| Platform | Preview Behavior |
-|----------|-----------------|
-| iMessage (iOS) | Full OG preview rendered inline — title, description, image |
-| WhatsApp | Full OG preview rendered inline |
-| Instagram DMs | **Largely suppressed.** Meta does not reliably render external link previews in DMs to keep users on platform |
-| Android Messages (RCS) | Rendered if the URL is from a known domain |
-| Snapchat | Not rendered |
-
-If a significant portion of your users move to Instagram DMs — which is likely given the demographic — the rich preview doesn't help you there. This is a platform risk you need to validate before assuming the preview solves the trust problem universally. The honest answer is: it solves it for iMessage and WhatsApp users, which is probably your largest segment, but not across the board.
+> iMessage + WhatsApp cover the majority of the target audience. Instagram DMs are a platform risk worth monitoring.
 
 ---
 
-## The 3-Second Rule: Person B's Landing Page Is the Real Product
+## The 3-Second Rule
 
-Person B clicks the link. What happens in the next 3 seconds determines whether this session completes or dies.
+Person B clicks the link. **What happens in the next 3 seconds determines everything.**
 
-Three seconds is not hyperbole. Research on mobile web landing pages consistently shows that if a user cannot understand what a page is, why it's trustworthy, and what they should do — in 3 seconds — they leave. Person B has additional friction on top of normal landing page bounce: they received this link from someone they've barely met. Their baseline skepticism is higher than a user who sought out a product on their own.
+```mermaid
+flowchart TD
+    A["Person B clicks link"] --> B{"3 seconds"}
+    B -->|Clear, trustworthy, one action| C["✅ Continues\nCompletes preferences\nSees matches"]
+    B -->|Confusing, form-heavy, sketchy| D["❌ Closes tab\nSession dies\nLoop broken"]
 
-The existing documentation does not treat this landing screen with the gravity it deserves. **This page has higher leverage than any other screen in the product.** It determines whether the two-person mechanic ever fires. A beautiful match reveal UI is worthless if Person B never completes their preferences.
+    style A fill:#3498DB,stroke:#2980B9,color:#fff
+    style B fill:#F39C12,stroke:#D68910,color:#fff
+    style C fill:#2ECC71,stroke:#27AE60,color:#fff
+    style D fill:#E74C3C,stroke:#C0392B,color:#fff
+```
 
 ### What Those 3 Seconds Must Communicate
 
-The landing screen needs to answer three questions before anything else happens:
-
-1. **What is this?** — One sentence. Not a paragraph. "Alex wants to plan your first date together."
-2. **Why should I trust it?** — Visual cues: clean design, recognizable branding, no ads, no popup asking for email, the other person's first name visible
-3. **What do I do right now?** — One button. Not a form. One button.
-
-If the first screen Person B sees is a form with four fields, they are gone. The current DS-02 preference input spec shows exactly this — a GPS request, followed by budget, followed by category selection, all treated as one form. This is the wrong UX for Person B.
+| Question | Answer on screen |
+|----------|-----------------|
+| **What is this?** | One sentence: "Alex wants to plan your first date together." |
+| **Why should I trust it?** | Clean design, no ads, Person A's name visible, no popup asking for email |
+| **What do I do?** | One button. Not a form. **One button.** |
 
 ---
 
-## The Person B Flow Must Be Redesigned
+## Person A vs Person B: Different Experiences
 
-Currently DS-02 treats Person A and Person B identically. They go through the same preference form in the same order. This is wrong.
-
-Person A initiated this session voluntarily. They have context, they know what Dateflow is, and they're motivated — they want the date to happen. Person A can tolerate a slightly longer setup.
-
-Person B clicked a link from a near-stranger on their phone. They have zero context, zero prior investment in the product, and full permission to close the tab at any moment. They need a completely different experience.
-
-### Proposed Person B Flow (Max 3 Screens, Under 60 Seconds)
-
-**Screen 1 — The Hook (3 seconds)**
-```
-[Dateflow logo]
-
-Alex wants to plan
-your first date.
-
-It takes 60 seconds. No account needed.
-
-[ Add my preferences → ]
-```
-Nothing else on this screen. No explanation of how the algorithm works. No feature list. One button.
-
-**Screen 2 — Location (one tap ideally)**
-```
-Where are you based?
-
-[ Use my location ]   ← primary CTA, auto-detects GPS
-
-— or type a neighborhood / zip code —
-[ __________________ ]
-```
-GPS detection on tap means this screen takes 2 seconds if they allow it. The manual input is the fallback, not the default. Do not ask for a full address. A neighborhood or zip code is enough.
-
-**Screen 3 — Vibe (visual, not a form)**
-```
-What are you up for?
-
-[ 🍽 Food ]  [ 🍸 Drinks ]  [ 🎯 Activity ]  [ 🎲 Surprise me ]
-
-Budget?
-[ $  Casual ]  [ $$  Mid-range ]  [ $$$  Upscale ]
-
-[ Find our places → ]
-```
-Visual chips, large tap targets, no dropdowns, no text input. Both questions on the same screen to reduce navigation. This screen should take under 15 seconds.
-
-**After submission — Loading State**
-```
-Finding places near both of you...
-
-[animated visual — not a spinner]
-
-"Checking 40+ spots near the midpoint between you and Alex"
-```
-This is not a dead wait screen. It communicates that something real is happening, that Dateflow is working, and that the result will be relevant to both people specifically. The loading state is doing trust work.
-
-**Total expected time: 30–45 seconds for Person B.**
-
-That is the target. Anything longer and the drop-off rate climbs steeply.
+| | Person A | Person B |
+|---|---------|---------|
+| **Context** | Initiated voluntarily, knows what Dateflow is | Clicked a link from a near-stranger |
+| **Motivation** | High — wants the date to happen | Has motivation but also skepticism |
+| **Tolerance** | Can handle a slightly longer setup | Will close the tab at any friction |
+| **Design approach** | Standard preference flow | Maximum 3 screens, under 60 seconds |
 
 ---
 
-## What This Means for the Retention Flywheel
+## Proposed Person B Flow
 
-The consumer growth loop is not "the share link goes viral." That framing was in the original strategy and it's too passive. The real loop is:
+```mermaid
+flowchart TD
+    S1["Screen 1 — The Hook\n3 seconds"] --> S2["Screen 2 — Location\none tap"]
+    S2 --> S3["Screen 3 — Vibe\nvisual chips, not forms"]
+    S3 --> L["Loading State\n'Finding places near both of you...'"]
+    L --> R["🎉 Ready to swipe"]
 
-```
-Person B has a seamless 45-second setup
-    ↓
-Person B sees a great match
-    ↓
-Person B goes on a good date
-    ↓
-Person B's next match leads to the same conversation: "we should hang out"
-    ↓
-Person B, now Person A, remembers Dateflow solved this last time
-    ↓
-Person B becomes Person A and sends the next link
+    style S1 fill:#E74C3C,stroke:#C0392B,color:#fff
+    style S2 fill:#F39C12,stroke:#D68910,color:#fff
+    style S3 fill:#3498DB,stroke:#2980B9,color:#fff
+    style L fill:#95A5A6,stroke:#7F8C8D,color:#fff
+    style R fill:#2ECC71,stroke:#27AE60,color:#fff
 ```
 
-This loop only fires if Person B's first experience is fast, smooth, and results in something that feels like magic — a match that neither person had to awkwardly negotiate. If Person B bounces before completing their preferences, the loop is dead on arrival. Every percentage point of improvement in Person B's setup completion rate compounds directly into the growth rate.
+**Screen 1 — The Hook** (3 seconds)
+> "Alex wants to plan your first date."
+>
+> It takes 60 seconds. No account needed.
+>
+> **[ Add my preferences → ]**
 
-This means the Person B landing page and preference input flow are not UI polish. They are the growth engine. They should be treated with the same engineering and design priority as the core swipe mechanic.
+Nothing else on this screen. No feature list. One button.
+
+**Screen 2 — Location** (one tap)
+> **[ Use my location ]** ← primary action, GPS auto-detect
+>
+> *or type a neighborhood / zip code*
+
+**Screen 3 — Vibe** (visual, not a form)
+> Category: `[ 🍽 Food ]` `[ 🍸 Drinks ]` `[ 🎯 Activity ]` `[ 🎲 Surprise me ]`
+>
+> Budget: `[ $ Casual ]` `[ $$ Mid-range ]` `[ $$$ Upscale ]`
+>
+> **[ Find our places → ]**
+
+Visual chips, large tap targets, no dropdowns, no text input. Under 15 seconds.
+
+**Total time: 30-45 seconds for Person B.**
 
 ---
 
-## What Needs to Change in Existing Documents
+## The Retention Flywheel
 
-### DS-02 — Preference Input
+```mermaid
+flowchart TD
+    A["Person B gets a link"] --> B["Seamless 45-sec setup"]
+    B --> C["Great venue match"]
+    C --> D["Good date happens"]
+    D --> E["Next match:\n'we should hang out'"]
+    E --> F["Remembers Dateflow"]
+    F --> G["NOW they're Person A\nSends the next link"]
+    G --> A
 
-**Problem:** Person A and Person B are treated identically. The flow spec shows one preference form for both roles without distinguishing the UX context.
+    style A fill:#FF6B6B,stroke:#CC5555,color:#fff
+    style C fill:#4ECDC4,stroke:#3BA89F,color:#fff
+    style D fill:#FFEAA7,stroke:#DCC480,color:#333
+    style G fill:#9B59B6,stroke:#8E44AD,color:#fff
+```
 
-**What needs to change:**
-- Split the flow into two explicitly separate paths: Person A (initiated session, higher tolerance) and Person B (cold link click, 3-second window)
-- Person B's flow should be maximum 3 screens as described above
-- The state diagram should show Person B's landing screen as a distinct state before preference input begins — a "hook screen" that precedes the form
-- The flowchart should branch at "User opens preference form" based on role
-- The GPS permission request for Person B should be a primary CTA on a dedicated screen, not a conditional branch buried in a form
-
-### User Stories — US-02 and US-03
-
-**US-02 (Send an invite link):** Currently scored entirely on link generation mechanics. The story says nothing about what the link looks like when it lands. A new acceptance criterion needs to be added: the generated URL must produce a rich Open Graph preview with a title that includes Person A's name and a description that communicates the product in one line. This is not optional polish — it is part of the story's definition of done.
-
-**US-03 (Join a session via link, no install):** The story correctly identifies Person B as the most fragile conversion point but its framing is about technical access (no App Store redirect, no account creation). The acceptance criteria need to explicitly cover the landing experience: Person B's first screen must communicate what the product is and what to do next within 3 seconds, contain a single primary action, and require no scrolling on a standard mobile viewport.
-
-**New story needed — US-02a: Rich link preview in messaging apps**
-This story does not exist and it should be in the active backlog:
-
-> *As Person A, I want the link I share to display a rich preview in iMessage and WhatsApp showing the other person's name and what Dateflow does, so that Person B understands what they're clicking before they tap.*
-
-This is a Small story (OG meta tags + a designed preview image) with high value at the most critical conversion point.
-
-### strategy.md — Channel 2: The Share Link as the Ad
-
-The section currently says: *"Person B has never heard of Dateflow. They open a link that says 'Aiden wants to plan a date. Here's how it works.'"*
-
-This description doesn't acknowledge that the link is being sent via iMessage or Instagram DMs, not via the dating app. The section needs to be updated to reflect:
-1. The link is shared in a messaging app, not in-app
-2. The rich preview is the actual first impression
-3. Instagram DMs are a platform risk (previews suppressed)
-4. Person B's landing page is the most important design investment in the product
-
-### overview.md — Core User Flow
-
-Step 2 currently reads: *"Person A generates a shareable link and sends it to Person B."*
-
-This needs to acknowledge where that send happens — almost always in a messaging app. The overview should note that the link preview design is part of the core flow, not an implementation detail.
-
-### pivot-b2b-strategy.md — Consumer Demo Section
-
-The pivot doc correctly identifies the consumer app as a sales tool for B2B deals, but the "how to get real users" section is under-specified given this insight. The scrappy consumer acquisition approach should explicitly target the iMessage/WhatsApp distribution channel, since that's where the natural link-sharing behavior already happens. Getting 100 completed sessions is easier if the link preview is compelling from day one.
+> **This loop is the growth engine.** If Person B bounces before completing preferences, the loop is dead. The Person B landing page is not UI polish — it is the most important page in the product.
 
 ---
 
-## Priority Order for Addressing These Gaps
+## Priority Order
 
-1. **Person B landing screen design** — highest leverage item in the entire product, must be specced before any frontend work begins on the join flow
-2. **DS-02 Person B flow** — split the preference input spec into two distinct paths before it gets built
-3. **Rich link preview (OG tags)** — small build, massive impact on Person B conversion; ship with the first version of the share link
-4. **US-02a** — add to active backlog, treat as part of the share link story scope
-5. **US-03 acceptance criteria** — update to explicitly cover the 3-second landing screen requirement
-6. **strategy.md Channel 2** — update to reflect messaging app reality and Instagram DM risk
+| Priority | Item | Impact |
+|:--------:|------|--------|
+| **1** | Person B landing screen design | Highest leverage in the entire product |
+| **2** | Split DS-02 into Person A / Person B flows | Different UX for different context |
+| **3** | Rich link preview (OG tags) | Small build, massive conversion impact |
+| **4** | US-02a: Rich link preview user story | Add to active backlog |
+| **5** | US-03 acceptance criteria update | Cover 3-second landing requirement |
+| **6** | Update strategy.md Channel 2 | Reflect messaging app reality |

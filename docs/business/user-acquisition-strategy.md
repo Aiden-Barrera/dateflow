@@ -1,146 +1,145 @@
 # Dateflow — User Acquisition Strategy
 
+> **TL;DR:** Get 100 real session pairs with ≥55% match rate. That data is what sells B2B deals. Four tiers: personal network → communities → one press hit → the product itself. No paid ads. No content marketing. Scrappy and targeted.
+
+---
+
 ## The Goal
 
-**100 completed session pairs with a match rate ≥ 55%** — enough clean data to walk into a B2B meeting with Thursday, The League, or Coffee Meets Bagel and show proof this works.
+```mermaid
+flowchart LR
+    A["🎯 100 completed\nsession pairs"] --> B["📊 Match rate\n≥ 55%"]
+    B --> C["📋 Clean metrics\nfor pitch deck"]
+    C --> D["🤝 Walk into meeting\nwith Thursday"]
 
-This is not a growth strategy. This is a proof-of-concept seeding playbook. The tactics are different — scrappy, personal, and targeted rather than scalable.
+    style A fill:#E74C3C,stroke:#C0392B,color:#fff
+    style B fill:#F39C12,stroke:#D68910,color:#fff
+    style C fill:#3498DB,stroke:#2980B9,color:#fff
+    style D fill:#2ECC71,stroke:#27AE60,color:#fff
+```
 
----
-
-## Tier 1: Personal Network (Weeks 1–3 Post-Launch)
-
-**Target: 30–40 completed sessions**
-
-This is unglamorous but it's where the first sessions come from.
-
-### Actions
-
-- [ ] **Direct outreach to friends who are actively dating.** Not a mass blast — individual texts: "Hey, I built this thing. Next time you have a date coming up, try it and tell me what sucked." Give them a reason to care (you're their friend, they want to help).
-- [ ] **Second-degree referral ask.** Ask each friend to send it to one person they know who's dating. Second-degree network doubles reach without feeling spammy.
-- [ ] **University dating culture.** If near a college campus, this demographic is constantly going on first dates. One person in a sorority or fraternity group chat who tries it and shares it can generate 10+ sessions.
-- [ ] **Build a target list of 50 people** in your network who are actively dating — names, how to reach them, best time to ask.
-
-### Why This Works
-
-People try tools their friends ask them to try. The conversion rate on a personal ask from a friend is 10–50x higher than any ad or cold post. At this stage, every session matters individually — treat each one like a sales conversation.
+This is **not a growth strategy.** This is a proof-of-concept seeding playbook.
 
 ---
 
-## Tier 2: Targeted Community Presence (Weeks 2–6)
+## The Four Tiers
 
-**Target: 30–40 completed sessions**
+```mermaid
+flowchart TD
+    T1["Tier 1\n👋 Personal Network\nWeeks 1-3\n30-40 sessions"] --> G["🎯 100\nSession\nPairs"]
+    T2["Tier 2\n💬 Communities\nWeeks 2-6\n30-40 sessions"] --> G
+    T3["Tier 3\n📰 Earned Media\nWeeks 3-8\n20-30 sessions"] --> G
+    T4["Tier 4\n🔗 Product = Marketing\nOngoing\nCompounding"] --> G
 
-Go where people are already complaining about the planning problem.
-
-### Reddit
-
-- **Target subreddits:** r/hingeapp, r/Tinder, r/dating_advice, r/datingoverthirty, r/bumble
-- **Do not post "check out my app."** Find threads where people are literally describing the planning failure — "we matched 3 weeks ago and still haven't met up," "I asked her out and she said yes but we can't figure out what to do."
-- **Reply authentically.** "I actually built something for exactly this" with a link. One well-placed comment on a viral thread can drive 20+ signups.
-- [ ] **Identify 10 Reddit threads from the last 30 days** where the planning problem is described — bookmark them for post-launch commenting.
-
-### Discord
-
-- Dating-focused Discord servers exist and are active. Search Disboard for dating/relationship servers.
-- Same approach: be a member first, offer the tool when it's genuinely relevant to a conversation.
-
-### Twitter / X
-
-- Dating hot takes go viral constantly. Quote-tweet or reply to "the worst part of dating apps is..." moments with the product when genuinely relevant.
-- The structural misalignment argument ("dating apps won't build this because faster dates = faster churn") is the kind of thread that gets engagement from tech/startup Twitter.
-
-### Rules of Engagement
-
-1. **Never spam.** One bad-faith post in a subreddit gets you banned and burns the channel permanently.
-2. **Contribute before you promote.** Answer questions, share genuine advice, be a member of the community for at least a few days before mentioning your product.
-3. **Only mention Dateflow when it's a direct answer to someone's stated problem.** If the comment doesn't describe the planning problem, don't shoehorn it in.
+    style T1 fill:#2ECC71,stroke:#27AE60,color:#fff
+    style T2 fill:#3498DB,stroke:#2980B9,color:#fff
+    style T3 fill:#9B59B6,stroke:#8E44AD,color:#fff
+    style T4 fill:#F39C12,stroke:#D68910,color:#fff
+    style G fill:#FFEAA7,stroke:#DCC480,color:#333
+```
 
 ---
 
-## Tier 3: One Piece of Earned Media (Weeks 3–8)
+### Tier 1: Personal Network (Weeks 1-3)
 
-**Target: 20–30 completed sessions from a single content hit**
+**Target: 30-40 sessions**
 
-You don't need a PR strategy. You need one piece of content that reaches the right audience.
+| Action | Detail |
+|--------|--------|
+| **Direct outreach** | Individual texts to friends who are dating. "Hey I built this — next time you have a date, try it and tell me what sucked." |
+| **Second-degree asks** | Each friend sends to one person they know who's dating. Doubles reach. |
+| **University communities** | Students go on first dates constantly. One person in a group chat = 10+ sessions. |
+| **Build a list of 50 people** | Names, how to reach them, best timing. |
 
-### The Women's Safety Press Angle
-
-This is the strongest press hook Dateflow has. "The date planning app that filters for first-date safety" is a story that writes itself for:
-
-- **Women's lifestyle press:** Refinery29, The Cut, Bustle, Cosmopolitan
-- **Dating vertical press:** Global Dating Insights
-- **Tech press (secondary):** TechCrunch, The Verge (if framed as a counter-narrative to dating app complacency)
-
-The pitch: Dating apps optimize for the match and abandon users at the planning stage. Women meeting strangers from apps have real safety concerns — public venues, independent accessibility, easy exits — and no tool addresses them. Dateflow makes "first-date safe" a default filter.
-
-- [ ] **Research 3 press contacts** at dating/women's lifestyle outlets who cover dating app stories.
-- [ ] **Write the one-paragraph pitch** for the women's safety angle.
-
-### One Creator Video
-
-- Find a dating content creator on TikTok or Instagram Reels (50K–200K follower range — mid-tier has better engagement and is more likely to respond to a DM).
-- Look for creators who have previously posted about first date planning struggles, the "where should we go" loop, or dating app frustrations.
-- DM them, give them early access, let them make their own content. Don't script it — authentic reaction content performs better.
-- One genuine creator video to a targeted audience can generate 30–50+ sessions.
-
-- [ ] **Find 5 dating content creators** (TikTok/Reels, 50K–200K followers) who have posted about first date planning — compile a DM outreach list.
-
-### Secondary Press Angle
-
-"The company building the feature dating apps won't" — the structural misalignment argument. Dating apps make money from subscriptions; users who find a partner quickly churn. This creates a perverse incentive to not invest in the planning layer. Dateflow builds what they structurally can't. This is a narrative tech journalists know how to write.
+> **Why this works:** Personal ask from a friend converts 10-50x better than any ad. Every session matters individually.
 
 ---
 
-## Tier 4: The Product as Marketing
+### Tier 2: Targeted Communities (Weeks 2-6)
 
-Every session Person A creates is a marketing impression on Person B. If Person B's experience is exceptional, they become Person A next time. This is the organic flywheel that compounds — but only if the first impression is flawless.
+**Target: 30-40 sessions**
 
-### The OG Link Preview
+| Platform | Strategy |
+|----------|----------|
+| **Reddit** | r/hingeapp, r/Tinder, r/dating_advice, r/datingoverthirty, r/bumble — find threads describing the planning failure. Reply authentically. |
+| **Discord** | Join dating-focused servers. Be a member first. Offer the tool when someone describes the problem. |
+| **Twitter/X** | Reply to "worst part of dating apps" moments. The structural misalignment argument plays well on tech Twitter. |
 
-When Person A pastes the Dateflow link into iMessage or WhatsApp, the rich preview is Person B's first impression of the product. A bare URL looks like a phishing link from a near-stranger. A well-crafted preview looks like a real product.
-
-- [ ] **Draft the OG link preview copy** — title, description, and preview image that appears in messaging apps.
-- The preview must communicate: what this is, who sent it, that it's fast, that no account is needed.
-
-### The 3-Second Landing Page
-
-Person B clicks the link. If they can't understand what the page is, why it's trustworthy, and what to do — in 3 seconds — they leave. This page has higher leverage than any other screen in the product.
-
-- The landing screen answers three questions: What is this? Why should I trust it? What do I do right now?
-- One button. Not a form. Not a feature list. One button.
-
-### The Match Reveal Moment
-
-The match reveal is the product's peak emotional moment — equivalent to Tinder's "It's a Match!" but for a concrete plan. Make it screenshot-worthy and shareable. This is the "tell your friends" moment.
+**Rules of engagement:**
+1. Never spam — one bad post = banned permanently
+2. Contribute before you promote — be a member for days first
+3. Only mention Dateflow when it directly answers someone's stated problem
 
 ---
 
-## What NOT to Spend Time or Money on Yet
+### Tier 3: One Piece of Earned Media (Weeks 3-8)
 
-| Activity | Why Not Now |
-|----------|-----------|
-| Paid ads (Google, Meta, TikTok) | No product-market fit data to optimize against. You'd be burning money to learn what organic testing teaches for free. |
-| Polished marketing website | A simple landing page with the value prop is enough. Nobody is evaluating your website design at this stage. |
-| Brand guidelines / logo redesign / visual identity | Premature. The product will change. The brand can be refined later. |
-| Broad social media presence | Nobody follows a startup's Instagram pre-launch. Don't maintain accounts that have no audience. |
-| Content marketing / blog posts | Wrong stage, wrong audience. Your users are on dating apps and Reddit, not reading startup blogs. |
-| SEO optimization | The payoff timeline for SEO is 6–12 months. You need sessions in 6–12 weeks. |
+**Target: 20-30 sessions from a single hit**
+
+| Channel | Approach |
+|---------|----------|
+| **Press — women's safety angle** | "The date planning app that filters for first-date safety." Pitch to Refinery29, The Cut, Bustle, Global Dating Insights. |
+| **One creator video** | Find a dating creator (50K-200K followers) who's posted about the planning problem. DM them early access. Don't script it. |
+| **Secondary press angle** | "The feature dating apps won't build" — the structural misalignment argument. |
+
+---
+
+### Tier 4: The Product as Marketing
+
+Every session Person A creates is a marketing impression on Person B.
+
+```mermaid
+flowchart LR
+    A["OG Link Preview\nFirst impression\nbefore the click"] --> B["3-Second Landing\nWhat is this?\nWhat do I do?"]
+    B --> C["Match Reveal\nScreenshot-worthy\n'tell your friends' moment"]
+
+    style A fill:#E74C3C,stroke:#C0392B,color:#fff
+    style B fill:#F39C12,stroke:#D68910,color:#fff
+    style C fill:#2ECC71,stroke:#27AE60,color:#fff
+```
+
+| Element | Why it matters |
+|---------|---------------|
+| **OG link preview** | A bare URL looks like phishing. A rich preview with Person A's name looks like a real product. |
+| **3-second landing page** | Can't understand it in 3 seconds? Person B closes the tab. One button, not a form. |
+| **Match reveal moment** | Peak emotional moment. Make it shareable. This is the "tell your friends" trigger. |
+
+---
+
+## What NOT to Do Yet
+
+| Don't do this | Why not |
+|--------------|---------|
+| Paid ads | No product-market fit data to optimize against |
+| Polished marketing website | Simple landing page is enough |
+| Brand guidelines / logo redesign | Premature. Product will change. |
+| Social media accounts | Nobody follows a startup's Instagram pre-launch |
+| Blog / content marketing | Wrong stage, wrong audience |
+| SEO | Payoff in 6-12 months. Need sessions in 6-12 weeks. |
 
 ---
 
 ## Analytics From Day One
 
-The consumer demo exists to generate proof for B2B pitches. Every session should emit metrics that map directly to the pitch deck:
+```mermaid
+flowchart TD
+    A["Session created"] --> B["Link sent"]
+    B --> C["Person B opens link"]
+    C --> D["Person B finishes prefs"]
+    D --> E["Venues generated"]
+    E --> F["Swiping complete"]
+    F --> G["Match found"]
+    G --> H["Directions / calendar used"]
 
-- [ ] **Set up PostHog (or equivalent)** to track session funnels and drop-off per step.
-- **Key metrics to capture:**
-  - Session creation rate (Person A starts a session)
-  - Invite send rate (Person A shares the link)
-  - Person B join rate (Person B opens the link)
-  - Person B completion rate (Person B finishes preferences)
-  - Match rate (at least one mutual venue match per session)
-  - Time to match (how long from session creation to match reveal)
-  - Post-match action rate (directions opened, calendar event created — proxy for "date actually happened")
+    style A fill:#BDC3C7,stroke:#95A5A6,color:#333
+    style C fill:#F39C12,stroke:#D68910,color:#fff
+    style D fill:#E74C3C,stroke:#C0392B,color:#fff
+    style G fill:#2ECC71,stroke:#27AE60,color:#fff
+    style H fill:#9B59B6,stroke:#8E44AD,color:#fff
+```
 
-The single metric that closes B2B deals: **"Apps using Dateflow show X% higher match-to-date conversion rate."** Design analytics to capture this from session one.
+**Measure every step.** The single metric that closes B2B deals:
+
+> **"Apps using Dateflow show X% higher match-to-date conversion rate."**
+
+Design analytics to capture this from session one. Even proxies (directions opened, calendar created) are better than nothing.

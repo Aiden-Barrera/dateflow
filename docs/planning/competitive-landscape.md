@@ -1,67 +1,49 @@
 # Dateflow — Competitive Landscape
 
+> **TL;DR:** Every major player owns the match phase or the booking phase. Nobody owns the planning phase in between. Dateflow is the only tool built from the ground up for two people deciding together, with no install required.
+
+---
+
 ## The Problem Space
 
-The dating-to-date pipeline has three phases:
-1. **Discovery** — find someone (dating apps)
-2. **Planning** — decide what to do and where to go ← *completely unowned*
-3. **Execution** — book, show up, enjoy
+```mermaid
+flowchart LR
+    A["1. Discovery\nFind someone"] --> B["2. Planning\nDecide what to do"]
+    B --> C["3. Execution\nBook and show up"]
 
-Every major player owns phase 1 or phase 3. Nobody owns phase 2.
+    style A fill:#2ECC71,stroke:#27AE60,color:#fff
+    style B fill:#E74C3C,stroke:#C0392B,color:#fff
+    style C fill:#3498DB,stroke:#2980B9,color:#fff
+```
+
+| Phase | Who owns it | Examples |
+|-------|------------|---------|
+| **Discovery** | Dating apps | Hinge, Bumble, Tinder |
+| **Planning** | **Nobody** | This is the gap |
+| **Execution** | Booking / venue platforms | OpenTable, Fever, Google Maps |
 
 ---
 
 ## Direct Competitors
 
-### Cobble
-- Tinder-style swipe matching on curated activity/restaurant ideas
-- Both people swipe independently; matches surface a shared plan
-- Raised $3M, strong early reviews (4.8 stars App Store)
-- **Weaknesses:** iOS only, limited to select US cities, growth appears stalled post-2023
-
-### SoulPlan
-- AI-powered suggestions filtered by mood, budget, energy level, location
-- Scheduling and calendar features
-- **Weaknesses:** Primarily aimed at established couples, not first dates
-
-### DateNight (app)
-- Generates 3–6 curated venue ideas via Google Maps
-- Works in 200+ countries
-- **Weaknesses:** Single-user only, no two-person coordination, no booking
-
-### Cupla
-- Calendar sync + AI suggestions + venue map
-- Strong mutual availability features
-- **Weaknesses:** Explicitly marketed to couples, not first-daters
+| Competitor | What they do | Strengths | Weaknesses |
+|-----------|-------------|-----------|-----------|
+| **Cobble** | Tinder-style swipe matching on venue ideas | Two-person flow, raised $3M, 4.8 stars | iOS only, limited US cities, growth stalled post-2023 |
+| **SoulPlan** | AI suggestions filtered by mood, budget, energy | Good personalization, calendar features | Aimed at couples, not first dates |
+| **DateNight** | 3-6 venue ideas via Google Maps | Works in 200+ countries | Single-user only, no coordination, no booking |
+| **Cupla** | Calendar sync + AI suggestions + venue map | Strong availability features | Marketed to couples, not first-daters |
 
 ---
 
 ## Adjacent Threats
 
-### Happn "Perfect Date" (July 2025) — Most Relevant New Entrant
-- AI (Mistral) + Foursquare: surfaces 5 hyper-local venue suggestions within a chat
-- Targets first dates explicitly
-- **Weaknesses:** Gated inside Happn — requires a Happn match. No booking, no calendar, no two-person swipe mechanic.
-
-### Hinge / Bumble
-- Both testing AI-powered conversation nudges and profile feedback
-- No venue/activity planning features as of early 2026
-- Hinge CEO departed Dec 2025 to launch "Overtone" (AI dating startup — worth monitoring)
-
-### Fever
-- Best-in-class for experience/event discovery and ticketing (immersive events, candlelight concerts, rooftop screenings)
-- Acquired DICE and Atom Tickets (2025)
-- **Not a planning tool** — no coordination, no personalization for first dates
-
-### Google Maps (Ask Maps, March 2026)
-- New AI conversational search: "romantic dinner near me under $80"
-- Growing rapidly as a raw venue-finding engine
-- **Not a date tool** — no two-person flow, no coordination, no booking integration
-
-### ChatGPT / Claude / Gemini
-- Can generate date itineraries conversationally when prompted
-- No real-time venue availability, no booking, no two-person experience
-- Require user to know to ask — not a product with a defined flow
+| Threat | What they're doing | Why they're not Dateflow |
+|--------|-------------------|------------------------|
+| **Happn "Perfect Date"** (2025) | AI + Foursquare: 5 venue suggestions in chat | Locked inside Happn. No booking, no calendar, no two-person swipe. |
+| **Hinge / Bumble** | AI conversation nudges, profile feedback | No venue or planning features as of 2026 |
+| **Fever** | Best-in-class event discovery and ticketing | Not a planning tool — no coordination for first dates |
+| **Google Maps "Ask Maps"** (2026) | AI conversational search for venues | No two-person flow, no coordination |
+| **ChatGPT / Claude / Gemini** | Can generate date itineraries | No real-time availability, no booking, no two-person experience |
 
 ---
 
@@ -82,7 +64,16 @@ Every major player owns phase 1 or phase 3. Nobody owns phase 2.
 
 ## Dateflow's Defensible Position
 
-1. **Standalone tool** — not locked inside a dating app. Works for anyone planning any early-stage date.
-2. **True two-person flow** — the only experience designed from the ground up for two people making a decision together, without requiring either to commit first.
-3. **First-date context baked in** — filters and suggestions tuned for public spaces, conversation-friendly environments, appropriate budget, and low-pressure settings.
-4. **Zero-friction invite** — Person B receives a link, no install, no account. The viral loop is built into the core mechanic.
+```mermaid
+flowchart TD
+    A["🔓 Standalone tool\nNot locked inside any app"] --> E["Dateflow's\nDefensible Moat"]
+    B["👥 True two-person flow\nBoth decide together, privately"] --> E
+    C["🛡 First-date context\nSafety, budget, conversation-friendly"] --> E
+    D["🔗 Zero-friction invite\nNo install, no account for Person B"] --> E
+
+    style E fill:#9B59B6,stroke:#8E44AD,color:#fff
+    style A fill:#3498DB,stroke:#2980B9,color:#fff
+    style B fill:#2ECC71,stroke:#27AE60,color:#fff
+    style C fill:#E74C3C,stroke:#C0392B,color:#fff
+    style D fill:#F39C12,stroke:#D68910,color:#fff
+```

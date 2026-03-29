@@ -1,60 +1,77 @@
 # Dateflow — Business Team Tooling
 
-## Primary Tool: GitHub Projects (Kanban)
-
-The marketing and business team operates from a GitHub Projects board using the **Kanban** preset.
-
-### Why GitHub Projects
-
-- Issues live in the same repo as the product — no sync needed between tools
-- Non-technical team members interact with a clean drag-and-drop board, never touching code
-- Free, no additional subscriptions
-- Custom fields (Priority, Owner, Due Date) can be added as needed
-- Multiple views (Board, Table, Roadmap) can be added to the same project later
-
-### Board Structure
-
-**Columns:**
-
-| Column | What goes here |
-|--------|---------------|
-| **Backlog** | All tasks not yet scheduled for work |
-| **This Week** | Tasks prioritized for the current week |
-| **In Progress** | Actively being worked on by a team member |
-| **Waiting On** | Blocked — waiting on external response, approval, or dependency |
-| **Done** | Completed tasks (archive periodically to keep the board clean) |
-
-### Labels for Business Issues
-
-Apply these labels to issues in the GitHub repo so they can be filtered on the board:
-
-| Label | Use for |
-|-------|---------|
-| `marketing` | Content, community engagement, press outreach |
-| `sales` | B2B outreach, partnership conversations, pitch materials |
-| `partnerships` | Dating app partner research and relationship building |
-| `content` | Social media posts, creator outreach, press pitches |
-| `analytics` | Metrics setup, dashboard creation, data analysis |
-| `research` | Competitive intelligence, market research, user interviews |
-
-### How the Team Uses It
-
-1. **All business tasks are created as GitHub Issues** with the appropriate label
-2. **The board URL is bookmarked** by every team member — this is their daily workspace
-3. **Weekly standup:** review the board, move cards, identify blockers in "Waiting On"
-4. **Each card should have:** a clear description, an owner (assigned), and a due date if time-sensitive
+> **TL;DR:** The business team uses a GitHub Projects kanban board. Issues tagged `biz` auto-route to the business board. Dev issues tagged `dev` go to the dev board. Pick one tool. One source of truth.
 
 ---
 
-## If GitHub Projects Feels Too Dev-Oriented
+## Board Setup
 
-If the team pushes back, these are the alternatives in order of recommendation:
+```mermaid
+flowchart LR
+    A["Backlog"] --> B["This Week"]
+    B --> C["In Progress"]
+    C --> D["Waiting On"]
+    D --> E["Done"]
 
-| Tool | Best For | Why | Cost |
-|------|----------|-----|------|
-| **Notion** | All-in-one wiki + tasks + docs | Business people already know it. Kanban, calendar, and docs in one place. Embed GitHub issue links to stay connected. | Free for small teams |
-| **Linear** | Fast-moving startup teams | Clean, opinionated, fast. Has GitHub sync so issues mirror between both systems. | Free for small teams |
-| **Trello** | Pure kanban simplicity | Lowest learning curve — productive in 5 minutes. | Free tier is generous |
-| **Asana** | Marketing teams specifically | Built for non-technical project management. Templates for content calendars and campaigns. | Free up to 10 users |
+    style A fill:#BDC3C7,stroke:#95A5A6,color:#333
+    style B fill:#3498DB,stroke:#2980B9,color:#fff
+    style C fill:#F39C12,stroke:#D68910,color:#fff
+    style D fill:#E74C3C,stroke:#C0392B,color:#fff
+    style E fill:#2ECC71,stroke:#27AE60,color:#fff
+```
 
-**Rule:** Pick one tool and commit. The worst outcome is half the team using Notion and the other half using GitHub Issues. One source of truth, enforced from day one.
+| Column | What goes here |
+|--------|---------------|
+| **Backlog** | All tasks not yet scheduled |
+| **This Week** | Prioritized for current week |
+| **In Progress** | Actively being worked on |
+| **Waiting On** | Blocked — waiting on response or dependency |
+| **Done** | Completed (archive periodically) |
+
+---
+
+## Label System
+
+```mermaid
+flowchart TD
+    I["New Issue Created"] --> L{"Which label?"}
+    L -->|"biz"| B["📋 Business Board"]
+    L -->|"dev"| D["💻 Dev Board"]
+    L -->|"none"| N["❌ Neither board\n(add a label!)"]
+
+    style I fill:#3498DB,stroke:#2980B9,color:#fff
+    style B fill:#9B59B6,stroke:#8E44AD,color:#fff
+    style D fill:#2ECC71,stroke:#27AE60,color:#fff
+    style N fill:#E74C3C,stroke:#C0392B,color:#fff
+```
+
+**Business sub-labels:**
+
+| Label | Use for |
+|-------|---------|
+| `research` | Competitive analysis, market research, user interviews |
+| `content` | Social media, creator outreach, press pitches, copy |
+| `sales` | B2B outreach, partnerships, pitch materials |
+| `analytics` | Metrics setup, dashboards, data analysis |
+
+---
+
+## How the Team Uses It
+
+1. **All business tasks** = GitHub Issues with `biz` label
+2. **Board URL is bookmarked** — this is the daily workspace
+3. **Weekly standup:** review board, move cards, identify blockers
+4. **Each card needs:** clear description, assigned owner, due date if time-sensitive
+
+---
+
+## If GitHub Projects Doesn't Work
+
+| Tool | Best for | Cost |
+|------|----------|------|
+| **Notion** | All-in-one wiki + tasks. Business people already know it. | Free (small teams) |
+| **Linear** | Fast startup teams. Has GitHub sync. | Free (small teams) |
+| **Trello** | Pure kanban. Lowest learning curve. | Free |
+| **Asana** | Marketing teams. Templates for campaigns. | Free (up to 10) |
+
+> **Rule:** Pick one tool and commit. Half on Notion, half on GitHub = chaos.
