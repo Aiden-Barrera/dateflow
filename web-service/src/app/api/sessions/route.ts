@@ -22,6 +22,13 @@ export async function POST(request: Request) {
   }
 
   // 2. Validate required field
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json(
+      { error: "Request body must be a JSON object" },
+      { status: 400 }
+    );
+  }
+
   const { creatorDisplayName } = body as { creatorDisplayName?: string };
 
   if (!creatorDisplayName || typeof creatorDisplayName !== "string") {
@@ -47,6 +54,16 @@ export async function POST(request: Request) {
       { status: 201 }
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    const isValidationError =
+      message.includes("Display name") ||
+      message.includes("characters") ||
+      message.includes("HTML");
+
+    if (isValidationError) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     console.error("[POST /api/sessions] Failed:", err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

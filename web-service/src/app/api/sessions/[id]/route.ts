@@ -28,7 +28,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       );
     }
 
-    if (session.status === "expired" || isExpired(session)) {
+    const isTerminal = session.status === "matched" || session.status === "expired";
+    if (session.status === "expired" || (!isTerminal && isExpired(session))) {
       return NextResponse.json(
         { error: "This session has expired" },
         { status: 410 }

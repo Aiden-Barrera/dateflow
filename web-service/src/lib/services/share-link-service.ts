@@ -2,10 +2,11 @@ import type { ShareLink } from "../types/session";
 import { validateSessionForJoin } from "./session-service";
 
 /**
- * Constructs a ShareLink from a session ID and the app's base URL.
+ * Constructs a ShareLink from a session ID and the app's base URL
+ * (read from process.env.NEXT_PUBLIC_APP_URL).
  *
  * This is a pure function — no database call, no async. The URL format
- * is: {APP_URL}/plan/{sessionId}, which maps to the Next.js page where
+ * is: {NEXT_PUBLIC_APP_URL}/plan/{sessionId}, which maps to the Next.js page where
  * Person B lands and enters their preferences.
  */
 export function generateShareLink(
