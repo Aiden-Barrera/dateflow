@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null = null;
 
-export function createSupabaseClient(): SupabaseClient {
+export function getSupabaseClient(): SupabaseClient {
   if (client) {
     return client;
   }

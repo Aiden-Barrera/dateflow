@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 // We need to test the module fresh each time because it uses a singleton.
 // vi.resetModules() clears the module cache so each test gets a clean import.
 
-describe("createSupabaseClient", () => {
+describe("getSupabaseClient", () => {
   beforeEach(() => {
     // Reset the module cache so the singleton doesn't carry over between tests
     vi.resetModules();
@@ -14,16 +14,16 @@ describe("createSupabaseClient", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-key");
 
-    const { createSupabaseClient } = await import("../supabase");
-    expect(() => createSupabaseClient()).toThrow("NEXT_PUBLIC_SUPABASE_URL");
+    const { getSupabaseClient } = await import("../supabase");
+    expect(() => getSupabaseClient()).toThrow("NEXT_PUBLIC_SUPABASE_URL");
   });
 
   it("throws an error when NEXT_PUBLIC_SUPABASE_ANON_KEY is missing", async () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
 
-    const { createSupabaseClient } = await import("../supabase");
-    expect(() => createSupabaseClient()).toThrow(
+    const { getSupabaseClient } = await import("../supabase");
+    expect(() => getSupabaseClient()).toThrow(
       "NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
   });
@@ -32,8 +32,8 @@ describe("createSupabaseClient", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
 
-    const { createSupabaseClient } = await import("../supabase");
-    const client = createSupabaseClient();
+    const { getSupabaseClient } = await import("../supabase");
+    const client = getSupabaseClient();
 
     // The Supabase client exposes a .from() method for querying tables
     expect(client).toBeDefined();
@@ -44,9 +44,9 @@ describe("createSupabaseClient", () => {
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
 
-    const { createSupabaseClient } = await import("../supabase");
-    const first = createSupabaseClient();
-    const second = createSupabaseClient();
+    const { getSupabaseClient } = await import("../supabase");
+    const first = getSupabaseClient();
+    const second = getSupabaseClient();
 
     // Same reference, not just equal — proof it's the exact same object
     expect(first).toBe(second);
