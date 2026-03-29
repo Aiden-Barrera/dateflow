@@ -1,155 +1,127 @@
 # Dateflow — Strategic Planning
 
-## 1. Should Dateflow Serve Established Couples?
+> **TL;DR:** Launch focused exclusively on first dates (not couples). Market to people in the specific moment after they match. The share link IS the growth engine. Long-term play is B2B — selling the planning layer to dating apps as embeddable infrastructure.
 
-**Short answer: not at launch, but don't close the door.**
+---
 
-The two-person swipe mechanic works just as well for a couple deciding on date night as it does for two people meeting for the first time. The underlying engine is agnostic. But marketing to both audiences simultaneously at launch would be a mistake for three reasons:
+## 1. First Dates Only at Launch
 
-**1. The UX needs diverge.**
-A first date has constraints that couple date night does not:
-- Public, well-lit, easy to exit (safety)
-- Not too intimate too fast (a candlelit four-course dinner on date one is pressure, not romance)
-- Accessible without depending on the other person for transport
-- Affordable at a stranger's budget, not just yours
-- Conversation-friendly (you actually need to talk to this person)
+The two-person swipe mechanic works for couples too, but targeting both audiences at launch is a mistake.
 
-These filters would feel patronizing to a couple of two years. If you design for first dates, the product is subtly wrong for couples — and vice versa. You cannot fully optimize for both with one UX.
+| Reason | First-daters | Established couples |
+|--------|-------------|-------------------|
+| **UX needs** | Public, well-lit, easy exit, affordable, conversation-friendly | New experiences, romantic ambiance, higher budget |
+| **Brand clarity** | "First date planner" — sharp, memorable, shareable | "Date planner for everyone" — vague, forgettable |
+| **Viral loop** | Person B becomes Person A next time they have a match | Couples already have coordination mechanisms |
 
-**2. Brand positioning becomes ambiguous.**
-"First date planner" is a sharp, memorable, shareable concept. People will immediately understand it, feel the pain point, and know who to send it to. "Date planner for first dates and couples" is longer and blunter. Precision in positioning is how you get word-of-mouth traction with no marketing budget.
-
-**3. The viral loop is stronger for first-daters.**
-Person B — who receives the share link cold, with no prior knowledge of Dateflow — joins the session, has a smooth experience, and instinctively thinks "I'd use this next time I have a date." That's the referral flywheel. Couples already have coordination mechanisms (they live together, they know each other's preferences, they have a shared Google Calendar). The pain point is less acute and the viral mechanic is weaker.
-
-**What to do instead:**
-- MVP and Phase 2: first-date focused exclusively. Every filter, prompt, and copy line is tuned for the first-date context.
-- Phase 3 consideration: once you have product-market fit with first-daters, launch a distinct "Date Night" mode — different UX entry point, different filter defaults (e.g., new experiences over familiar places, higher budget ceiling, romantic ambiance over conversation-friendly), same underlying engine.
-- Never turn couples away if they organically find and use the product. Just don't split your attention building for them before you've earned your first-date user base.
+> **Decision:** MVP and Phase 2 = first dates only. Phase 3 = consider a "Date Night" mode with different defaults. Never turn couples away — just don't build for them yet.
 
 ---
 
 ## 2. Why This Service Is Genuinely Necessary
 
-This goes deeper than "the market is fragmented."
+### The Planning Tax
 
-### The Planning Tax on Dating
+A significant fraction of matches that express mutual interest in meeting **never actually meet.** It's not a motivation problem — both wanted to meet. It's a coordination failure.
 
-A significant fraction of matches that express mutual interest in meeting never actually meet. The cited reasons are almost always some version of: the conversation petered out, we could never figure out what to do or when, one person suggested something and it never happened.
+> Dating apps have spent billions optimizing the match. Nobody has spent meaningfully on what happens next.
 
-This isn't a motivation problem. Both people wanted to meet. It's a coordination failure — and the planning layer is where it happens. Dating apps have spent billions optimizing the match. Nobody has spent meaningfully on solving what happens next.
+### The Vulnerability Problem
 
-### The Vulnerability Asymmetry
+When you suggest "want to try that ramen place on 5th?" you're revealing your price range, your taste, your neighborhood, and your read on the other person. If they don't like it, you've been subtly rejected — not for who you are, but for your suggestion.
 
-Suggesting a venue is a small act of exposure you don't notice until you're the one doing it. When you say "want to try that new ramen place on 5th?" you're revealing:
-- What you think is appropriate for a first date (casual? fancy?)
-- Your price range
-- Your taste in food
-- Your neighborhood
-- Your read on the other person
+**Result:** Both people say "I'm down for whatever." Nobody picks. The date doesn't happen.
 
-If they hate ramen, or think it's too casual, or can't afford it, you've been subtly rejected — not for who you are, but for the suggestion. So most people hedge: "I'm down for whatever." Both people say it. Nobody picks anything. The date doesn't happen.
+**Dateflow's fix:** Neither person suggests anything. Both react to a neutral third-party list privately. Choosing becomes low-stakes until a match reveals mutual agreement.
 
-Dateflow removes this asymmetry entirely. Neither person has to suggest anything. Both independently react to a neutral third-party list. The act of choosing becomes low-stakes and private until a match reveals mutual agreement. This is psychologically very different from being the one who picked.
+### Women's Safety
 
-### The Paradox of Choice in a New Dynamic
+Women meeting strangers from dating apps need venues that are:
 
-When you know someone well, the question "what should we do?" is easy to answer — you have years of shared context to filter from. On a first date, the search space is enormous and your filtering information is near zero. You don't know if they're vegetarian, hate loud bars, think bowling is corny, or have a work early the next morning. The infinite possibility space is paralyzing precisely because you lack the context to navigate it.
+| Safety Factor | Why it matters |
+|--------------|---------------|
+| Public and well-lit | Not a private rooftop with one exit |
+| Independently accessible | Not reliant on the other person for a ride |
+| Not too intimate | A loud bar is actually safer than a quiet restaurant on date one |
+| Easy to leave | No valet-only, no ticketed entry for casual drinks |
 
-Dateflow solves this by collecting the minimum necessary inputs (budget, category preferences, location, rough availability) and collapsing the possibility space to a manageable shortlist. It's not a recommendation engine in the abstract sense — it's a decision-narrowing tool that works with two people's stated constraints simultaneously.
+> No existing tool surfaces these considerations. **"First-date safe" as a default filter** is both the right thing to build and Dateflow's strongest differentiator.
 
-### Women's Safety: The Underrated Dimension
+### Dating Apps Won't Build This
 
-This is the most underserved concern in date planning and the one that matters most to the largest portion of the target audience.
+```mermaid
+flowchart TD
+    A["Dating apps make money\nfrom subscriptions"] --> B["Revenue maximized when\nusers are swiping"]
+    B --> C["Users who find a partner\nquickly churn"]
+    C --> D["Perverse incentive:\nDON'T help people\nget to actual dates"]
+    D --> E["Planning layer stays\ncompletely unbuilt"]
+    E --> F["💡 That's Dateflow's\nopportunity"]
 
-Women who meet someone through a dating app are meeting a stranger. The venue matters for safety:
-- Public and well-lit (not a private rooftop with one exit)
-- Accessible independently (not reliant on the other person for a ride home)
-- Not too intimate too fast (a loud sports bar is actually safer than a quiet candlelit restaurant on date one)
-- Easy to leave without explanation if something feels off
-
-No existing tool surfaces these considerations. Dateflow can make "first-date safe" a default filter that users (especially women) can trust. This is not just a feature — it's a values statement. A dating product that explicitly protects women's safety has a strong differentiated story that resonates with press, with female users, and with any eventual dating app partnership discussions.
-
-### Dating Apps Are Structurally Misaligned
-
-Dating apps make money from subscriptions. Their revenue is maximized when users are actively swiping and have not yet gone on a date. There is a well-documented tension in the industry: a user who finds a partner quickly churns. This creates a perverse structural incentive to not invest too heavily in the planning layer — the better the path to actual dates, the faster users leave.
-
-But frustrated users who can never get to a real date also churn. The apps are caught between these two failure modes and have largely resolved it by optimizing the match experience obsessively while leaving the planning gap completely unaddressed. That gap is Dateflow's opportunity.
-
-### The Handoff Nobody Owns
-
-The dating-to-date pipeline has three phases:
-1. Match (owned by dating apps)
-2. Plan (unowned)
-3. Execute / book (partially owned by OpenTable, Fever, Google Maps)
-
-Phase 2 is a complete vacuum. The user is handed off from the dating app with nothing — no tools, no coordination, no structure. They fall back to texting back and forth, which is slow, awkward, and frequently leads to nothing. Dateflow owns phase 2 entirely and creates the bridge to phase 3.
+    style A fill:#3498DB,stroke:#2980B9,color:#fff
+    style D fill:#E74C3C,stroke:#C0392B,color:#fff
+    style F fill:#2ECC71,stroke:#27AE60,color:#fff
+```
 
 ---
 
-## 3. Marketing — Deep Strategy
+## 3. Marketing Channels
 
-### The Marketing Moment Is Hyper-Specific
+### The Trigger Moment
 
-Dateflow should not market to "people who want to go on dates generally." It should market to a person in a specific moment: they just matched with someone, exchanged numbers, or had the "we should hang out" conversation — and now they're staring at their phone wondering what to say next.
+Don't market to "people who want to go on dates." Market to a person in **this specific moment:** they just matched, exchanged numbers, and are staring at their phone wondering what to say next.
 
-That moment is the trigger. All marketing should speak to it directly.
+> **Tagline candidates:** "Stop texting. Start planning." · "You matched. Now what?" · "The part dating apps forgot."
 
-Tagline candidates:
-- "Stop texting. Start planning."
-- "You matched. Now what?"
-- "Pick a place, without the awkward back-and-forth."
-- "The part dating apps forgot."
+### Channel Overview
 
-### Channel 1: Organic Content (Highest ROI)
+```mermaid
+flowchart TD
+    A["Channel 1\n🎬 Creator Content\nHighest ROI"] --> G["🎯 100 Session Pairs\nfor B2B Proof"]
+    B["Channel 2\n🔗 Share Link = Ad\nBuilt into product"] --> G
+    C["Channel 3\n💬 Reddit / Discord\nCommunity presence"] --> G
+    D["Channel 4\n🏙 City-First\nDepth over breadth"] --> G
+    E["Channel 5\n📰 Press\nSafety angle"] --> G
+    F["Channel 6\n🤝 B2B Partners\nDating app embeds"] --> G
 
-The "where do you want to go?" / "I don't know, where do YOU want to go?" loop is universally recognized. It's been a meme for decades. Dating creators on TikTok, Instagram Reels, and YouTube Shorts have massive, highly targeted audiences of exactly Dateflow's users.
-
-Execution:
-- Identify 15–20 dating/relationship creators with 50K–500K followers (mid-tier has better engagement rates and is far cheaper to seed)
-- Send them early access. No paid deal initially — let them organically discover the utility and make content
-- The product is inherently visual and demonstrable in a 30-second video: "I just sent my match this link and we had plans in 90 seconds"
-- This content format is native to the platforms where the target audience lives
-
-### Channel 2: The Share Link as the Ad
-
-The share link does not live inside a dating app. By the time two people are planning to meet, they have almost always moved to iMessage, WhatsApp, or Instagram DMs. Person A pastes the Dateflow URL into a text conversation. That URL — and the preview it generates — is the product's entire first impression on Person B.
-
-**The link preview is the ad, not the link itself.** A bare URL (`dateflow.app/s/a7f3bc2`) from a near-stranger looks like a phishing link. A rich Open Graph preview that shows Person A's name, a one-line description, and a clean product image looks like a real tool. The OG tags must be built and shipped with the first version of the share link — they are not launch polish.
-
-**Platform reality:** iMessage and WhatsApp render rich previews reliably. Instagram DMs largely suppress external link previews to keep users on-platform. If a significant share of users coordinate via Instagram DMs, the preview won't help there — Person A's accompanying message ("try this for planning our date") becomes the only trust signal. This is a platform risk worth monitoring but not worth blocking the launch over, since iMessage + WhatsApp cover the majority of the target audience.
-
-**Person B's experience IS the growth engine.** If Person B's first 60 seconds are smooth — one clear landing screen, fast preference input, obvious value — they become Person A the next time they have a match. This is the real retention flywheel:
-
-```
-Person B has a seamless setup → sees a great match → goes on a good date
-    → next match leads to the same "we should hang out" moment
-    → Person B, now Person A, remembers Dateflow and sends the next link
+    style A fill:#E74C3C,stroke:#C0392B,color:#fff
+    style B fill:#9B59B6,stroke:#8E44AD,color:#fff
+    style C fill:#3498DB,stroke:#2980B9,color:#fff
+    style D fill:#2ECC71,stroke:#27AE60,color:#fff
+    style E fill:#F39C12,stroke:#D68910,color:#fff
+    style F fill:#1ABC9C,stroke:#16A085,color:#fff
+    style G fill:#FFEAA7,stroke:#DCC480,color:#333
 ```
 
-This loop only fires if Person B completes their preferences. Every percentage point of improvement in Person B's setup completion rate compounds directly into growth. The Person B landing page and preference flow should be treated with the same engineering priority as the core swipe mechanic.
+### Channel Details
 
-Design principle: Person B should never be confused, never need to create an account, and should finish the process feeling like the whole thing was almost magically easy.
+| Channel | Strategy | Key detail |
+|---------|----------|-----------|
+| **Creator content** | Seed 15-20 mid-tier dating creators (50K-500K followers) on TikTok/Reels. No paid deals — let them discover the utility. | The product is demonstrable in 30 seconds: "I sent my match this link and we had plans in 90 seconds" |
+| **Share link as the ad** | Every invite sent IS a marketing impression on Person B. If their experience is magical, they become Person A next time. | The link preview (OG tags) must look trustworthy in iMessage/WhatsApp. Instagram DMs suppress previews — platform risk to monitor. |
+| **Community presence** | Reddit: r/Tinder, r/hingeapp, r/dating_advice, r/datingoverthirty. Don't spam — contribute authentically. | Mention Dateflow only when someone literally describes the planning problem. |
+| **City-first depth** | Launch in one city (Austin or Chicago). Curate top 150-200 venues manually. | "The app everyone in Austin uses" > "an app 10 people in 40 cities use" |
+| **Press** | Lead with the women's safety angle. Secondary: "the feature dating apps won't build." | Targets: Refinery29, The Cut, TechCrunch, Global Dating Insights |
+| **B2B partnerships** | Approach Thursday, The League, Coffee Meets Bagel at launch. | Position: "We built the planning layer so you don't have to." |
 
-### Channel 3: Dating App Communities
+### The Growth Flywheel
 
-Reddit communities (r/Tinder, r/hingeapp, r/dating_advice, r/datingoverthirty) aggregate hundreds of thousands of active daters who are vocal about pain points. The planning problem is a common complaint — "we matched, I asked her out, she said yes, we texted for two weeks going in circles and then she stopped responding" is a recurring story.
+```mermaid
+flowchart TD
+    A["Person B gets a link\nfrom their match"] --> B["Smooth 45-second setup"]
+    B --> C["Sees a great venue match"]
+    C --> D["Goes on a good date"]
+    D --> E["Next match → same\n'we should hang out' moment"]
+    E --> F["Person B remembers Dateflow"]
+    F --> G["Person B becomes Person A\nand sends the next link"]
+    G --> A
 
-Approach: don't spam these communities. Contribute authentically. Answer questions. When someone describes the planning problem, mention Dateflow as something that solved it for you. Let the community try it. The upvotes will do the rest.
+    style A fill:#FF6B6B,stroke:#CC5555,color:#fff
+    style C fill:#4ECDC4,stroke:#3BA89F,color:#fff
+    style D fill:#FFEAA7,stroke:#DCC480,color:#333
+    style G fill:#9B59B6,stroke:#8E44AD,color:#fff
+```
 
-### Channel 4: City-First, Not Country-First
-
-Cobble's failure is instructive. They launched nationally, spread thin, and had mediocre venue quality everywhere. The right approach:
-
-- Pick one city for launch. Criteria: high dating app usage, dense geography (short distances between people), strong food/bar/activity scene, not so large that word-of-mouth is diluted. **Austin or Chicago** fit better than NYC or LA for a first launch.
-- Manually curate the top 150–200 venues in that city. Know which venues are conversation-friendly, which have good lighting, which have easy parking, which are the "right" price point for a first date. This local depth is the product quality moat.
-- Achieve genuine traction in one city before expanding. "The date planning app that everyone in Austin uses" is a more fundable story than "a date planning app used by 10 people in 40 cities."
-
-### Channel 5: Press Angle
-
-The safety angle (Dateflow's default filters for first-date-appropriate venues, particularly for women) is a press-worthy story that differentiates from every competitor. "The date planning app that puts safety first" has a clear editorial angle for tech press, women's lifestyle press (Refinery29, The Cut), and dating vertical press (Global Dating Insights).
-
-Secondary press angle: "The company building the feature dating apps won't" — the structural misalignment argument frames Dateflow as the challenger to a broken incumbent market. This is a narrative journalists know how to write.
+> **This loop only fires if Person B completes their preferences.** Every % improvement in Person B's completion rate compounds directly into growth.
 
 ---
 
@@ -157,98 +129,70 @@ Secondary press angle: "The company building the feature dating apps won't" — 
 
 ### The Core Insight
 
-Dating apps have a feature gap they know about and have repeatedly failed to solve. Happn built "Perfect Date" — a lightweight version that's locked inside their own matching experience and lacks booking or scheduling. Hinge's CEO literally left to start a new company because he saw what was missing. No major app has cracked this.
+Dating apps know this gap exists. They've repeatedly failed to solve it because building a planning layer requires integrations (Google Places, OpenTable, realtime two-person sync) that are adjacent to their core competency. For Dateflow, it IS the core competency.
 
-The reason isn't lack of awareness — it's that building a planning layer requires relationships and integrations that are adjacent to a dating app's core competency (Google Places, OpenTable, Fever, realtime two-person sync). It's not impossible, but it's costly and distracting. For Dateflow, it IS the core competency.
+### How It Works
 
-This creates a genuine B2B opportunity: Dateflow as infrastructure that dating apps embed rather than build.
+```mermaid
+flowchart TD
+    A["Dating App\n(distribution)"] --> B["Dateflow SDK / API\n(planning engine)"]
+    B --> C["User pair\n(matched & want to meet)"]
+    C --> D["Venue / Booking\n(revenue)"]
 
-### The B2B2C Model
-
-```
-Dating App (distribution)
-    ↓
-Dateflow SDK / API (planning engine)
-    ↓
-User pair (two people who matched and want to meet)
-    ↓
-Venue / Booking (revenue)
+    style A fill:#3498DB,stroke:#2980B9,color:#fff
+    style B fill:#9B59B6,stroke:#8E44AD,color:#fff
+    style C fill:#2ECC71,stroke:#27AE60,color:#fff
+    style D fill:#F39C12,stroke:#D68910,color:#fff
 ```
 
-The dating app provides the match context (two users who want to meet). Dateflow provides the planning layer. Revenue flows from bookings back through Dateflow, with a portion shared back to the dating app as distribution compensation.
+| For the dating app | For Dateflow |
+|-------------------|-------------|
+| Feature their users want, no engineering cost | Massive distribution, no marketing spend |
+| Differentiator: "plan your date right from the app" | Credibility from established brands |
+| Revenue share incentivizes promotion | Booking volume at scale |
 
-From the dating app's perspective:
-- Feature their users want, without engineering cost
-- Differentiator in a crowded market ("plan your first date right from the app")
-- Revenue share creates an incentive to promote Dateflow features
+### Who to Approach (and When)
 
-From Dateflow's perspective:
-- Massive distribution without consumer marketing spend
-- Credibility from association with established brands
-- Booking volume at scale
+| Tier | Targets | When | Why them |
+|------|---------|------|----------|
+| **Tier 1** | Thursday, The League, Coffee Meets Bagel | At launch | Small teams, fast decisions, philosophically aligned |
+| **Tier 2** | Bumble, Hinge, Hily, Badoo | Phase 2 (after booking data) | Slower decisions, need proof first |
+| **Avoid** | Tinder (Match Group) | Never first | 6-month procurement, will reverse-engineer it |
 
-### Who to Approach First
+### Integration Modes
 
-**Do not approach Hinge, Bumble, or Tinder first.** They move slowly, have large engineering teams who will just build it themselves once they see you, and their legal/procurement processes will delay any deal for months.
+```mermaid
+flowchart LR
+    A["Mode 1\n🔗 Link Handoff\n(lightest)"] --> B["Mode 2\n📱 Embedded Webview\n(mid)"]
+    B --> C["Mode 3\n⚙️ Full API\n(white-label)"]
 
-**Tier 1 targets (approach at launch):**
-- **Thursday** — built around the premise that dating should lead to IRL meetings fast (one day a week). Dateflow's thesis is identical. Strong philosophical alignment. Small team, fast decisions.
-- **The League** — premium positioning, users who plan actual dates (not just swipe endlessly). Higher average budget per session = higher booking value.
-- **Coffee Meets Bagel** — focused on quality over quantity, user base actively wants to meet. Less swipe-gamification, more date-oriented.
-- **Hily, Badoo, or other mid-tier apps** — less brand cachet but faster decisions and genuine need for feature differentiation
-
-**Tier 2 targets (approach at Phase 2, after you have booking data to show):**
-- Bumble — has "Suggest a Date" feature but it's just a nudge, not a planning tool
-- Hinge — most likely to be interested once Overtone (new AI dating app from ex-CEO) launches and competes with them
-
-### Technical Implementation of the Embed
-
-Three integration modes, in order of integration depth:
-
-**Mode 1: Link handoff (lightest)**
-Dating app sends a deep link: `dateflow.app/start?session_token=xxx` with preference data pre-filled from the match's profiles. User opens Dateflow as a separate web experience.
-
-**Mode 2: Embedded webview**
-Dating app renders Dateflow's planning UI inside a native webview. The user never leaves the dating app. Dateflow returns a result via a callback or webhook.
-
-**Mode 3: API-only / white-label**
-Dating app calls Dateflow's API, gets back venue suggestions and match results, renders the UI natively in their own design system. Dateflow is invisible; all credit goes to the dating app.
-
-```
-// Mode 3 API contract (simplified)
-POST /api/v1/sessions
-{
-  "person_a": { "location": {...}, "preferences": {...} },
-  "person_b": { "location": {...}, "preferences": {...} },
-  "context": "first_date",
-  "partner_id": "thursday_app"
-}
-→ { "session_id": "...", "venues": [...], "match_webhook_url": "..." }
+    style A fill:#2ECC71,stroke:#27AE60,color:#fff
+    style B fill:#F39C12,stroke:#D68910,color:#fff
+    style C fill:#9B59B6,stroke:#8E44AD,color:#fff
 ```
 
-### The Risk and the Upside
+| Mode | How it works | Best for |
+|------|-------------|----------|
+| **Link Handoff** | Dating app sends deep link to Dateflow. User opens as separate web experience. | Quick pilot, lowest engineering effort |
+| **Embedded Webview** | Dateflow UI renders inside the dating app's native webview. | Realistic first integration for mid-tier partner |
+| **Full API / White-Label** | Dating app calls API, renders UI in their own design system. Dateflow is invisible. | Tier 2 partners who care about brand consistency |
 
-**Risk:** A dating app embeds Dateflow, sees it working well, and rebuilds it in-house or acquires the feature. This is the standard "build-to-acquire" risk for infrastructure startups.
+### Risk and Upside
 
-**Managed by:**
-1. Moving fast — if Dateflow is 18 months ahead on venue depth, AI quality, and booking integrations, rebuilding from scratch is expensive
-2. Exclusive partnerships with smaller apps early establish switching costs
-3. If a big app acquires Dateflow, that's a successful exit
-
-**Upside:** If one mid-size dating app embeds Dateflow and promotes it to their user base, Dateflow's session volume could 10x overnight. B2B distribution is asymmetric — one deal can do what years of consumer marketing cannot.
+> **Risk:** A dating app embeds Dateflow, sees it working, and rebuilds in-house.
+>
+> **Managed by:** Moving fast (18 months ahead on venue depth + AI quality), exclusive early partnerships, and compounding session data moat. If a big app acquires Dateflow — that's a successful exit.
+>
+> **Upside:** One mid-size dating app embedding Dateflow could 10x session volume overnight. One B2B deal > years of consumer marketing.
 
 ---
 
-## 5. Open Questions to Resolve Before Building
+## 5. Open Questions (Before Phase 2)
 
-These are unresolved strategic decisions that should be made before Phase 2:
-
-1. **Account strategy:** Sessions require no account (MVP). At what point do you introduce accounts, and what value do they unlock? (Session history, preference memory, booking management) — answer: introduce at the point where users are clearly returning, not at launch.
-
-2. **Pricing strategy for B2B:** Flat monthly licensing fee, per-session fee, or pure revenue share? Per-session is most aligned with dating app incentives (they pay only when users are actually active).
-
-3. **City expansion trigger:** What metric signals you've achieved enough depth in City 1 to expand to City 2? Suggested trigger: 500 completed session pairs with >60% match rate, and at least 3 organic press mentions in local media.
-
-4. **Data ownership in B2B:** If a dating app uses Dateflow's API, who owns the session and preference data? This needs to be in the API contract explicitly. Dateflow should retain anonymized aggregate data (for recommendation improvement) but not identify users to other partners.
-
-5. **Couples mode timing:** The mechanism works. The question is when launching "Date Night" mode cannibalizes or reinforces the first-date brand. Revisit at Phase 3, not before.
+| Question | Current thinking |
+|----------|-----------------|
+| **When to introduce accounts?** | When users are clearly returning, not at launch |
+| **B2B pricing model?** | Per-session fee — partners pay only when users are active |
+| **City expansion trigger?** | 500 session pairs with >60% match rate + 3 organic press mentions |
+| **Data ownership in B2B?** | Dateflow retains anonymized aggregate data; per-user data owned by dating app |
+| **Couples mode timing?** | Revisit at Phase 3, not before |
