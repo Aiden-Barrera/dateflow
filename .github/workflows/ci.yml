@@ -7,9 +7,12 @@ on:
     branches: [main]
 
 jobs:
-  ci:
-    name: Lint, Test & Build
+  web-service:
+    name: Web Service
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-service
     steps:
       - uses: actions/checkout@v4
 
