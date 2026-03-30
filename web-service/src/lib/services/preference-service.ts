@@ -42,11 +42,12 @@ export async function submitPreference(
   const allPrefs = await getPreferences(sessionId);
 
   if (allPrefs.length >= 2) {
-    // 3. Transition session to both_ready
+    // 3. Transition session to both_ready — only from pending_b
     const { error: updateError } = await supabase
       .from("sessions")
       .update({ status: "both_ready" })
-      .eq("id", sessionId);
+      .eq("id", sessionId)
+      .eq("status", "pending_b");
 
     if (updateError) {
       throw new Error(updateError.message);
@@ -88,9 +89,12 @@ export async function getBothPreferences(
 ): Promise<[Preference, Preference]> {
   const preferences = await getPreferences(sessionId);
 
-  if (preferences.length < 2) {
+  const prefA = preferences.find((p) => p.role === "a");
+  const prefB = preferences.find((p) => p.role === "b");
+
+  if (!prefA || !prefB) {
     throw new Error("Both preferences are required");
   }
 
-  return [preferences[0], preferences[1]];
+  return [prefA, prefB];
 }

@@ -284,6 +284,18 @@ describe("POST /api/sessions/[id]/preferences", () => {
     expect(response.status).toBe(410);
   });
 
+  // --- Status check ---
+
+  it("returns 409 when session is not in pending_b status", async () => {
+    mockGetSession.mockResolvedValue({ ...fakeSession, status: "both_ready" });
+
+    const response = await POST(makePostRequest(validBody), makeParams());
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toContain("not accepting preferences");
+  });
+
   // --- Duplicate check ---
 
   it("returns 409 when preference already exists for that role", async () => {
@@ -296,6 +308,20 @@ describe("POST /api/sessions/[id]/preferences", () => {
 
     expect(response.status).toBe(409);
     expect(body.error).toBeDefined();
+  });
+
+  // --- Race condition: DB unique constraint → 409 ---
+
+  it("returns 409 when DB throws unique constraint violation", async () => {
+    mockSubmitPreference.mockRejectedValue(
+      new Error("duplicate key value violates unique constraint")
+    );
+
+    const response = await POST(makePostRequest(validBody), makeParams());
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toContain("already submitted");
   });
 
   // --- Unexpected errors ---

@@ -147,7 +147,15 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // 5. Check for duplicate preference
+    // 5. Check session is accepting preferences
+    if (session.status !== "pending_b") {
+      return NextResponse.json(
+        { error: "This session is not accepting preferences" },
+        { status: 409 }
+      );
+    }
+
+    // 6. Check for duplicate preference
     const existing = await getPreferences(id);
     const alreadySubmitted = existing.some((p) => p.role === role);
 
@@ -158,7 +166,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // 6. Submit preference (and trigger transition if both ready)
+    // 7. Submit preference (and trigger transition if both ready)
     const preference = await submitPreference(id, {
       role,
       location,
@@ -171,6 +179,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       { status: 201 }
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+    const isUniqueViolation = message.includes("unique") || message.includes("duplicate");
+
+    if (isUniqueViolation) {
+      return NextResponse.json(
+        { error: "Preference already submitted for this role" },
+        { status: 409 }
+      );
+    }
+
     console.error(`[POST /api/sessions/${id}/preferences] Failed:`, err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

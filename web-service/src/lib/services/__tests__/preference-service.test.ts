@@ -27,9 +27,11 @@ const mockInsert = vi.fn(() => ({ select: mockInsertSelect }));
 const mockSelectEq = vi.fn();
 const mockQuerySelect = vi.fn(() => ({ eq: mockSelectEq }));
 
-// UPDATE chain: from("sessions").update().eq()
-const mockUpdateEq = vi.fn();
-const mockUpdate = vi.fn(() => ({ eq: mockUpdateEq }));
+// UPDATE chain: from("sessions").update().eq("id", ...).eq("status", ...)
+// Second .eq() is the terminal call that returns { data, error }
+const mockUpdateStatusEq = vi.fn();
+const mockUpdateIdEq = vi.fn(() => ({ eq: mockUpdateStatusEq }));
+const mockUpdate = vi.fn(() => ({ eq: mockUpdateIdEq }));
 
 // from() routes to the right chain based on table name
 const mockFrom = vi.fn((table: string) => {
@@ -130,7 +132,7 @@ describe("submitPreference", () => {
     // Person B submits — now both rows exist
     mockInsertSingle.mockResolvedValue({ data: fakeRowB, error: null });
     mockSelectEq.mockResolvedValue({ data: [fakeRow, fakeRowB], error: null });
-    mockUpdateEq.mockResolvedValue({ data: null, error: null });
+    mockUpdateStatusEq.mockResolvedValue({ data: null, error: null });
 
     await submitPreference("session-uuid-5678", {
       ...fakeInput,
@@ -141,10 +143,11 @@ describe("submitPreference", () => {
     expect(mockFrom).toHaveBeenCalledWith("preferences");
     expect(mockSelectEq).toHaveBeenCalledWith("session_id", "session-uuid-5678");
 
-    // Verify it updated the session status
+    // Verify it updated the session status — only from pending_b
     expect(mockFrom).toHaveBeenCalledWith("sessions");
     expect(mockUpdate).toHaveBeenCalledWith({ status: "both_ready" });
-    expect(mockUpdateEq).toHaveBeenCalledWith("id", "session-uuid-5678");
+    expect(mockUpdateIdEq).toHaveBeenCalledWith("id", "session-uuid-5678");
+    expect(mockUpdateStatusEq).toHaveBeenCalledWith("status", "pending_b");
   });
 
   it("does NOT transition when only one preference exists", async () => {
@@ -161,7 +164,7 @@ describe("submitPreference", () => {
   it("returns the preference even when transition happens", async () => {
     mockInsertSingle.mockResolvedValue({ data: fakeRowB, error: null });
     mockSelectEq.mockResolvedValue({ data: [fakeRow, fakeRowB], error: null });
-    mockUpdateEq.mockResolvedValue({ data: null, error: null });
+    mockUpdateStatusEq.mockResolvedValue({ data: null, error: null });
 
     const result = await submitPreference("session-uuid-5678", {
       ...fakeInput,
