@@ -88,34 +88,3 @@ export function toPreference(row: PreferenceRow): Preference {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Serialization — for API responses
-// ---------------------------------------------------------------------------
-
-/**
- * JSON-safe version of Preference — createdAt becomes an ISO string.
- */
-export type SerializedPreference = {
-  readonly id: string;
-  readonly sessionId: string;
-  readonly role: Role;
-  readonly location: Location;
-  readonly budget: BudgetLevel;
-  readonly categories: readonly Category[];
-  readonly createdAt: string;
-};
-
-/**
- * Converts a Preference (with Date) into a JSON-safe format (with ISO string).
- */
-export function serializePreference(pref: Preference): SerializedPreference {
-  return {
-    id: pref.id,
-    sessionId: pref.sessionId,
-    role: pref.role,
-    location: pref.location,
-    budget: pref.budget,
-    categories: pref.categories,
-    createdAt: pref.createdAt.toISOString(),
-  };
-}

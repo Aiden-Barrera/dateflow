@@ -10,7 +10,7 @@ CREATE TABLE preferences (
   role        text        NOT NULL CHECK (role IN ('a', 'b')),
   location    jsonb       NOT NULL,
   budget      text        NOT NULL CHECK (budget IN ('BUDGET', 'MODERATE', 'UPSCALE')),
-  categories  text[]      NOT NULL CHECK (array_length(categories, 1) > 0),
+  categories  text[]      NOT NULL CHECK (cardinality(categories) > 0),
   created_at  timestamptz NOT NULL DEFAULT now(),
 
   -- One preference per person per session. If Person A already submitted,
@@ -19,6 +19,6 @@ CREATE TABLE preferences (
   UNIQUE (session_id, role)
 );
 
--- Enable RLS — same pattern as sessions. The service role key bypasses
--- this, so API routes work fine. Direct anon access is blocked.
+-- Enable RLS on preferences. The service role key bypasses this, so
+-- API routes work fine while direct anon access is blocked.
 ALTER TABLE preferences ENABLE ROW LEVEL SECURITY;

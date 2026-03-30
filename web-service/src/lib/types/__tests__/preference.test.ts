@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { toPreference, serializePreference } from "../preference";
+import { toPreference } from "../preference";
+import { serializePreference } from "../../services/preference-serializer";
 import type { PreferenceRow } from "../preference";
 import type { Preference } from "../preference";
 
