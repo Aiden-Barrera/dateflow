@@ -1,0 +1,90 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { getSession } from "../../../lib/services/session-service";
+import { isExpired } from "../../../lib/services/session-helpers";
+import { PlanFlow } from "./plan-flow";
+
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+/**
+ * Dynamic OG meta tags for share link previews.
+ *
+ * When Person A texts this link to Person B, the messaging app
+ * (iMessage, WhatsApp, Instagram DMs) shows a personalized preview:
+ * "{Name} wants to plan a date with you"
+ *
+ * Next.js deduplicates the fetch — generateMetadata and PlanPage
+ * share the same request, so getSession is only called once.
+ */
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const session = await getSession(id);
+
+  if (!session) {
+    return {
+      title: "Dateflow",
+      description: "Plan your perfect first date together.",
+    };
+  }
+
+  const name = session.creatorDisplayName;
+  const title = `${name} wants to plan a date with you`;
+  const description =
+    "Add your preferences — it takes 60 seconds. No account needed.";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      siteName: "Dateflow",
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
+
+/**
+ * /plan/[id] — Person B's entry point.
+ *
+ * This is a server component: it fetches the session on the server
+ * (secure, fast, no client-side API call), then hands the data to
+ * PlanFlow — a client component that manages the multi-screen flow.
+ */
+export default async function PlanPage({ params }: PageProps) {
+  const { id } = await params;
+
+  const session = await getSession(id);
+
+  if (!session) {
+    notFound();
+  }
+
+  if (session.status === "expired" || isExpired(session)) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-bg px-6 text-center">
+        <h1 className="text-h1 font-semibold text-text">
+          This session has expired
+        </h1>
+        <p className="mt-3 text-body text-text-secondary">
+          Date planning sessions expire after 48 hours.
+          Ask your partner to create a new one.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <PlanFlow
+      sessionId={session.id}
+      creatorName={session.creatorDisplayName}
+    />
+  );
+}
