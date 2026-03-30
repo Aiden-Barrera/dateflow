@@ -43,7 +43,7 @@ export function PlanFlow({ sessionId, creatorName }: PlanFlowProps) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               role: "b",
-              location: { lat: loc.lat, lng: loc.lng },
+              location: { lat: loc.lat, lng: loc.lng, label: loc.label },
               budget: vibeBudget,
               categories: vibeCategories,
             }),
