@@ -136,7 +136,8 @@ describe("POST /api/sessions/[id]/preferences", () => {
   // --- Role validation ---
 
   it("returns 400 when role is missing", async () => {
-    const { role: _, ...noRole } = validBody;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { role, ...noRole } = validBody;
     const response = await POST(makePostRequest(noRole), makeParams());
 
     expect(response.status).toBe(400);
@@ -154,7 +155,8 @@ describe("POST /api/sessions/[id]/preferences", () => {
   // --- Location validation ---
 
   it("returns 400 when location is missing", async () => {
-    const { location: _, ...noLocation } = validBody;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { location, ...noLocation } = validBody;
     const response = await POST(makePostRequest(noLocation), makeParams());
 
     expect(response.status).toBe(400);
@@ -199,7 +201,8 @@ describe("POST /api/sessions/[id]/preferences", () => {
   // --- Budget validation ---
 
   it("returns 400 when budget is missing", async () => {
-    const { budget: _, ...noBudget } = validBody;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { budget, ...noBudget } = validBody;
     const response = await POST(makePostRequest(noBudget), makeParams());
 
     expect(response.status).toBe(400);
@@ -217,7 +220,8 @@ describe("POST /api/sessions/[id]/preferences", () => {
   // --- Categories validation ---
 
   it("returns 400 when categories is missing", async () => {
-    const { categories: _, ...noCategories } = validBody;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { categories, ...noCategories } = validBody;
     const response = await POST(makePostRequest(noCategories), makeParams());
 
     expect(response.status).toBe(400);
