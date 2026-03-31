@@ -51,3 +51,8 @@ CREATE INDEX idx_venues_composite_score
        + score_quality_signal + score_time_of_day_fit) / 5
     ) DESC
   );
+
+-- Enable RLS on venues. The service role key (used by API routes) bypasses this,
+-- so direct client access is protected. Policies would be added in a future migration
+-- once the auth model is finalized.
+ALTER TABLE venues ENABLE ROW LEVEL SECURITY;
