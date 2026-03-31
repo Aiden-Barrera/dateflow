@@ -11,7 +11,7 @@ import { getRedisClient } from "../../upstash-redis";
 
 describe("VenueCache", () => {
   let cache: VenueCache;
-  let mockRedisClient: any;
+  let mockRedisClient: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     // Reset mocks before each test
@@ -23,7 +23,8 @@ describe("VenueCache", () => {
       set: vi.fn(),
     };
 
-    vi.mocked(getRedisClient).mockReturnValue(mockRedisClient);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(getRedisClient).mockReturnValue(mockRedisClient as any);
     cache = new VenueCache();
   });
 
