@@ -6,7 +6,7 @@
 
 ## 📍 Quick Orientation
 
-**Status:** Pre-MVP in active development (DS-01 & DS-02 implementation started)
+**Status:** Pre-MVP in active development (DS-01 & DS-02 core services + API routes built; Person A UI still placeholder)
 
 **Main Branch:** `main`
 
@@ -21,7 +21,7 @@ dateflow-2/
 ├── web-service/                         # Next.js application (entire product)
 │   ├── src/
 │   │   ├── app/                         # Next.js App Router
-│   │   │   ├── page.tsx                 # Person A entry point
+│   │   │   ├── page.tsx                 # Landing page (default Next.js placeholder; Person A flow not yet implemented)
 │   │   │   ├── layout.tsx               # Root layout (meta, globals)
 │   │   │   ├── api/                     # API routes (organized by feature)
 │   │   │   │   └── sessions/
@@ -77,9 +77,9 @@ dateflow-2/
 │   │       └── 002_create_preferences.sql
 │   │
 │   ├── package.json
+│   ├── bun.lock
 │   ├── tsconfig.json
-│   ├── next.config.js
-│   └── tailwind.config.js
+│   └── next.config.ts
 │
 ├── docs/
 │   ├── planning/                        # Product & strategy (read first)
@@ -130,8 +130,8 @@ dateflow-2/
 
 | Feature | Status | Location |
 |---------|--------|----------|
-| **DS-01: Session Management** | ✅ Core built | `src/lib/services/session-*` + `src/app/api/sessions/` |
-| **DS-02: Preference Input** | ✅ Core built | `src/lib/services/preference-*` + `src/app/api/sessions/[id]/preferences/` |
+| **DS-01: Session Management** | ✅ Services + API built | `src/lib/services/session-*` + `src/app/api/sessions/` |
+| **DS-02: Preference Input** | ✅ Services + API + Person B UI built | `src/lib/services/preference-*` + `src/app/api/sessions/[id]/preferences/` + `src/components/` |
 | **DS-03: Venue Generation** | ⬜ Not started | Will go in `src/lib/services/venue-*.ts` + `src/app/api/sessions/[id]/venues/` |
 | **DS-04: Swipe & Match** | ⬜ Not started | Will go in `src/lib/services/swipe-*.ts` + `src/app/api/sessions/[id]/swipes/` |
 | **DS-05: Post-Match** | ⬜ Not started | Will extend result page + calendar routes |
@@ -153,19 +153,20 @@ dateflow-2/
 ```sql
 -- DS-01: Sessions (foundation)
 sessions {
-  id UUID PK
-  created_at TIMESTAMP
-  status TEXT ('pending_b' | 'both_ready' | 'generating' | 'ready_to_swipe' | 'matched')
-  expires_at TIMESTAMP
-  person_a_role TEXT ('person_a')
+  id UUID PK DEFAULT gen_random_uuid()
+  status TEXT ('pending_b' | 'both_ready' | 'generating' | 'generation_failed' | 'ready_to_swipe' | 'matched' | 'expired')
+  creator_display_name TEXT NOT NULL
+  created_at TIMESTAMPTZ DEFAULT now()
+  expires_at TIMESTAMPTZ DEFAULT now() + 48h
+  matched_venue_id TEXT
 }
 
 -- DS-02: Preferences (when both users submit)
 preferences {
-  id UUID PK
+  id UUID PK DEFAULT gen_random_uuid()
   session_id UUID FK → sessions
-  role TEXT ('person_a' | 'person_b')
-  location JSONB {lat, lng, place_name}
+  role TEXT ('a' | 'b')
+  location JSONB {lat, lng, label}
   budget TEXT ('BUDGET' | 'MODERATE' | 'UPSCALE')
   categories TEXT[] (RESTAURANT, BAR, ACTIVITY, EVENT)
   UNIQUE(session_id, role)
@@ -184,10 +185,12 @@ pending_b (Person A created, waiting for B)
 both_ready (Both submitted, ready for venue gen)
   ↓ (Async venue generation starts)
 generating
-  ↓ (Venues ready)
-ready_to_swipe (Both can swipe)
-  ↓ (Match detected)
-matched ✅
+  ├─→ (Venues ready) → ready_to_swipe (Both can swipe)
+  │                       ↓ (Match detected)
+  │                     matched ✅
+  └─→ (Failed) → generation_failed → retry → generating
+
+Any pre-matched session → expired (after 48h, cleaned up by pg_cron)
 ```
 
 See **Session Lifecycle** in `docs/dev-specs/onboarding.md` for complete flow.
@@ -197,7 +200,7 @@ See **Session Lifecycle** in `docs/dev-specs/onboarding.md` for complete flow.
 | Layer | Purpose | Examples | Max Size |
 |-------|---------|----------|----------|
 | **API Routes** | HTTP handlers, input validation | `src/app/api/sessions/route.ts` | 100 lines |
-| **Services** | Domain logic (no HTTP) | `SessionService`, `PreferenceService` | 200–400 lines |
+| **Services** | Domain logic (no HTTP) | `session-service.ts`, `preference-service.ts` | 200–400 lines |
 | **Types** | TypeScript interfaces | `session.ts`, `preference.ts` | 100 lines |
 | **Components** | React UI (server + client) | `HookScreen`, `LocationScreen` | 200 lines |
 | **Tests** | Unit tests (Vitest format) | `__tests__/session-service.test.ts` | Match source |
@@ -214,7 +217,7 @@ See **Session Lifecycle** in `docs/dev-specs/onboarding.md` for complete flow.
 | **Database** | Supabase Postgres | Cloud | Managed, realtime, migrations |
 | **Type Safety** | TypeScript | v5 | Strict mode enabled |
 | **Testing** | Vitest | 4.1.2 | Fast, ESM-native |
-| **Linting** | ESLint | v9 | Enforced by pre-commit hook |
+| **Linting** | ESLint | v9 | Enforced in CI (`bun run lint` in GitHub Actions) |
 
 ---
 
@@ -224,18 +227,13 @@ See **Session Lifecycle** in `docs/dev-specs/onboarding.md` for complete flow.
 
 ```bash
 cd web-service
-npm install
+bun install
 
-# Create .env.local with these vars:
+# Create .env.local with these vars (keep in sync with .env.example):
 NEXT_PUBLIC_SUPABASE_URL=<from Supabase project>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<from Supabase project>
-GOOGLE_PLACES_API_KEY=<request from Aiden>
-GOOGLE_GEOCODING_API_KEY=<request from Aiden>
-ANTHROPIC_API_KEY=<request from Aiden>
-UPSTASH_REDIS_URL=<request from Aiden>
-UPSTASH_QSTASH_TOKEN=<request from Aiden>
-SENTRY_AUTH_TOKEN=<request from Aiden>
-NEXT_PUBLIC_VERCEL_ENV=development
+SUPABASE_SERVICE_ROLE_KEY=<from Supabase project>
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 **Never commit `.env.local`.** Only `.env.example` with placeholders.
@@ -244,7 +242,7 @@ NEXT_PUBLIC_VERCEL_ENV=development
 
 ```bash
 cd web-service
-npm run dev  # http://localhost:3000
+bun run dev  # http://localhost:3000
 ```
 
 Hot-reloads on file changes. Check terminal for build errors.
@@ -252,9 +250,9 @@ Hot-reloads on file changes. Check terminal for build errors.
 ### **Run Tests**
 
 ```bash
-npm test                    # All tests
-npm test -- preference      # Filter by name
-npm test -- --watch        # Watch mode
+bun run test                    # All tests
+bun run test -- preference      # Filter by name
+bun run test -- --watch        # Watch mode
 ```
 
 Tests are colocated (`__tests__/` next to source).
@@ -262,14 +260,14 @@ Tests are colocated (`__tests__/` next to source).
 ### **Lint (Enforced)**
 
 ```bash
-npm run lint  # ESLint (pre-commit hook blocks if this fails)
+bun run lint  # ESLint (enforced in CI via GitHub Actions)
 ```
 
 ### **Build for Production**
 
 ```bash
-npm run build  # Creates .next/
-npm start      # Runs production bundle locally
+bun run build  # Creates .next/
+bun start      # Runs production bundle locally
 ```
 
 Build must succeed before any deploy.
@@ -303,27 +301,33 @@ Build must succeed before any deploy.
 **Pattern:** Services contain domain logic (DB queries, state transitions), no HTTP stuff.
 
 **Examples:**
-- `SessionService` — create, fetch, transition status
-- `PreferenceService` — create, fetch, update preferences
-- `ShareLinkService` — generate share links
+- `session-service.ts` — `createSession`, `fetchSession`, transition status
+- `preference-service.ts` — `submitPreference`, `fetchPreferences`
+- `share-link-service.ts` — `generateShareLink`
 
 **Requirements:**
-- ✅ Use constructor injection for Supabase client
-- ✅ All methods async (may call DB)
+- ✅ Export async functions (not classes)
+- ✅ Obtain Supabase client internally via `getSupabaseServerClient()` (no constructor injection)
 - ✅ Immutable: no mutations, use spread operators
-- ✅ Throw typed errors (or create `AppError` class)
-- ✅ Private helper methods prefixed with `_`
+- ✅ Throw typed errors (or use/create an `AppError` type)
+- ✅ Keep helpers as non-exported functions in the same module
 
 **Test:** Place unit tests in `__tests__/[name]-service.test.ts`
 
 **Example:**
 ```typescript
-export class SessionService {
-  constructor(private supabase: SupabaseClient) {}
+import { getSupabaseServerClient } from "@/lib/supabase-server";
 
-  async createSession(): Promise<Session> {
-    // Create and return, don't mutate
-  }
+export async function createSession(displayName: string): Promise<Session> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .insert({ creator_display_name: displayName })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return toSession(data);
 }
 ```
 
@@ -426,18 +430,12 @@ grep -r "/api/endpoint" web-service/src
 ### **Test Format (Vitest)**
 
 ```typescript
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SessionService } from '../SessionService';
+import { describe, it, expect, vi } from 'vitest';
+import { createSession } from '../session-service';
 
-describe('SessionService', () => {
-  let service: SessionService;
-
-  beforeEach(() => {
-    service = new SessionService(mockSupabase);
-  });
-
+describe('session-service', () => {
   it('creates a new session with pending_b status', async () => {
-    const session = await service.createSession();
+    const session = await createSession('Alex');
     expect(session.status).toBe('pending_b');
     expect(session.id).toBeDefined();
   });
@@ -447,10 +445,10 @@ describe('SessionService', () => {
 ### **Running Tests**
 
 ```bash
-npm test                         # Run all
-npm test -- session-service      # Specific file
-npm test -- --watch             # Watch mode
-npm test -- --coverage          # Coverage report
+bun run test                         # Run all
+bun run test -- session-service      # Specific file
+bun run test -- --watch             # Watch mode
+bun run test -- --coverage          # Coverage report
 ```
 
 ---
@@ -466,7 +464,7 @@ Every commit must pass:
 - [ ] `.env.local` is gitignored
 - [ ] No real secrets in `.env.example`
 
-See `~/.claude/rules/common/security.md` for full guidelines.
+Follow OWASP top 10 guidelines. Validate inputs, parameterize queries, never expose internals in errors.
 
 ---
 
@@ -488,7 +486,7 @@ See `~/.claude/rules/common/security.md` for full guidelines.
 **Before adding a package:**
 1. Check if similar functionality exists (don't duplicate)
 2. Review: maintainer count, last publish, known CVEs
-3. Update `package-lock.json` and commit
+3. Run `bun install` to update `bun.lock` and commit the lockfile (CI uses `bun install --frozen-lockfile`)
 
 ---
 
@@ -500,9 +498,9 @@ See `~/.claude/rules/common/security.md` for full guidelines.
 - **Cache:** Upstash (Redis-compatible)
 
 **Pre-merge checklist:**
-- ✅ All tests pass: `npm test`
-- ✅ Lint passes: `npm run lint`
-- ✅ Build succeeds: `npm run build`
+- ✅ All tests pass: `bun run test`
+- ✅ Lint passes: `bun run lint`
+- ✅ Build succeeds: `bun run build`
 - ✅ No secrets in code
 
 ---
@@ -539,7 +537,7 @@ See `~/.claude/rules/common/security.md` for full guidelines.
 - `web-service/src/lib/types/preference.ts` — Preference interface
 
 **UI (Person A & B flows):**
-- `web-service/src/app/page.tsx` — Person A homepage
+- `web-service/src/app/page.tsx` — Landing page (placeholder; Person A flow TBD)
 - `web-service/src/app/plan/[id]/page.tsx` — Shared planning page
 - `web-service/src/components/hook-screen.tsx` — Person B hook
 - `web-service/src/components/location-screen.tsx` — Location input
@@ -553,15 +551,13 @@ See `~/.claude/rules/common/security.md` for full guidelines.
 
 ## 🤝 Code Patterns
 
-### **Service Initialization**
+### **Service Usage in API Routes**
 
 ```typescript
-// In API route
-import { SessionService } from '@/lib/services/session-service';
-import { getSupabaseServerClient } from '@/lib/supabase-server';
+// In API route — services are function-based, not class-based
+import { createSession } from '@/lib/services/session-service';
 
-const sessionService = new SessionService(getSupabaseServerClient());
-const session = await sessionService.createSession();
+const session = await createSession(displayName);
 ```
 
 ### **Error Handling**
@@ -610,7 +606,7 @@ return data; // TypeScript knows error is null here
 1. Check status in Supabase: `SELECT * FROM sessions WHERE id = '...'`
 2. Find the route that should transition it (DS-01/DS-02 routes)
 3. Add logs to the service method
-4. Run test with `npm test -- --watch`
+4. Run test with `bun run test -- --watch`
 
 **Preference not saving?**
 1. Check API response in browser DevTools
@@ -625,7 +621,7 @@ return data; // TypeScript knows error is null here
 4. Check that the component is being imported
 
 **Test failing?**
-1. Run in watch mode: `npm test -- --watch`
+1. Run in watch mode: `bun run test -- --watch`
 2. Read the error message carefully
 3. Check the service/route it's testing
 4. Mock Supabase if needed
@@ -643,7 +639,7 @@ return data; // TypeScript knows error is null here
 
 ## 🎯 Current Status
 
-**Latest:** Session management (DS-01) and preference input (DS-02) implementation complete.
+**Latest:** Session management (DS-01) and preference input (DS-02) core services + API routes built. Person B UI flow (hook/location/vibe screens) implemented. Person A homepage still default placeholder.
 
 **Next:** Venue generation (DS-03) — takes both preferences, calculates midpoint, fetches venues, AI scoring.
 
