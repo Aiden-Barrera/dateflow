@@ -73,7 +73,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
       </div>
 
       {/* Back arrow */}
-      <button onClick={onBack} className="pt-2 pb-4 cursor-pointer">
+      <button onClick={onBack} className="pt-2 pb-4 cursor-pointer" aria-label="Go back">
         <BackArrow />
       </button>
 

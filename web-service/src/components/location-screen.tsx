@@ -6,6 +6,7 @@ import type { Location } from "../lib/types/preference";
 
 type LocationScreenProps = {
   readonly onComplete: (location: Location) => void;
+  readonly onBack: () => void;
 };
 
 type GpsState = "idle" | "loading" | "denied";
@@ -18,7 +19,7 @@ type GpsState = "idle" | "loading" | "denied";
  *
  * Calls onComplete with a Location object when either path succeeds.
  */
-export function LocationScreen({ onComplete }: LocationScreenProps) {
+export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
   const [gpsState, setGpsState] = useState<GpsState>("idle");
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
@@ -72,10 +73,10 @@ export function LocationScreen({ onComplete }: LocationScreenProps) {
         </div>
       </div>
 
-      {/* Back arrow — visual only for now, wired in Step 6 */}
-      <div className="pt-2 pb-4">
+      {/* Back arrow */}
+      <button onClick={onBack} className="pt-2 pb-4 cursor-pointer" aria-label="Go back">
         <BackArrow />
-      </div>
+      </button>
 
       {/* Main content */}
       <div className="flex flex-1 flex-col items-center pt-4">
@@ -129,7 +130,7 @@ export function LocationScreen({ onComplete }: LocationScreenProps) {
                 }}
                 placeholder="Enter a zip code or city"
                 autoFocus
-                className="h-13 w-full rounded-xl border-[1.5px] border-muted bg-surface px-4 text-body text-text placeholder:text-text-secondary/50 focus:border-primary focus:outline-none"
+                className="h-14 w-full rounded-xl border-[1.5px] border-muted bg-surface px-4 text-body text-text placeholder:text-text-secondary/50 focus:border-primary focus:outline-none"
               />
               {manualInput.trim().length > 0 && (
                 <Button variant="secondary" onClick={handleManualSubmit}>

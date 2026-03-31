@@ -79,6 +79,7 @@ export function PlanFlow({ sessionId, creatorName }: PlanFlowProps) {
           setLocation(loc);
           setStep("vibe");
         }}
+        onBack={() => setStep("hook")}
       />
     );
   }

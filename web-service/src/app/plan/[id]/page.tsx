@@ -15,8 +15,8 @@ type PageProps = {
  * (iMessage, WhatsApp, Instagram DMs) shows a personalized preview:
  * "{Name} wants to plan a date with you"
  *
- * Next.js deduplicates the fetch — generateMetadata and PlanPage
- * share the same request, so getSession is only called once.
+ * Both generateMetadata and PlanPage load the session on the server
+ * to render personalized content for the recipient.
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
