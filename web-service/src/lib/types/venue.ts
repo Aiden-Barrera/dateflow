@@ -33,6 +33,7 @@ export type VenueScore = {
   readonly firstDateSuitability: number;
   readonly qualitySignal: number;
   readonly timeOfDayFit: number;
+  readonly composite: number;
 };
 
 /**
@@ -125,6 +126,12 @@ export function toVenue(row: VenueRow): Venue {
       firstDateSuitability: row.score_first_date_suitability,
       qualitySignal: row.score_quality_signal,
       timeOfDayFit: row.score_time_of_day_fit,
+      composite:
+        row.score_category_overlap * 0.3 +
+        row.score_distance_to_midpoint * 0.25 +
+        row.score_first_date_suitability * 0.25 +
+        row.score_quality_signal * 0.15 +
+        row.score_time_of_day_fit * 0.05,
     },
   };
 }
@@ -174,3 +181,8 @@ export type ScoredVenue = {
   readonly tags: readonly string[];
 };
 
+export type CuratedVenueCandidate = PlaceCandidate & {
+  readonly category: Category;
+  readonly score: VenueScore;
+  readonly tags: readonly string[];
+};
