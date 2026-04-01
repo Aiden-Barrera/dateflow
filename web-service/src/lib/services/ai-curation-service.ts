@@ -61,18 +61,12 @@ function timeOfDayFit(category: Category, round: number): number {
 }
 
 function buildFallbackTags(category: Category, candidate: PlaceCandidate): readonly string[] {
-  const tags = ["unscored"];
-
-  if (candidate.rating >= 4.5) {
-    tags.push("top-rated");
-  }
-
-  if (candidate.reviewCount >= 250) {
-    tags.push("well-reviewed");
-  }
-
-  tags.push(category.toLowerCase());
-  return tags;
+  return [
+    "unscored",
+    ...(candidate.rating >= 4.5 ? ["top-rated"] : []),
+    ...(candidate.reviewCount >= 250 ? ["well-reviewed"] : []),
+    category.toLowerCase(),
+  ];
 }
 
 function fallbackRank(

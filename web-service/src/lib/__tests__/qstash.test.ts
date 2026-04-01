@@ -23,6 +23,8 @@ import { SignatureError } from "@upstash/qstash";
 import { enqueueVenueGeneration, verifyQstashRequest } from "../qstash";
 
 describe("qstash helpers", () => {
+  const sessionId = "123e4567-e89b-42d3-a456-426614174000";
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("QSTASH_CURRENT_SIGNING_KEY", "current-key");
@@ -50,15 +52,23 @@ describe("qstash helpers", () => {
   it("publishes the generate job to the session generate endpoint", async () => {
     mockPublishJSON.mockResolvedValueOnce({ messageId: "msg-123" });
 
-    await enqueueVenueGeneration("session-123");
+    await enqueueVenueGeneration(sessionId);
 
     expect(mockPublishJSON).toHaveBeenCalledWith({
-      url: "https://dateflow.test/api/sessions/session-123/generate",
+      url: `https://dateflow.test/api/sessions/${sessionId}/generate`,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: { sessionId: "session-123" },
+      body: { sessionId },
     });
+  });
+
+  it("rejects non-UUID session ids before publishing", async () => {
+    await expect(enqueueVenueGeneration("session-123")).rejects.toThrow(
+      "Session ID must be a UUID"
+    );
+
+    expect(mockPublishJSON).not.toHaveBeenCalled();
   });
 });
