@@ -72,5 +72,6 @@ export function distanceBetween(a: Location, b: Location): number {
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
 
-  return EARTH_RADIUS_METERS * 2 * Math.asin(Math.sqrt(h));
+  const clampedH = Math.min(1, Math.max(0, h));
+  return EARTH_RADIUS_METERS * 2 * Math.asin(Math.sqrt(clampedH));
 }

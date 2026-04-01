@@ -1,7 +1,7 @@
 import type { Location, Category } from "../types/preference";
 import type { PlaceCandidate } from "../types/venue";
 import { VenueCache } from "./venue-cache";
-import { searchNearby } from "./places-api-client";
+import { searchNearby, categoriesToGoogleTypes } from "./places-api-client";
 
 /**
  * Cache TTL: 6 hours in seconds.
@@ -29,7 +29,8 @@ export async function searchNearbyWithCache(
   maxPrice: number
 ): Promise<readonly PlaceCandidate[]> {
   const cache = new VenueCache();
-  const cacheKey = cache.buildKey(location, categories, maxPrice);
+  const baseKey = cache.buildKey(location, categories, maxPrice);
+  const cacheKey = `${baseKey}:radius=${radius}`;
 
   // Try cache first
   try {
@@ -42,8 +43,11 @@ export async function searchNearbyWithCache(
     console.error("[searchNearbyWithCache] Cache read failed, calling API:", err);
   }
 
+  // Convert our Category enums to Google Places type strings
+  const googleTypes = categoriesToGoogleTypes(categories);
+
   // Cache miss or error — call Google Places
-  const candidates = await searchNearby(location, radius, categories, maxPrice);
+  const candidates = await searchNearby(location, radius, googleTypes, maxPrice);
 
   // Write to cache (fire-and-forget — don't block on this)
   cache.set(cacheKey, candidates, CACHE_TTL_SECONDS).catch((err) => {

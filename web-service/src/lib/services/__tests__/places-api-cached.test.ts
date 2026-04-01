@@ -64,7 +64,7 @@ describe("searchNearbyWithCache", () => {
     const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
 
     expect(results).toEqual(fakeCandidates);
-    expect(mockCache.get).toHaveBeenCalledWith("venue:cache:30.27:-97.74:BAR:RESTAURANT:3");
+    expect(mockCache.get).toHaveBeenCalledWith("venue:cache:30.27:-97.74:BAR:RESTAURANT:3:radius=2000");
     expect(searchNearby).not.toHaveBeenCalled();
   });
 
@@ -76,9 +76,11 @@ describe("searchNearbyWithCache", () => {
     const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
 
     expect(results).toEqual(fakeCandidates);
-    expect(searchNearby).toHaveBeenCalledWith(location, radius, categories, maxPrice);
+    // searchNearby receives Google type strings, not Category enums
+    const expectedGoogleTypes = ["restaurant", "cafe", "bakery", "bar", "night_club"];
+    expect(searchNearby).toHaveBeenCalledWith(location, radius, expectedGoogleTypes, maxPrice);
     expect(mockCache.set).toHaveBeenCalledWith(
-      "venue:cache:30.27:-97.74:BAR:RESTAURANT:3",
+      "venue:cache:30.27:-97.74:BAR:RESTAURANT:3:radius=2000",
       fakeCandidates,
       CACHE_TTL_SECONDS
     );

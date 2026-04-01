@@ -118,11 +118,13 @@ export function scoreSafety(candidate: PlaceCandidate): number {
   // Rating contribution: 3.5 → 0.0, 5.0 → 1.0
   const ratingScore = (candidate.rating - MIN_RATING) / (5 - MIN_RATING);
 
-  // Review contribution: log-scaled so 50 → low, 500+ → 1.0
-  // Using log(reviews) / log(cap) gives a nice curve that rewards more reviews
-  // but with diminishing returns.
+  // Review contribution: log-scaled so 50 → 0.0, 500+ → 1.0.
+  // We normalize log(reviewCount) between MIN_REVIEW_COUNT and REVIEW_COUNT_CAP
+  // to keep the score in [0, 1] with diminishing returns.
   const clampedReviews = Math.min(candidate.reviewCount, REVIEW_COUNT_CAP);
-  const reviewScore = Math.log(clampedReviews) / Math.log(REVIEW_COUNT_CAP);
+  const minLog = Math.log(MIN_REVIEW_COUNT);
+  const maxLog = Math.log(REVIEW_COUNT_CAP);
+  const reviewScore = (Math.log(clampedReviews) - minLog) / (maxLog - minLog);
 
   // Weighted blend: rating matters more, but review count adds confidence
   return ratingScore * 0.6 + reviewScore * 0.4;

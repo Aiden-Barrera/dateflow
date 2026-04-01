@@ -82,15 +82,58 @@ const TYPE_TO_CATEGORY: Record<string, Category> = {
 };
 
 /**
+ * Category selection priority when multiple mapped categories are present
+ * for a single place.
+ */
+const CATEGORY_PRIORITY: readonly Category[] = [
+  "RESTAURANT",
+  "BAR",
+  "EVENT",
+  "ACTIVITY",
+];
+
+/**
  * Given a Google Places types array, returns the best-matching Category.
+ * Applies explicit priority RESTAURANT > BAR > EVENT > ACTIVITY so the
+ * result is deterministic regardless of Google's type ordering.
  * Falls back to ACTIVITY for unrecognized types.
  */
 export function mapGoogleTypeToCategory(types: readonly string[]): Category {
+  const presentCategories = new Set<Category>();
+
   for (const type of types) {
     const category = TYPE_TO_CATEGORY[type];
-    if (category) return category;
+    if (category) {
+      presentCategories.add(category);
+    }
   }
+
+  for (const priorityCategory of CATEGORY_PRIORITY) {
+    if (presentCategories.has(priorityCategory)) {
+      return priorityCategory;
+    }
+  }
+
   return "ACTIVITY";
+}
+
+/**
+ * Maps a Category enum to the Google Places type strings used for search.
+ * Each category maps to the primary types we want Google to return.
+ */
+const CATEGORY_TO_GOOGLE_TYPES: Record<Category, readonly string[]> = {
+  RESTAURANT: ["restaurant", "cafe", "bakery"],
+  BAR: ["bar", "night_club"],
+  ACTIVITY: ["bowling_alley", "amusement_park", "aquarium", "art_gallery", "museum", "spa", "tourist_attraction"],
+  EVENT: ["movie_theater", "performing_arts_theater"],
+};
+
+/**
+ * Converts an array of our Category enums to Google Places type strings.
+ * Used by the cache layer to translate categories before calling searchNearby.
+ */
+export function categoriesToGoogleTypes(categories: readonly Category[]): readonly string[] {
+  return categories.flatMap((cat) => CATEGORY_TO_GOOGLE_TYPES[cat]);
 }
 
 // ---------------------------------------------------------------------------
