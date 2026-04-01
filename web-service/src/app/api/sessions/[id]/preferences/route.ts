@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { enqueueVenueGeneration } from "../../../../../lib/qstash";
 import { getSession } from "../../../../../lib/services/session-service";
 import {
   getPreferences,
@@ -158,6 +159,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // 6. Check for duplicate preference
     const existing = await getPreferences(id);
     const alreadySubmitted = existing.some((p) => p.role === role);
+    const willCompleteBothPreferences = existing.length === 1 && !alreadySubmitted;
 
     if (alreadySubmitted) {
       return NextResponse.json(
@@ -173,6 +175,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       budget,
       categories,
     });
+
+    if (willCompleteBothPreferences) {
+      await enqueueVenueGeneration(id);
+    }
 
     return NextResponse.json(
       { preference: serializePreference(preference) },

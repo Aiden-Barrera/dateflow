@@ -14,7 +14,7 @@ const mockQuerySelect = vi.fn(() => ({
   eq: mockQueryEq,
 }));
 
-const mockInsert = vi.fn();
+const mockUpsert = vi.fn();
 
 const mockUpdateSelect = vi.fn();
 const mockUpdateIn = vi.fn(() => ({ select: mockUpdateSelect }));
@@ -32,7 +32,7 @@ const mockFrom = vi.fn((table: string) => {
 
   return {
     select: mockQuerySelect,
-    insert: mockInsert,
+    upsert: mockUpsert,
   };
 });
 
@@ -163,7 +163,7 @@ describe("generateVenues", () => {
       .mockResolvedValueOnce(curated.slice(4, 8))
       .mockResolvedValueOnce(curated.slice(8, 12));
 
-    mockInsert.mockResolvedValue({ error: null });
+    mockUpsert.mockResolvedValue({ error: null });
     mockUpdateSelect.mockResolvedValue({ data: [{ id: "session-1" }], error: null });
     mockQueryOrderPosition.mockResolvedValue({
       data: Array.from({ length: 12 }, (_, index) => makeVenueRow(index)),
@@ -182,9 +182,13 @@ describe("generateVenues", () => {
       1
     );
     expect(mockScoreAndCurate).toHaveBeenCalledTimes(3);
-    expect(mockInsert).toHaveBeenCalledOnce();
+    expect(mockUpsert).toHaveBeenCalledOnce();
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.any(Array),
+      { onConflict: "session_id,round,position" }
+    );
 
-    const insertedRows = mockInsert.mock.calls[0][0];
+    const insertedRows = mockUpsert.mock.calls[0][0];
     expect(insertedRows).toHaveLength(12);
     expect(insertedRows[0].round).toBe(1);
     expect(insertedRows[0].position).toBe(1);

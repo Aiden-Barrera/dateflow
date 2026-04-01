@@ -23,6 +23,11 @@ vi.mock("../../../../../../lib/services/preference-service", () => ({
   submitPreference: (...args: unknown[]) => mockSubmitPreference(...args),
 }));
 
+const mockEnqueueVenueGeneration = vi.fn();
+vi.mock("../../../../../../lib/qstash", () => ({
+  enqueueVenueGeneration: (...args: unknown[]) => mockEnqueueVenueGeneration(...args),
+}));
+
 import { POST } from "../route";
 
 // ---------------------------------------------------------------------------
@@ -85,6 +90,7 @@ describe("POST /api/sessions/[id]/preferences", () => {
     mockGetSession.mockResolvedValue(fakeSession);
     mockGetPreferences.mockResolvedValue([]);
     mockSubmitPreference.mockResolvedValue(fakePreference);
+    mockEnqueueVenueGeneration.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -109,6 +115,18 @@ describe("POST /api/sessions/[id]/preferences", () => {
       budget: "MODERATE",
       categories: ["RESTAURANT", "BAR"],
     });
+    expect(mockEnqueueVenueGeneration).not.toHaveBeenCalled();
+  });
+
+  it("enqueues venue generation when the second preference is submitted", async () => {
+    mockGetPreferences.mockResolvedValue([
+      { ...fakePreference, role: "a" },
+    ]);
+
+    const response = await POST(makePostRequest(validBody), makeParams());
+
+    expect(response.status).toBe(201);
+    expect(mockEnqueueVenueGeneration).toHaveBeenCalledWith("abc-123");
   });
 
   // --- Request body validation ---

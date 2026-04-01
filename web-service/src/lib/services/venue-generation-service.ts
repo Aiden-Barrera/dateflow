@@ -93,7 +93,9 @@ type InsertVenueRow = {
 
 async function insertVenues(rows: readonly InsertVenueRow[]): Promise<void> {
   const supabase = getSupabaseServerClient();
-  const { error } = await supabase.from("venues").insert(rows);
+  const { error } = await supabase
+    .from("venues")
+    .upsert(rows, { onConflict: "session_id,round,position" });
 
   if (error) {
     throw new Error(error.message);
