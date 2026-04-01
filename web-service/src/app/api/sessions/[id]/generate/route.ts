@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     await generateVenues(id);
 
-    return NextResponse.json({ status: "generating" }, { status: 202 });
+    return NextResponse.json({ status: "generating" }, { status: 200 });
   } catch (err) {
     console.error(`[POST /api/sessions/${id}/generate] Failed:`, err);
     return NextResponse.json(

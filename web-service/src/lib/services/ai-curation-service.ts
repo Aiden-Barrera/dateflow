@@ -4,29 +4,12 @@ import type {
   PlaceCandidate,
   VenueScore,
 } from "../types/venue";
+import { computeVenueComposite } from "../types/venue";
 import { mapGoogleTypeToCategory } from "./places-api-client";
 import { distanceBetween } from "./midpoint-calculator";
 import { scoreSafety } from "./safety-filter";
 
-const SCORE_WEIGHTS = {
-  categoryOverlap: 0.3,
-  distanceToMidpoint: 0.25,
-  firstDateSuitability: 0.25,
-  qualitySignal: 0.15,
-  timeOfDayFit: 0.05,
-} as const;
-
 const REVIEW_COUNT_CAP = 500;
-
-function composite(score: Omit<VenueScore, "composite">): number {
-  return (
-    score.categoryOverlap * SCORE_WEIGHTS.categoryOverlap +
-    score.distanceToMidpoint * SCORE_WEIGHTS.distanceToMidpoint +
-    score.firstDateSuitability * SCORE_WEIGHTS.firstDateSuitability +
-    score.qualitySignal * SCORE_WEIGHTS.qualitySignal +
-    score.timeOfDayFit * SCORE_WEIGHTS.timeOfDayFit
-  );
-}
 
 function roundBonus(category: Category, round: number): number {
   if (round === 2 && (category === "ACTIVITY" || category === "EVENT")) {
@@ -109,19 +92,28 @@ function fallbackRank(
         timeOfDayFit: timeOfDayFit(category, round),
       };
 
+      const baseComposite = computeVenueComposite(partialScore);
       const score: VenueScore = {
         ...partialScore,
-        composite: Math.min(1, composite(partialScore) + roundBonus(category, round)),
+        composite: baseComposite,
       };
 
+      const rankingComposite = Math.min(1, baseComposite + roundBonus(category, round));
+
       return {
+        rankingComposite,
         ...candidate,
         category,
         score,
         tags: buildFallbackTags(category, candidate),
       };
     })
-    .sort((a, b) => b.score.composite - a.score.composite);
+    .sort((a, b) => b.rankingComposite - a.rankingComposite)
+    .map((rankedCandidate) => {
+      const { rankingComposite, ...candidate } = rankedCandidate;
+      void rankingComposite;
+      return candidate;
+    });
 }
 
 export async function scoreAndCurate(

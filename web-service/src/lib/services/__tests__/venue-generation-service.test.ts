@@ -16,9 +16,14 @@ const mockQuerySelect = vi.fn(() => ({
 
 const mockInsert = vi.fn();
 
-const mockUpdateReadyEq = vi.fn();
-const mockUpdateGeneratingEq = vi.fn(() => ({ eq: mockUpdateReadyEq }));
-const mockUpdate = vi.fn(() => ({ eq: mockUpdateGeneratingEq }));
+const mockUpdateSelect = vi.fn();
+const mockUpdateIn = vi.fn(() => ({ select: mockUpdateSelect }));
+const mockUpdateEqStatus = vi.fn(() => ({ select: mockUpdateSelect }));
+const mockUpdateEqId = vi.fn(() => ({
+  eq: mockUpdateEqStatus,
+  in: mockUpdateIn,
+}));
+const mockUpdate = vi.fn(() => ({ eq: mockUpdateEqId }));
 
 const mockFrom = vi.fn((table: string) => {
   if (table === "sessions") {
@@ -159,7 +164,7 @@ describe("generateVenues", () => {
       .mockResolvedValueOnce(curated.slice(8, 12));
 
     mockInsert.mockResolvedValue({ error: null });
-    mockUpdateReadyEq.mockResolvedValue({ error: null });
+    mockUpdateSelect.mockResolvedValue({ data: [{ id: "session-1" }], error: null });
     mockQueryOrderPosition.mockResolvedValue({
       data: Array.from({ length: 12 }, (_, index) => makeVenueRow(index)),
       error: null,
@@ -188,6 +193,10 @@ describe("generateVenues", () => {
 
     expect(mockUpdate).toHaveBeenNthCalledWith(1, { status: "generating" });
     expect(mockUpdate).toHaveBeenNthCalledWith(2, { status: "ready_to_swipe" });
+    expect(mockUpdateIn).toHaveBeenCalledWith("status", [
+      "both_ready",
+      "generation_failed",
+    ]);
     expect(venues).toHaveLength(12);
     expect(venues[0].score.composite).toBeDefined();
   });
@@ -199,5 +208,14 @@ describe("generateVenues", () => {
 
     expect(mockUpdate).toHaveBeenNthCalledWith(1, { status: "generating" });
     expect(mockUpdate).toHaveBeenNthCalledWith(2, { status: "generation_failed" });
+  });
+
+  it("allows retries when the session starts in generation_failed", async () => {
+    await generateVenues("session-1");
+
+    expect(mockUpdateIn).toHaveBeenCalledWith("status", [
+      "both_ready",
+      "generation_failed",
+    ]);
   });
 });

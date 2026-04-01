@@ -37,17 +37,36 @@ function mergedCategories(
 async function updateSessionStatus(
   sessionId: string,
   nextStatus: "generating" | "ready_to_swipe" | "generation_failed",
-  currentStatus: "both_ready" | "generation_failed" | "generating"
+  currentStatuses:
+    | "both_ready"
+    | "generation_failed"
+    | "generating"
+    | readonly ("both_ready" | "generation_failed" | "generating")[]
 ): Promise<void> {
   const supabase = getSupabaseServerClient();
-  const { error } = await supabase
+  const statuses = Array.isArray(currentStatuses)
+    ? currentStatuses
+    : [currentStatuses];
+  const query = supabase
     .from("sessions")
     .update({ status: nextStatus })
-    .eq("id", sessionId)
-    .eq("status", currentStatus);
+    .eq("id", sessionId);
+
+  const filteredQuery =
+    statuses.length === 1
+      ? query.eq("status", statuses[0])
+      : query.in("status", statuses);
+
+  const { data, error } = await filteredQuery.select("id");
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (!data || data.length !== 1) {
+    throw new Error(
+      `Failed to transition session to ${nextStatus}: expected exactly one row update`
+    );
   }
 }
 
@@ -82,7 +101,10 @@ async function insertVenues(rows: readonly InsertVenueRow[]): Promise<void> {
 }
 
 export async function generateVenues(sessionId: string): Promise<readonly Venue[]> {
-  await updateSessionStatus(sessionId, "generating", "both_ready");
+  await updateSessionStatus(sessionId, "generating", [
+    "both_ready",
+    "generation_failed",
+  ]);
 
   try {
     const preferences = await getBothPreferences(sessionId);
@@ -117,7 +139,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           address: venue.address,
           lat: venue.location.lat,
           lng: venue.location.lng,
-          price_level: venue.priceLevel,
+          price_level: venue.priceLevel === 0 ? 1 : venue.priceLevel,
           rating: venue.rating,
           photo_url: null,
           tags: venue.tags,

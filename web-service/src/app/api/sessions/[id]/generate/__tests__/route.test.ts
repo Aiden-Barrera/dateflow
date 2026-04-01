@@ -47,11 +47,11 @@ describe("POST /api/sessions/[id]/generate", () => {
     mockGenerateVenues.mockResolvedValue([]);
   });
 
-  it("returns 202 and starts generation for a both_ready session", async () => {
+  it("returns 200 and starts generation for a both_ready session", async () => {
     const response = await POST(makeRequest(), makeParams());
     const body = await response.json();
 
-    expect(response.status).toBe(202);
+    expect(response.status).toBe(200);
     expect(body.status).toBe("generating");
     expect(mockGenerateVenues).toHaveBeenCalledWith("session-123");
   });
@@ -68,7 +68,7 @@ describe("POST /api/sessions/[id]/generate", () => {
 
     const response = await POST(makeRequest(), makeParams());
 
-    expect(response.status).toBe(202);
+    expect(response.status).toBe(200);
     expect(mockGenerateVenues).toHaveBeenCalledWith("session-123");
   });
 

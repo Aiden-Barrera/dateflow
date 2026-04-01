@@ -6,6 +6,13 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
+class InvalidRoundError extends Error {
+  constructor() {
+    super("Round must be 1, 2, or 3");
+    this.name = "InvalidRoundError";
+  }
+}
+
 function parseRound(value: string | null): number | undefined {
   if (value === null) {
     return undefined;
@@ -13,7 +20,7 @@ function parseRound(value: string | null): number | undefined {
 
   const round = Number(value);
   if (!Number.isInteger(round) || round < 1 || round > 3) {
-    throw new Error("Round must be 1, 2, or 3");
+    throw new InvalidRoundError();
   }
 
   return round;
@@ -45,7 +52,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ venues });
   } catch (err) {
-    if (err instanceof Error && err.message === "Round must be 1, 2, or 3") {
+    if (err instanceof InvalidRoundError) {
       return NextResponse.json(
         { error: err.message },
         { status: 400 }

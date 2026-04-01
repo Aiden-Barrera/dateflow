@@ -36,6 +36,26 @@ export type VenueScore = {
   readonly composite: number;
 };
 
+export const VENUE_SCORE_WEIGHTS = {
+  categoryOverlap: 0.3,
+  distanceToMidpoint: 0.25,
+  firstDateSuitability: 0.25,
+  qualitySignal: 0.15,
+  timeOfDayFit: 0.05,
+} as const;
+
+export function computeVenueComposite(
+  score: Omit<VenueScore, "composite">
+): number {
+  return (
+    score.categoryOverlap * VENUE_SCORE_WEIGHTS.categoryOverlap +
+    score.distanceToMidpoint * VENUE_SCORE_WEIGHTS.distanceToMidpoint +
+    score.firstDateSuitability * VENUE_SCORE_WEIGHTS.firstDateSuitability +
+    score.qualitySignal * VENUE_SCORE_WEIGHTS.qualitySignal +
+    score.timeOfDayFit * VENUE_SCORE_WEIGHTS.timeOfDayFit
+  );
+}
+
 /**
  * A venue generated and stored for a session.
  * The composite score is the weighted average of the five dimension scores.
@@ -126,12 +146,13 @@ export function toVenue(row: VenueRow): Venue {
       firstDateSuitability: row.score_first_date_suitability,
       qualitySignal: row.score_quality_signal,
       timeOfDayFit: row.score_time_of_day_fit,
-      composite:
-        row.score_category_overlap * 0.3 +
-        row.score_distance_to_midpoint * 0.25 +
-        row.score_first_date_suitability * 0.25 +
-        row.score_quality_signal * 0.15 +
-        row.score_time_of_day_fit * 0.05,
+      composite: computeVenueComposite({
+        categoryOverlap: row.score_category_overlap,
+        distanceToMidpoint: row.score_distance_to_midpoint,
+        firstDateSuitability: row.score_first_date_suitability,
+        qualitySignal: row.score_quality_signal,
+        timeOfDayFit: row.score_time_of_day_fit,
+      }),
     },
   };
 }
