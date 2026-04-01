@@ -176,5 +176,24 @@ describe("places-api-client", () => {
         searchNearby(location, 2000, ["restaurant"], 3)
       ).rejects.toThrow("Google Places API error: 403 Forbidden");
     });
+
+    it("keeps type filtering consistent when maxPrice is applied", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ places: [] }),
+      });
+
+      await searchNearby(location, 2000, ["restaurant", "bar"], 3);
+
+      const [, request] = mockFetch.mock.calls[0] as [
+        string,
+        { body: string }
+      ];
+      const body = JSON.parse(request.body);
+
+      expect(body.includedTypes).toEqual(["restaurant", "bar"]);
+      expect(body.maxPriceLevel).toBe(3);
+      expect(body).not.toHaveProperty("includedPrimaryTypes");
+    });
   });
 });

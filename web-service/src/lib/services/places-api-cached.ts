@@ -28,19 +28,32 @@ export async function searchNearbyWithCache(
   categories: readonly Category[],
   maxPrice: number
 ): Promise<readonly PlaceCandidate[]> {
-  const cache = new VenueCache();
-  const baseKey = cache.buildKey(location, categories, maxPrice);
-  const cacheKey = `${baseKey}:radius=${radius}`;
+  let cache: VenueCache | null = null;
+  let cacheKey: string | null = null;
+
+  try {
+    cache = new VenueCache();
+    const baseKey = cache.buildKey(location, categories, maxPrice);
+    cacheKey = `${baseKey}:radius=${radius}`;
+  } catch (err) {
+    // Cache initialization failed — log and continue without caching.
+    console.error(
+      "[searchNearbyWithCache] Cache unavailable, calling API without cache:",
+      err
+    );
+  }
 
   // Try cache first
-  try {
-    const cached = await cache.get(cacheKey);
-    if (cached) {
-      return cached;
+  if (cache && cacheKey) {
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    } catch (err) {
+      // Cache read failed — log and fall through to API call
+      console.error("[searchNearbyWithCache] Cache read failed, calling API:", err);
     }
-  } catch (err) {
-    // Cache read failed — log and fall through to API call
-    console.error("[searchNearbyWithCache] Cache read failed, calling API:", err);
   }
 
   // Convert our Category enums to Google Places type strings
@@ -50,9 +63,11 @@ export async function searchNearbyWithCache(
   const candidates = await searchNearby(location, radius, googleTypes, maxPrice);
 
   // Write to cache (fire-and-forget — don't block on this)
-  cache.set(cacheKey, candidates, CACHE_TTL_SECONDS).catch((err) => {
-    console.error("[searchNearbyWithCache] Cache write failed:", err);
-  });
+  if (cache && cacheKey) {
+    cache.set(cacheKey, candidates, CACHE_TTL_SECONDS).catch((err) => {
+      console.error("[searchNearbyWithCache] Cache write failed:", err);
+    });
+  }
 
   return candidates;
 }

@@ -109,8 +109,8 @@ export function applySafetyFilter(
  *   - Rating contribution (60%): how far above the 3.5 minimum the rating is
  *   - Review contribution (40%): log-scaled review count, capped at 500
  *
- * This score feeds into the `firstDateSuitability` dimension of VenueScore,
- * giving the AI curation service a numeric signal for safety quality.
+ * This score is used as a rating + review-count based quality/safety signal,
+ * which aligns with the `qualitySignal` dimension of VenueScore.
  */
 export function scoreSafety(candidate: PlaceCandidate): number {
   if (!passesHardRules(candidate)) return 0;

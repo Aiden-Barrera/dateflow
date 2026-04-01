@@ -188,7 +188,6 @@ export async function searchNearby(
       },
     },
     ...(maxPrice > 0 && {
-      includedPrimaryTypes: types,
       maxPriceLevel: maxPrice,
     }),
   };

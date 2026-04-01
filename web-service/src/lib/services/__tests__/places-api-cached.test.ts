@@ -100,4 +100,23 @@ describe("searchNearbyWithCache", () => {
     expect(results).toEqual(fakeCandidates);
     expect(searchNearby).toHaveBeenCalled();
   });
+
+  it("calls API without caching when cache initialization throws", async () => {
+    vi.mocked(VenueCache).mockImplementationOnce(() => {
+      throw new Error("Missing Upstash env");
+    });
+    vi.mocked(searchNearby).mockResolvedValueOnce(fakeCandidates);
+
+    const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
+
+    expect(results).toEqual(fakeCandidates);
+    expect(searchNearby).toHaveBeenCalledWith(
+      location,
+      radius,
+      ["restaurant", "cafe", "bakery", "bar", "night_club"],
+      maxPrice
+    );
+    expect(mockCache.get).not.toHaveBeenCalled();
+    expect(mockCache.set).not.toHaveBeenCalled();
+  });
 });
