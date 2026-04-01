@@ -16,9 +16,6 @@ CREATE TABLE swipes (
 CREATE INDEX idx_swipes_session_role
   ON swipes (session_id, role);
 
-CREATE INDEX idx_swipes_session_venue
-  ON swipes (session_id, venue_id);
-
 ALTER TABLE swipes ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION record_swipe_and_check_match(
@@ -34,7 +31,7 @@ DECLARE
   other_role text;
   other_liked boolean;
   current_status text;
-  current_matched_venue_id uuid;
+  current_matched_venue_id text;
 BEGIN
   IF input_role NOT IN ('a', 'b') THEN
     RAISE EXCEPTION 'invalid role: %', input_role;
@@ -52,12 +49,24 @@ BEGIN
     RAISE EXCEPTION 'session not found: %', input_session_id;
   END IF;
 
+  IF current_status <> 'ready_to_swipe' THEN
+    RAISE EXCEPTION 'cannot swipe when session status is %', current_status;
+  END IF;
+
+  PERFORM 1
+  FROM venues
+  WHERE id = input_venue_id
+    AND session_id = input_session_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'venue % does not belong to session %', input_venue_id, input_session_id;
+  END IF;
+
   INSERT INTO swipes (session_id, venue_id, role, liked)
   VALUES (input_session_id, input_venue_id, input_role, input_liked)
   ON CONFLICT (session_id, venue_id, role)
   DO UPDATE
-    SET liked = EXCLUDED.liked,
-        created_at = now();
+    SET liked = EXCLUDED.liked;
 
   IF input_liked THEN
     SELECT liked
@@ -84,9 +93,9 @@ BEGIN
 
   RETURN QUERY
   SELECT
-    (current_status = 'matched' AND current_matched_venue_id = input_venue_id) AS matched,
+    (current_status = 'matched' AND current_matched_venue_id = input_venue_id::text) AS matched,
     CASE
-      WHEN current_status = 'matched' AND current_matched_venue_id = input_venue_id
+      WHEN current_status = 'matched' AND current_matched_venue_id = input_venue_id::text
         THEN input_venue_id
       ELSE NULL
     END AS venue_id;
