@@ -23,15 +23,27 @@ vi.mock("../../../../../../lib/services/preference-service", () => ({
   submitPreference: (...args: unknown[]) => mockSubmitPreference(...args),
 }));
 
+const mockEnqueueVenueGeneration = vi.fn();
+vi.mock("../../../../../../lib/qstash", () => ({
+  enqueueVenueGeneration: (...args: unknown[]) => mockEnqueueVenueGeneration(...args),
+}));
+
+const mockGenerateVenues = vi.fn();
+vi.mock("../../../../../../lib/services/venue-generation-service", () => ({
+  generateVenues: (...args: unknown[]) => mockGenerateVenues(...args),
+}));
+
 import { POST } from "../route";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
+const SESSION_ID = "123e4567-e89b-42d3-a456-426614174000";
+
 /** Builds a POST request with a JSON body */
 function makePostRequest(body: unknown): Request {
-  return new Request("http://localhost:3000/api/sessions/abc-123/preferences", {
+  return new Request(`http://localhost:3000/api/sessions/${SESSION_ID}/preferences`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -39,7 +51,7 @@ function makePostRequest(body: unknown): Request {
 }
 
 /** The route params that Next.js passes — id comes from the [id] URL segment */
-function makeParams(id = "abc-123") {
+function makeParams(id = SESSION_ID) {
   return { params: Promise.resolve({ id }) };
 }
 
@@ -53,7 +65,7 @@ const validBody = {
 
 /** A fake active session — not expired, status pending_b */
 const fakeSession = {
-  id: "abc-123",
+  id: SESSION_ID,
   status: "pending_b",
   creatorDisplayName: "Alex",
   createdAt: new Date("2026-03-27T12:00:00Z"),
@@ -64,7 +76,7 @@ const fakeSession = {
 /** The preference object that submitPreference returns */
 const fakePreference = {
   id: "pref-uuid-1234",
-  sessionId: "abc-123",
+  sessionId: SESSION_ID,
   role: "b",
   location: { lat: 30.2672, lng: -97.7431, label: "Downtown Austin" },
   budget: "MODERATE",
@@ -85,6 +97,8 @@ describe("POST /api/sessions/[id]/preferences", () => {
     mockGetSession.mockResolvedValue(fakeSession);
     mockGetPreferences.mockResolvedValue([]);
     mockSubmitPreference.mockResolvedValue(fakePreference);
+    mockEnqueueVenueGeneration.mockResolvedValue(undefined);
+    mockGenerateVenues.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -99,23 +113,53 @@ describe("POST /api/sessions/[id]/preferences", () => {
 
     expect(response.status).toBe(201);
     expect(body.preference.id).toBe("pref-uuid-1234");
-    expect(body.preference.sessionId).toBe("abc-123");
+    expect(body.preference.sessionId).toBe(SESSION_ID);
     expect(body.preference.role).toBe("b");
     expect(body.preference.createdAt).toBe("2026-03-29T14:00:00.000Z");
 
-    expect(mockSubmitPreference).toHaveBeenCalledWith("abc-123", {
+    expect(mockSubmitPreference).toHaveBeenCalledWith(SESSION_ID, {
       role: "b",
       location: { lat: 30.2672, lng: -97.7431, label: "Downtown Austin" },
       budget: "MODERATE",
       categories: ["RESTAURANT", "BAR"],
     });
+    expect(mockEnqueueVenueGeneration).not.toHaveBeenCalled();
+  });
+
+  it("enqueues venue generation when the second preference is submitted", async () => {
+    mockGetPreferences.mockResolvedValue([
+      { ...fakePreference, role: "a" },
+    ]);
+
+    const response = await POST(makePostRequest(validBody), makeParams());
+
+    expect(response.status).toBe(201);
+    expect(mockEnqueueVenueGeneration).toHaveBeenCalledWith(SESSION_ID);
+  });
+
+  it("falls back to direct generation when enqueueing fails", async () => {
+    mockGetPreferences.mockResolvedValue([{ ...fakePreference, role: "a" }]);
+    mockEnqueueVenueGeneration.mockRejectedValueOnce(new Error("QStash down"));
+
+    const response = await POST(makePostRequest(validBody), makeParams());
+
+    expect(response.status).toBe(201);
+    expect(mockGenerateVenues).toHaveBeenCalledWith(SESSION_ID);
+  });
+
+  it("returns 400 when the session id is not a UUID", async () => {
+    const response = await POST(makePostRequest(validBody), makeParams("abc-123"));
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("Session ID must be a valid UUID");
   });
 
   // --- Request body validation ---
 
   it("returns 400 when body is not valid JSON", async () => {
     const request = new Request(
-      "http://localhost:3000/api/sessions/abc-123/preferences",
+      `http://localhost:3000/api/sessions/${SESSION_ID}/preferences`,
       { method: "POST", body: "not json" }
     );
     const response = await POST(request, makeParams());

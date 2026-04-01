@@ -33,7 +33,28 @@ export type VenueScore = {
   readonly firstDateSuitability: number;
   readonly qualitySignal: number;
   readonly timeOfDayFit: number;
+  readonly composite: number;
 };
+
+export const VENUE_SCORE_WEIGHTS = {
+  categoryOverlap: 0.3,
+  distanceToMidpoint: 0.25,
+  firstDateSuitability: 0.25,
+  qualitySignal: 0.15,
+  timeOfDayFit: 0.05,
+} as const;
+
+export function computeVenueComposite(
+  score: Omit<VenueScore, "composite">
+): number {
+  return (
+    score.categoryOverlap * VENUE_SCORE_WEIGHTS.categoryOverlap +
+    score.distanceToMidpoint * VENUE_SCORE_WEIGHTS.distanceToMidpoint +
+    score.firstDateSuitability * VENUE_SCORE_WEIGHTS.firstDateSuitability +
+    score.qualitySignal * VENUE_SCORE_WEIGHTS.qualitySignal +
+    score.timeOfDayFit * VENUE_SCORE_WEIGHTS.timeOfDayFit
+  );
+}
 
 /**
  * A venue generated and stored for a session.
@@ -125,6 +146,13 @@ export function toVenue(row: VenueRow): Venue {
       firstDateSuitability: row.score_first_date_suitability,
       qualitySignal: row.score_quality_signal,
       timeOfDayFit: row.score_time_of_day_fit,
+      composite: computeVenueComposite({
+        categoryOverlap: row.score_category_overlap,
+        distanceToMidpoint: row.score_distance_to_midpoint,
+        firstDateSuitability: row.score_first_date_suitability,
+        qualitySignal: row.score_quality_signal,
+        timeOfDayFit: row.score_time_of_day_fit,
+      }),
     },
   };
 }
@@ -174,3 +202,8 @@ export type ScoredVenue = {
   readonly tags: readonly string[];
 };
 
+export type CuratedVenueCandidate = PlaceCandidate & {
+  readonly category: Category;
+  readonly score: VenueScore;
+  readonly tags: readonly string[];
+};

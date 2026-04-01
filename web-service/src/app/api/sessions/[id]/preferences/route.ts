@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { enqueueVenueGeneration } from "../../../../../lib/qstash";
 import { getSession } from "../../../../../lib/services/session-service";
 import {
   getPreferences,
@@ -6,6 +7,7 @@ import {
 } from "../../../../../lib/services/preference-service";
 import { serializePreference } from "../../../../../lib/services/preference-serializer";
 import { isExpired } from "../../../../../lib/services/session-helpers";
+import { generateVenues } from "../../../../../lib/services/venue-generation-service";
 import type { BudgetLevel, Category, Role } from "../../../../../lib/types/preference";
 
 type RouteParams = {
@@ -25,6 +27,8 @@ const VALID_CATEGORIES: readonly Category[] = [
   "EVENT",
 ];
 const MAX_CATEGORIES = 4;
+const SESSION_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // ---------------------------------------------------------------------------
 // Input validation
@@ -108,6 +112,13 @@ function validateBody(body: unknown): ValidationResult {
 export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
 
+  if (!SESSION_ID_PATTERN.test(id)) {
+    return NextResponse.json(
+      { error: "Session ID must be a valid UUID" },
+      { status: 400 }
+    );
+  }
+
   // 1. Parse JSON body
   let rawBody: unknown;
   try {
@@ -158,6 +169,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     // 6. Check for duplicate preference
     const existing = await getPreferences(id);
     const alreadySubmitted = existing.some((p) => p.role === role);
+    const willCompleteBothPreferences = existing.length === 1 && !alreadySubmitted;
 
     if (alreadySubmitted) {
       return NextResponse.json(
@@ -173,6 +185,26 @@ export async function POST(request: Request, { params }: RouteParams) {
       budget,
       categories,
     });
+
+    if (willCompleteBothPreferences) {
+      try {
+        await enqueueVenueGeneration(id);
+      } catch (enqueueErr) {
+        console.error(
+          `[POST /api/sessions/${id}/preferences] Failed to enqueue generation, falling back to direct generation:`,
+          enqueueErr
+        );
+
+        try {
+          await generateVenues(id);
+        } catch (generationErr) {
+          console.error(
+            `[POST /api/sessions/${id}/preferences] Direct generation fallback failed:`,
+            generationErr
+          );
+        }
+      }
+    }
 
     return NextResponse.json(
       { preference: serializePreference(preference) },

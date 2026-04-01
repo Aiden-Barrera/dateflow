@@ -223,6 +223,17 @@ See **Session Lifecycle** in `docs/dev-specs/onboarding.md` for complete flow.
 
 ## 🚀 Development Workflow
 
+### **Issue Workflow**
+
+For each GitHub issue:
+
+1. Create a new branch for that issue before starting implementation
+2. Complete the work and verify it locally
+3. Push the branch when the issue is complete
+4. Create a pull request for review
+
+Prefer one issue per branch so the PR stays focused and easy to review.
+
 ### **Setup (First Time)**
 
 ```bash
