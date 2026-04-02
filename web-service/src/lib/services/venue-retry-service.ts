@@ -217,11 +217,20 @@ function applyRetryPreferences(
   preferences: readonly [Preference, Preference],
   retryPreferences: RetryPreferences,
 ): readonly [Preference, Preference] {
-  return preferences.map((preference) => ({
-    ...preference,
-    budget: retryPreferences.budget,
-    categories: retryPreferences.categories,
-  })) as readonly [Preference, Preference];
+  const [preferenceA, preferenceB] = preferences;
+
+  return [
+    {
+      ...preferenceA,
+      budget: retryPreferences.budget,
+      categories: retryPreferences.categories,
+    },
+    {
+      ...preferenceB,
+      budget: retryPreferences.budget,
+      categories: retryPreferences.categories,
+    },
+  ];
 }
 
 async function createGenerationBatch(
