@@ -20,7 +20,7 @@ const CYCLE_INTERVAL_MS = 2400;
  * Two animated concentric rings (coral outer, teal inner) + cycling subtitle text
  * create the feeling of real work happening, not just a spinner.
  */
-export function LoadingScreen() {
+export function LoadingScreen({ demoMode = false }: { readonly demoMode?: boolean }) {
   const [subtitleIndex, setSubtitleIndex] = useState(0);
 
   useEffect(() => {
@@ -32,55 +32,84 @@ export function LoadingScreen() {
   }, []);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-bg px-6">
-      {/* Logo at top */}
-      <div className="absolute top-10">
+    <div className="relative flex min-h-dvh flex-col justify-center overflow-hidden bg-bg px-6">
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full opacity-20 blur-3xl"
+        style={{ background: "var(--color-primary)" }}
+        aria-hidden="true"
+      />
+      <div className="absolute top-10 left-6">
         <Logo />
       </div>
 
-      {/* Animated rings */}
-      <div className="relative flex items-center justify-center">
-        {/* Outer ring — coral */}
-        <div
-          className="absolute h-32 w-32 rounded-full border-4 opacity-40"
-          style={{
-            borderColor: "var(--color-primary)",
-            animation: "spin 3s linear infinite",
-            borderTopColor: "transparent",
-          }}
-          aria-hidden="true"
-        />
-        {/* Middle ring — teal, counter-spin */}
-        <div
-          className="absolute h-20 w-20 rounded-full border-4 opacity-60"
-          style={{
-            borderColor: "var(--color-secondary)",
-            animation: "spin 2s linear infinite reverse",
-            borderTopColor: "transparent",
-          }}
-          aria-hidden="true"
-        />
-        {/* Inner dot */}
-        <div
-          className="h-3 w-3 rounded-full"
-          style={{ background: "var(--color-primary)" }}
-          aria-hidden="true"
-        />
-      </div>
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-10 rounded-[2rem] border border-white/70 bg-white/80 px-8 py-10 text-center shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm">
+        <div className="relative flex items-center justify-center">
+          <div
+            className="absolute h-36 w-36 rounded-full border-4 opacity-40"
+            style={{
+              borderColor: "var(--color-primary)",
+              animation: "spin 3s linear infinite",
+              borderTopColor: "transparent",
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute h-24 w-24 rounded-full border-4 opacity-60"
+            style={{
+              borderColor: "var(--color-secondary)",
+              animation: "spin 2s linear infinite reverse",
+              borderTopColor: "transparent",
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className="h-4 w-4 rounded-full"
+            style={{ background: "var(--color-primary)" }}
+            aria-hidden="true"
+          />
+        </div>
 
-      {/* Text */}
-      <div className="mt-12 flex flex-col items-center gap-2 text-center">
-        <h1 className="text-h2 font-semibold text-text">
-          Finding your spots
-        </h1>
-        <p
-          key={subtitleIndex}
-          className="text-body text-text-secondary"
-          style={{ animation: "fadeIn 0.4s ease-in" }}
-        >
-          {SUBTITLES[subtitleIndex]}
-        </p>
+        <div className="max-w-2xl">
+          <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
+            Venue generation
+          </p>
+          <h1 className="mt-3 text-[clamp(2.5rem,8vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
+            {demoMode ? "Building your demo deck" : "Finding your spots"}
+          </h1>
+          <p
+            key={subtitleIndex}
+            className="mt-4 text-body text-text-secondary"
+            style={{ animation: "fadeIn 0.4s ease-in" }}
+          >
+            {demoMode
+              ? "Skipping the external APIs and assembling a local demo shortlist."
+              : SUBTITLES[subtitleIndex]}
+          </p>
+        </div>
+
+        <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-3">
+          <LoadingCard label="Step A" body="Merge both preference profiles" />
+          <LoadingCard label="Step B" body="Rank the first four options" />
+          <LoadingCard label="Step C" body="Prepare the swipe deck" />
+        </div>
       </div>
+    </div>
+  );
+}
+
+function LoadingCard({
+  label,
+  body,
+}: {
+  readonly label: string;
+  readonly body: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-muted bg-bg/75 px-4 py-4">
+      <p className="text-caption font-semibold uppercase tracking-[0.18em] text-secondary">
+        {label}
+      </p>
+      <p className="mt-2 text-body text-text-secondary">{body}</p>
     </div>
   );
 }

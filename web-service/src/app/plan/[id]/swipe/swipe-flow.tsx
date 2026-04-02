@@ -32,6 +32,8 @@ type SwipeApiResult = {
   readonly sessionStatus: string;
 };
 
+type WaitingStage = "preferences" | "generation" | "round" | "session";
+
 const CATEGORY_LABELS: Record<Category, string> = {
   RESTAURANT: "Restaurant",
   BAR: "Bar",
@@ -48,6 +50,7 @@ export function SwipeFlow({
   const router = useRouter();
   const [status, setStatus] = useState<"loading" | "ready" | "waiting" | "error">("loading");
   const [statusMessage, setStatusMessage] = useState("Loading your first round...");
+  const [waitingStage, setWaitingStage] = useState<WaitingStage>("preferences");
   const [round, setRound] = useState(1);
   const [venues, setVenues] = useState<readonly Venue[]>([]);
   const [index, setIndex] = useState(0);
@@ -101,12 +104,10 @@ export function SwipeFlow({
       }
 
       if (snapshot.status !== "ready_to_swipe") {
+        const waitingState = getWaitingState(snapshot.status);
+        setWaitingStage(waitingState.stage);
         setStatus("waiting");
-        setStatusMessage(
-          snapshot.status === "generating" || snapshot.status === "both_ready"
-            ? "Your venue stack is still being generated."
-            : "This session is not ready for swiping yet.",
-        );
+        setStatusMessage(waitingState.message);
         return;
       }
 
@@ -185,8 +186,9 @@ export function SwipeFlow({
         setStatus("error");
         setStatusMessage("This session moved into fallback resolution. The no-match ending screen is still pending.");
       } else {
+        setWaitingStage("round");
         setStatus("waiting");
-        setStatusMessage("Waiting for the other side to finish this round...");
+        setStatusMessage("You are set for this round. We will keep watch for your partner's next picks.");
       }
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Failed to record swipe.");
@@ -212,12 +214,34 @@ export function SwipeFlow({
   }
 
   if (status === "waiting") {
+    const waitingCopy = getWaitingCopy(waitingStage);
+
     return (
       <SwipeShell creatorName={creatorName} role={role}>
-        <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-white/85 px-6 py-10 text-center shadow-[0_20px_60px_rgba(45,42,38,0.12)] backdrop-blur-sm">
-          <Orbit />
-          <h1 className="mt-6 text-h1 font-semibold">Waiting on the other side</h1>
-          <p className="mt-3 text-body text-text-secondary">{statusMessage}</p>
+        <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-white/85 px-6 py-10 text-center shadow-[0_20px_60px_rgba(45,42,38,0.12)] backdrop-blur-sm sm:px-8">
+          <RomanceOrbit />
+          <p className="mt-6 text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
+            {waitingCopy.eyebrow}
+          </p>
+          <h1 className="mt-3 max-w-lg text-[clamp(2.2rem,6vw,3.5rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-text">
+            {waitingCopy.title}
+          </h1>
+          <p className="mt-4 max-w-xl text-body text-text-secondary">
+            {waitingCopy.body}
+          </p>
+          <p className="mt-3 max-w-lg text-body text-text-secondary">
+            {statusMessage}
+          </p>
+          <div className="mt-6 grid w-full max-w-lg gap-3 sm:grid-cols-2">
+            <WaitingCard
+              title={waitingCopy.cardTitle}
+              body={waitingCopy.cardBody}
+            />
+            <WaitingCard
+              title="Keep this tab open"
+              body="Dateflow will move you forward as soon as the session is ready."
+            />
+          </div>
           <div className="mt-6 w-full max-w-sm">
             <Button variant="secondary" onClick={() => void bootstrap()}>
               Refresh status
@@ -410,12 +434,52 @@ function SwipeShell({
   );
 }
 
-function Orbit() {
+function RomanceOrbit() {
   return (
-    <div className="relative h-20 w-20">
-      <div className="absolute inset-0 rounded-full border-2 border-primary/20" />
-      <div className="absolute inset-3 rounded-full border-2 border-secondary/20" />
-      <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
+    <div className="relative h-32 w-32" aria-hidden="true">
+      <div
+        className="absolute inset-2 rounded-full opacity-80 blur-2xl"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(255,126,107,0.28) 0%, rgba(255,126,107,0.08) 50%, transparent 72%)",
+        }}
+      />
+      <div className="absolute inset-0 rounded-full border border-primary/18" />
+      <div
+        className="absolute inset-0 motion-safe:animate-spin motion-reduce:animate-none"
+        style={{ animationDuration: "10s" }}
+      >
+        <div className="absolute left-1/2 top-0 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-white/90 text-primary shadow-[0_10px_24px_rgba(45,42,38,0.12)]">
+          <MiniHeartIcon />
+        </div>
+      </div>
+      <div className="absolute inset-4 rounded-full border border-secondary/25" />
+      <div
+        className="absolute inset-0 motion-safe:animate-spin motion-reduce:animate-none"
+        style={{ animationDirection: "reverse", animationDuration: "7s" }}
+      >
+        <div className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-secondary shadow-[0_0_0_6px_rgba(120,214,201,0.18)]" />
+      </div>
+      <div className="absolute inset-[2.3rem] flex items-center justify-center rounded-full bg-white/90 shadow-[0_18px_40px_rgba(45,42,38,0.14)]">
+        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-muted text-primary motion-safe:animate-pulse motion-reduce:animate-none">
+          <HeartIcon className="h-5 w-5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WaitingCard({
+  title,
+  body,
+}: {
+  readonly title: string;
+  readonly body: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-muted bg-bg/75 px-4 py-4 text-left">
+      <h2 className="text-body font-semibold text-text">{title}</h2>
+      <p className="mt-2 text-body text-text-secondary">{body}</p>
     </div>
   );
 }
@@ -446,12 +510,84 @@ function PassIcon() {
   );
 }
 
-function HeartIcon() {
+function HeartIcon({ className = "h-5 w-5" }: { readonly className?: string }) {
   return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 21s-6.72-4.32-9.33-8.35C.96 10.01 1.53 6.5 4.43 4.84c2.35-1.35 4.85-.48 6.1 1.33 1.25-1.81 3.75-2.68 6.1-1.33 2.9 1.66 3.47 5.17 1.76 7.81C18.72 16.68 12 21 12 21Z" />
     </svg>
   );
+}
+
+function MiniHeartIcon() {
+  return <HeartIcon className="h-3.5 w-3.5" />;
+}
+
+function getWaitingState(status: string): {
+  readonly stage: WaitingStage;
+  readonly message: string;
+} {
+  if (status === "pending_b") {
+    return {
+      stage: "preferences",
+      message: "Your partner still has a few quick preferences to share before the deck can open.",
+    };
+  }
+
+  if (status === "both_ready" || status === "generating") {
+    return {
+      stage: "generation",
+      message: "Both sides are in. Dateflow is shaping the first shortlist now.",
+    };
+  }
+
+  return {
+    stage: "session",
+    message: "This session is not ready for swiping yet, but we are still watching for updates.",
+  };
+}
+
+function getWaitingCopy(stage: WaitingStage): {
+  readonly eyebrow: string;
+  readonly title: string;
+  readonly body: string;
+  readonly cardTitle: string;
+  readonly cardBody: string;
+} {
+  switch (stage) {
+    case "preferences":
+      return {
+        eyebrow: "Almost ready",
+        title: "Waiting on your partner's preferences",
+        body: "The moment both sides finish their quick picks, Dateflow can start building your shared date shortlist.",
+        cardTitle: "What happens next",
+        cardBody: "As soon as their preferences are in, the venue deck starts preparing automatically.",
+      };
+    case "generation":
+      return {
+        eyebrow: "Shortlist in progress",
+        title: "Your date options are taking shape",
+        body: "You are past the setup step. Now Dateflow is pulling the strongest options together for both of you.",
+        cardTitle: "What happens next",
+        cardBody: "Once the shortlist is ready, the swipe deck opens and you can start liking venues.",
+      };
+    case "round":
+      return {
+        eyebrow: "Round complete",
+        title: "Waiting on your partner's picks",
+        body: "Your side is done for now. The next reveal happens as soon as your partner finishes their round.",
+        cardTitle: "What happens next",
+        cardBody: "Dateflow will unlock the next round or reveal the match automatically.",
+      };
+    case "session":
+    default:
+      return {
+        eyebrow: "Checking session",
+        title: "Your date flow is still warming up",
+        body: "This session has not opened the swipe deck yet, but the connection is still live and we are watching for changes.",
+        cardTitle: "What happens next",
+        cardBody: "The screen refreshes into the next state as soon as the session advances.",
+      };
+  }
 }
 
 function toPriceLabel(priceLevel: number): string {

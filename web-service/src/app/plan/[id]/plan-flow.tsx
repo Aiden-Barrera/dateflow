@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HookScreen } from "../../../components/hook-screen";
 import { LocationScreen } from "../../../components/location-screen";
@@ -40,39 +40,37 @@ export function PlanFlow({
   const [location, setLocation] = useState<Location | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const submitPreferences = useCallback(
-    async (
-      loc: Location,
-      vibeCategories: Category[],
-      vibeBudget: BudgetLevel
-    ) => {
-      try {
-        const response = await fetch(
-          `/api/sessions/${sessionId}/preferences`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              role: "b",
-              location: { lat: loc.lat, lng: loc.lng, label: loc.label },
-              budget: vibeBudget,
-              categories: vibeCategories,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          const message =
-            body.error ?? "Something went wrong. Please try again.";
-          setSubmitError(message);
+  async function submitPreferences(
+    loc: Location,
+    vibeCategories: Category[],
+    vibeBudget: BudgetLevel
+  ) {
+    try {
+      const response = await fetch(
+        `/api/sessions/${sessionId}/preferences`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "b",
+            location: { lat: loc.lat, lng: loc.lng, label: loc.label },
+            budget: vibeBudget,
+            categories: vibeCategories,
+            demo: demoMode,
+          }),
         }
-      } catch {
-        setSubmitError("Could not connect. Check your internet and try again.");
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        const message =
+          body.error ?? "Something went wrong. Please try again.";
+        setSubmitError(message);
       }
-    },
-    [sessionId]
-  );
+    } catch {
+      setSubmitError("Could not connect. Check your internet and try again.");
+    }
+  }
 
   useEffect(() => {
     if (step !== "loading") {
@@ -149,5 +147,5 @@ export function PlanFlow({
     );
   }
 
-  return <LoadingScreen />;
+  return <LoadingScreen demoMode={demoMode} />;
 }

@@ -29,8 +29,12 @@ vi.mock("../../../../../../lib/qstash", () => ({
 }));
 
 const mockGenerateVenues = vi.fn();
+const mockGenerateDemoVenues = vi.fn();
 vi.mock("../../../../../../lib/services/venue-generation-service", () => ({
   generateVenues: (...args: unknown[]) => mockGenerateVenues(...args),
+}));
+vi.mock("../../../../../../lib/services/demo-venue-service", () => ({
+  generateDemoVenues: (...args: unknown[]) => mockGenerateDemoVenues(...args),
 }));
 
 import { POST } from "../route";
@@ -99,6 +103,7 @@ describe("POST /api/sessions/[id]/preferences", () => {
     mockSubmitPreference.mockResolvedValue(fakePreference);
     mockEnqueueVenueGeneration.mockResolvedValue(undefined);
     mockGenerateVenues.mockResolvedValue(undefined);
+    mockGenerateDemoVenues.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -145,6 +150,20 @@ describe("POST /api/sessions/[id]/preferences", () => {
 
     expect(response.status).toBe(201);
     expect(mockGenerateVenues).toHaveBeenCalledWith(SESSION_ID);
+  });
+
+  it("uses demo venue generation instead of qstash when demo mode is enabled", async () => {
+    mockGetPreferences.mockResolvedValue([{ ...fakePreference, role: "a" }]);
+
+    const response = await POST(
+      makePostRequest({ ...validBody, demo: true }),
+      makeParams(),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockGenerateDemoVenues).toHaveBeenCalledWith(SESSION_ID);
+    expect(mockEnqueueVenueGeneration).not.toHaveBeenCalled();
+    expect(mockGenerateVenues).not.toHaveBeenCalled();
   });
 
   it("returns 400 when the session id is not a UUID", async () => {

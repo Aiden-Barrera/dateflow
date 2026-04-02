@@ -7,12 +7,6 @@ type SessionRowUpdate = {
   matchedVenueId?: string | null;
 };
 
-type ChannelStatus =
-  | "SUBSCRIBED"
-  | "TIMED_OUT"
-  | "CHANNEL_ERROR"
-  | "CLOSED";
-
 export type SessionStatusSnapshot = {
   readonly status: string;
   readonly matchedVenueId: string | null;
@@ -40,14 +34,23 @@ export function createSessionStatusSync(
     options.pollIntervalMs ?? SESSION_STATUS_POLL_INTERVAL_MS;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
+  const pollOnce = async () => {
+    try {
+      const snapshot = await fetchStatus();
+      onUpdate(snapshot);
+    } catch {
+      // Ignore transient polling failures. A later poll or realtime update
+      // can still move the UI forward.
+    }
+  };
+
   const startPolling = () => {
     if (pollTimer) {
       return;
     }
 
-    pollTimer = setInterval(async () => {
-      const snapshot = await fetchStatus();
-      onUpdate(snapshot);
+    pollTimer = setInterval(() => {
+      void pollOnce();
     }, pollIntervalMs);
   };
 
@@ -79,20 +82,10 @@ export function createSessionStatusSync(
       },
     );
 
-  channel.subscribe((status: ChannelStatus) => {
-      if (status === "SUBSCRIBED") {
-        stopPolling();
-        return;
-      }
+  startPolling();
+  void pollOnce();
 
-      if (
-        status === "CHANNEL_ERROR" ||
-        status === "TIMED_OUT" ||
-        status === "CLOSED"
-      ) {
-        startPolling();
-      }
-    });
+  channel.subscribe(() => {});
 
   return {
     stop() {
