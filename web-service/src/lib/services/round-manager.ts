@@ -1,9 +1,7 @@
 import { getSupabaseServerClient } from "../supabase-server";
+import { FINAL_ROUND, VENUES_PER_ROUND } from "../swipe-config";
 import type { SwipeRow } from "../types/swipe";
 import type { VenueRow } from "../types/venue";
-
-const VENUES_PER_ROUND = 4;
-const FINAL_ROUND = 3;
 
 export type ForcedResolution = {
   readonly venueId: string;
@@ -160,6 +158,7 @@ function buildSwipeMap(swipes: readonly SwipeRow[]): Map<string, readonly SwipeR
 }
 
 function computeVenueComposite(venue: VenueRow): number {
+  // VenueGenerationService persists normalized 0-1 component scores.
   return (
     venue.score_category_overlap * 0.3 +
     venue.score_distance_to_midpoint * 0.25 +

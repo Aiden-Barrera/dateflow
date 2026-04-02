@@ -17,10 +17,12 @@ vi.mock("../supabase", () => ({
 describe("createSessionStatusSync", () => {
   const fetchStatus = vi.fn<() => Promise<SessionStatusSnapshot>>();
   const onUpdate = vi.fn<(snapshot: SessionStatusSnapshot) => void>();
+  const fetchMock = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    vi.stubGlobal("fetch", fetchMock);
     mockOn.mockReturnValue({ subscribe: mockSubscribe });
     fetchStatus.mockResolvedValue({
       status: "ready_to_swipe",
@@ -32,6 +34,7 @@ describe("createSessionStatusSync", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("forwards realtime session updates from the Supabase channel", () => {
@@ -80,5 +83,25 @@ describe("createSessionStatusSync", () => {
 
     expect(mockUnsubscribe).toHaveBeenCalledOnce();
     expect(fetchStatus).toHaveBeenCalledOnce();
+  });
+
+  it("polls the existing session route when no custom fetchStatus is provided", async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        session: {
+          status: "matched",
+          matchedVenueId: "venue-4",
+        },
+      }),
+    });
+
+    createSessionStatusSync("session-1", onUpdate);
+
+    const lifecycleHandler = mockSubscribe.mock.calls[0][0];
+    lifecycleHandler("CHANNEL_ERROR");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(fetchMock).toHaveBeenCalledWith("/api/sessions/session-1");
   });
 });

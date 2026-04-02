@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "./supabase";
+import { SESSION_STATUS_POLL_INTERVAL_MS } from "./swipe-config";
 
 type SessionRowUpdate = {
   status?: string;
@@ -28,8 +29,6 @@ type SessionStatusSync = {
   stop(): void;
 };
 
-const DEFAULT_POLL_INTERVAL_MS = 5000;
-
 export function createSessionStatusSync(
   sessionId: string,
   onUpdate: (snapshot: SessionStatusSnapshot) => void,
@@ -37,7 +36,8 @@ export function createSessionStatusSync(
 ): SessionStatusSync {
   const supabase = getSupabaseClient();
   const fetchStatus = options.fetchStatus ?? (() => fetchSessionStatus(sessionId));
-  const pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+  const pollIntervalMs =
+    options.pollIntervalMs ?? SESSION_STATUS_POLL_INTERVAL_MS;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
   const startPolling = () => {
@@ -107,11 +107,21 @@ export function createSessionStatusSync(
 async function fetchSessionStatus(
   sessionId: string,
 ): Promise<SessionStatusSnapshot> {
-  const response = await fetch(`/api/sessions/${sessionId}/status`);
+  const response = await fetch(`/api/sessions/${sessionId}`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch session status for ${sessionId}`);
   }
 
-  return (await response.json()) as SessionStatusSnapshot;
+  const payload = (await response.json()) as {
+    session: {
+      status: string;
+      matchedVenueId: string | null;
+    };
+  };
+
+  return {
+    status: payload.session.status,
+    matchedVenueId: payload.session.matchedVenueId,
+  };
 }

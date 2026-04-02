@@ -26,6 +26,7 @@ const mockFrom = vi.fn((table: string) => {
 });
 
 const mockCheckAndRecordMatch = vi.fn();
+const mockResolveNoMatch = vi.fn();
 
 vi.mock("../../supabase-server", () => ({
   getSupabaseServerClient: () => ({ from: mockFrom }),
@@ -34,6 +35,14 @@ vi.mock("../../supabase-server", () => ({
 vi.mock("../match-detector", () => ({
   checkAndRecordMatch: (...args: unknown[]) => mockCheckAndRecordMatch(...args),
 }));
+
+vi.mock("../round-manager", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../round-manager")>();
+  return {
+    ...actual,
+    resolveNoMatch: (...args: unknown[]) => mockResolveNoMatch(...args),
+  };
+});
 
 function makeVenueRow(index: number): VenueRow {
   const round = Math.floor(index / 4) + 1;
@@ -88,6 +97,10 @@ describe("recordSwipe", () => {
     mockCheckAndRecordMatch.mockResolvedValue({
       matched: false,
       venueId: null,
+    });
+    mockResolveNoMatch.mockResolvedValue({
+      venueId: "venue-12",
+      reason: "highest_scored",
     });
   });
 
@@ -193,6 +206,39 @@ describe("recordSwipe", () => {
       roleBCount: 2,
       total: 4,
       complete: false,
+    });
+  });
+
+  it("resolves the session when round 3 completes without a mutual match", async () => {
+    mockSwipeEq.mockResolvedValue({
+      data: [
+        ...["venue-1", "venue-2", "venue-3", "venue-4"].flatMap((venueId) => [
+          makeSwipeRow(venueId, "a"),
+          makeSwipeRow(venueId, "b"),
+        ]),
+        ...["venue-5", "venue-6", "venue-7", "venue-8"].flatMap((venueId) => [
+          makeSwipeRow(venueId, "a"),
+          makeSwipeRow(venueId, "b"),
+        ]),
+        makeSwipeRow("venue-9", "a"),
+        makeSwipeRow("venue-10", "a"),
+        makeSwipeRow("venue-11", "a"),
+        makeSwipeRow("venue-12", "a", false),
+        makeSwipeRow("venue-9", "b"),
+        makeSwipeRow("venue-10", "b"),
+        makeSwipeRow("venue-11", "b"),
+        makeSwipeRow("venue-12", "b", false),
+      ],
+      error: null,
+    });
+
+    const result = await recordSwipe("session-1", "venue-12", "b", false);
+
+    expect(result).toEqual({
+      matched: true,
+      matchedVenueId: "venue-12",
+      roundComplete: true,
+      currentRound: 3,
     });
   });
 });

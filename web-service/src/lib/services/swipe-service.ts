@@ -1,6 +1,11 @@
 import { checkAndRecordMatch } from "./match-detector";
-import { getCurrentRound, isRoundComplete } from "./round-manager";
+import {
+  getCurrentRound,
+  isRoundComplete,
+  resolveNoMatch,
+} from "./round-manager";
 import { getSupabaseServerClient } from "../supabase-server";
+import { FINAL_ROUND } from "../swipe-config";
 import type { Role } from "../types/preference";
 import { toSwipe, type Swipe, type SwipeRow } from "../types/swipe";
 import type { VenueRow } from "../types/venue";
@@ -26,6 +31,10 @@ export async function recordSwipe(
   role: Role,
   liked: boolean,
 ): Promise<SwipeResult> {
+  if (role !== "a" && role !== "b") {
+    throw new Error(`Invalid role: ${role}`);
+  }
+
   const currentRound = await getCurrentRound(sessionId);
   const venuesForRound = await getVenueIdsForRound(sessionId, currentRound);
 
@@ -37,6 +46,17 @@ export async function recordSwipe(
   const roundComplete = matchResult.matched
     ? false
     : await isRoundComplete(sessionId, currentRound);
+
+  if (!matchResult.matched && roundComplete && currentRound === FINAL_ROUND) {
+    const resolution = await resolveNoMatch(sessionId);
+
+    return {
+      matched: true,
+      matchedVenueId: resolution.venueId,
+      roundComplete: true,
+      currentRound,
+    };
+  }
 
   return {
     matched: matchResult.matched,
