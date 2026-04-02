@@ -53,7 +53,7 @@ export async function resolveNoMatch(
   });
 
   if (singleLikeVenue) {
-    await finalizeSessionMatch(sessionId, singleLikeVenue.id);
+    await finalizeFallbackSuggestion(sessionId, singleLikeVenue.id);
 
     return {
       venueId: singleLikeVenue.id,
@@ -72,7 +72,7 @@ export async function resolveNoMatch(
     throw new Error(`No venues available for session ${sessionId}`);
   }
 
-  await finalizeSessionMatch(sessionId, topVenue.id);
+  await finalizeFallbackSuggestion(sessionId, topVenue.id);
 
   return {
     venueId: topVenue.id,
@@ -80,7 +80,7 @@ export async function resolveNoMatch(
   };
 }
 
-async function finalizeSessionMatch(
+async function finalizeFallbackSuggestion(
   sessionId: string,
   venueId: string,
 ): Promise<void> {
@@ -88,7 +88,7 @@ async function finalizeSessionMatch(
   const { error } = await supabase
     .from("sessions")
     .update({
-      status: "matched",
+      status: "fallback_pending",
       matched_venue_id: venueId,
     })
     .eq("id", sessionId);

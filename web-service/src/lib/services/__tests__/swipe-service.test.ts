@@ -118,6 +118,7 @@ describe("recordSwipe", () => {
       matchedVenueId: null,
       roundComplete: false,
       currentRound: 1,
+      sessionStatus: "ready_to_swipe",
     });
   });
 
@@ -134,6 +135,7 @@ describe("recordSwipe", () => {
       matchedVenueId: "venue-2",
       roundComplete: false,
       currentRound: 1,
+      sessionStatus: "matched",
     });
   });
 
@@ -209,7 +211,7 @@ describe("recordSwipe", () => {
     });
   });
 
-  it("resolves the session when round 3 completes without a mutual match", async () => {
+  it("returns fallback pending state when round 3 completes without a mutual match", async () => {
     mockSwipeEq.mockResolvedValue({
       data: [
         ...["venue-1", "venue-2", "venue-3", "venue-4"].flatMap((venueId) => [
@@ -235,10 +237,11 @@ describe("recordSwipe", () => {
     const result = await recordSwipe("session-1", "venue-12", "b", false);
 
     expect(result).toEqual({
-      matched: true,
+      matched: false,
       matchedVenueId: "venue-12",
       roundComplete: true,
       currentRound: 3,
+      sessionStatus: "fallback_pending",
     });
   });
 });
