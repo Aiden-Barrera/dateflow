@@ -8,6 +8,7 @@ import { toVenue, type Venue, type VenueRow } from "../types/venue";
 import { getBothPreferences } from "./preference-service";
 import { calculateMidpoint } from "./midpoint-calculator";
 import { searchNearbyWithCache } from "./places-api-cached";
+import { mapGoogleTypeToCategory } from "./places-api-client";
 import { applySafetyFilter } from "./safety-filter";
 import { scoreAndCurate } from "./ai-curation-service";
 
@@ -212,7 +213,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         pool_id: poolId,
         place_id: candidate.placeId,
         name: candidate.name,
-        category: candidate.category,
+        category: mapGoogleTypeToCategory(candidate.types),
         address: candidate.address,
         lat: candidate.location.lat,
         lng: candidate.location.lng,
@@ -220,7 +221,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         rating: candidate.rating,
         photo_url: null,
         raw_types: candidate.types,
-        raw_tags: candidate.tags,
+        raw_tags: [],
         source_rank: index + 1,
       })),
     );
