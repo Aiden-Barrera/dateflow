@@ -6,9 +6,16 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
+const ISO_8601_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
+
 function parseDateTime(value: string | null): Date | undefined {
   if (value === null) {
     return undefined;
+  }
+
+  if (!ISO_8601_PATTERN.test(value)) {
+    throw new Error("dateTime must be a valid ISO 8601 string");
   }
 
   const date = new Date(value);

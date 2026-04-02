@@ -2,6 +2,7 @@ import type { MatchResult } from "../types/match-result";
 
 const DEFAULT_EVENT_HOUR_UTC = 19;
 const EVENT_DURATION_HOURS = 2;
+const DEFAULT_APP_URL = "https://dateflow.app";
 
 function pad(value: number): string {
   return value.toString().padStart(2, "0");
@@ -33,20 +34,27 @@ function escapeICS(value: string): string {
     .replace(/;/g, "\\;");
 }
 
+function getResultsUrl(sessionId: string): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? DEFAULT_APP_URL;
+  return `${appUrl}/plan/${sessionId}/results`;
+}
+
 export function generateICS(
   matchResult: MatchResult,
   dateTime = defaultDateTime(matchResult),
 ): string {
   const endDateTime = new Date(dateTime);
   endDateTime.setUTCHours(endDateTime.getUTCHours() + EVENT_DURATION_HOURS);
-
-  const resultUrl = `https://dateflow.app/plan/${matchResult.sessionId}/results`;
+  const resultUrl = getResultsUrl(matchResult.sessionId);
+  const uid = `${matchResult.sessionId}@dateflow.app`;
 
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Dateflow//EN",
     "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${formatICSDate(matchResult.matchedAt)}`,
     `DTSTART:${formatICSDate(dateTime)}`,
     `DTEND:${formatICSDate(endDateTime)}`,
     `SUMMARY:${escapeICS(`Date at ${matchResult.venue.name}`)}`,

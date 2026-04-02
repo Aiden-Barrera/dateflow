@@ -105,6 +105,17 @@ describe("GET /api/sessions/[id]/calendar", () => {
     expect(mockGetMatchResult).not.toHaveBeenCalled();
   });
 
+  it("returns 400 for a non-ISO dateTime string that Date would otherwise parse", async () => {
+    const response = await GET(makeRequest("?dateTime=2026-04-05 19:30:00"), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("dateTime must be a valid ISO 8601 string");
+    expect(mockGetMatchResult).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when the session does not exist", async () => {
     mockGetMatchResult.mockRejectedValue(new Error("Session not found"));
 
