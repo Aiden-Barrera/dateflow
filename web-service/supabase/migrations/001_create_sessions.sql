@@ -13,6 +13,9 @@ CREATE TABLE sessions (
                                      'generating',
                                      'generation_failed',
                                      'ready_to_swipe',
+                                     'fallback_pending',
+                                     'retry_pending',
+                                     'reranking',
                                      'matched',
                                      'expired'
                                    )),

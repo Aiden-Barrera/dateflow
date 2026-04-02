@@ -15,11 +15,20 @@ const mockUpdateSelect = vi.fn(() => ({ single: mockUpdateSingle }));
 const mockUpdateEq = vi.fn(() => ({ select: mockUpdateSelect }));
 const mockUpdate = vi.fn(() => ({ eq: mockUpdateEq }));
 
+const mockDeleteEq = vi.fn();
+const mockDelete = vi.fn(() => ({ eq: mockDeleteEq }));
+
 const mockFrom = vi.fn((table: string) => {
   if (table === "sessions") {
     return {
       select: mockSelect,
       update: mockUpdate,
+    };
+  }
+
+  if (table === "swipes") {
+    return {
+      delete: mockDelete,
     };
   }
 
@@ -48,6 +57,7 @@ describe("fallback-decision-service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSelectSingle.mockResolvedValue({ data: baseRow, error: null });
+    mockDeleteEq.mockResolvedValue({ error: null });
     mockRerankStoredCandidates.mockResolvedValue({
       strategy: "pool_rerank",
       generationBatchId: "batch-2",
@@ -91,6 +101,8 @@ describe("fallback-decision-service", () => {
       status: "ready_to_swipe",
       matched_venue_id: null,
     });
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+    expect(mockDeleteEq).toHaveBeenCalledWith("session_id", "session-1");
     expect(session.status).toBe("ready_to_swipe");
     expect(session.matchedVenueId).toBeNull();
   });
@@ -120,6 +132,30 @@ describe("fallback-decision-service", () => {
 
     expect(mockUpdate).toHaveBeenNthCalledWith(2, { status: "retry_pending" });
     expect(session.status).toBe("retry_pending");
+  });
+
+  it("reverts reranking back to fallback_pending when rerank throws", async () => {
+    mockRerankStoredCandidates.mockRejectedValue(new Error("rerank failed"));
+    mockUpdateSingle
+      .mockResolvedValueOnce({
+        data: { ...baseRow, status: "reranking" },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { ...baseRow, status: "fallback_pending" },
+        error: null,
+      });
+
+    await expect(
+      requestFallbackRetry("session-1", {
+        categories: ["BAR"],
+        budget: "MODERATE",
+      }),
+    ).rejects.toThrow("rerank failed");
+
+    expect(mockUpdate).toHaveBeenNthCalledWith(1, { status: "reranking" });
+    expect(mockUpdate).toHaveBeenNthCalledWith(2, { status: "fallback_pending" });
+    expect(mockDelete).not.toHaveBeenCalled();
   });
 
   it("rejects fallback decisions unless the session is in fallback_pending", async () => {

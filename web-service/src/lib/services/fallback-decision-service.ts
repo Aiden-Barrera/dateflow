@@ -24,16 +24,24 @@ export async function requestFallbackRetry(
   await getFallbackPendingSession(sessionId);
 
   await updateSessionStatus(sessionId, "reranking");
-  const result = await rerankStoredCandidates(sessionId, preferences);
 
-  if (result.requiresFullRegeneration) {
-    return updateSessionStatus(sessionId, "retry_pending");
+  try {
+    const result = await rerankStoredCandidates(sessionId, preferences);
+
+    if (result.requiresFullRegeneration) {
+      return updateSessionStatus(sessionId, "retry_pending");
+    }
+
+    await clearSessionSwipes(sessionId);
+
+    return updateSession(sessionId, {
+      status: "ready_to_swipe",
+      matched_venue_id: null,
+    });
+  } catch (error) {
+    await updateSessionStatus(sessionId, "fallback_pending");
+    throw error;
   }
-
-  return updateSession(sessionId, {
-    status: "ready_to_swipe",
-    matched_venue_id: null,
-  });
 }
 
 async function getFallbackPendingSession(sessionId: string): Promise<Session> {
@@ -59,9 +67,21 @@ async function getFallbackPendingSession(sessionId: string): Promise<Session> {
 
 async function updateSessionStatus(
   sessionId: string,
-  status: "matched" | "retry_pending" | "reranking",
+  status: "matched" | "retry_pending" | "reranking" | "fallback_pending",
 ): Promise<Session> {
   return updateSession(sessionId, { status });
+}
+
+async function clearSessionSwipes(sessionId: string): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from("swipes")
+    .delete()
+    .eq("session_id", sessionId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 async function updateSession(
