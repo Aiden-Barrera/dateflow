@@ -14,6 +14,9 @@ const mockQuerySelect = vi.fn(() => ({
   eq: mockQueryEq,
 }));
 
+const mockInsertSelectSingle = vi.fn();
+const mockInsertSelect = vi.fn(() => ({ single: mockInsertSelectSingle }));
+const mockInsert = vi.fn(() => ({ select: mockInsertSelect }));
 const mockUpsert = vi.fn();
 
 const mockUpdateSelect = vi.fn();
@@ -28,6 +31,10 @@ const mockUpdate = vi.fn(() => ({ eq: mockUpdateEqId }));
 const mockFrom = vi.fn((table: string) => {
   if (table === "sessions") {
     return { update: mockUpdate };
+  }
+
+  if (table === "session_candidate_pools" || table === "venue_generation_batches") {
+    return { insert: mockInsert };
   }
 
   return {
@@ -163,6 +170,15 @@ describe("generateVenues", () => {
       .mockResolvedValueOnce(curated.slice(4, 8))
       .mockResolvedValueOnce(curated.slice(8, 12));
 
+    mockInsertSelectSingle
+      .mockResolvedValueOnce({
+        data: { id: "pool-1" },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { id: "batch-1" },
+        error: null,
+      });
     mockUpsert.mockResolvedValue({ error: null });
     mockUpdateSelect.mockResolvedValue({ data: [{ id: "session-1" }], error: null });
     mockQueryOrderPosition.mockResolvedValue({
@@ -182,16 +198,37 @@ describe("generateVenues", () => {
       1
     );
     expect(mockScoreAndCurate).toHaveBeenCalledTimes(3);
-    expect(mockUpsert).toHaveBeenCalledOnce();
+    expect(mockInsert).toHaveBeenNthCalledWith(1, {
+      session_id: "session-1",
+      source: "initial_generation",
+    });
+    expect(mockInsert).toHaveBeenNthCalledWith(2, {
+      session_id: "session-1",
+      pool_id: "pool-1",
+      batch_number: 1,
+      generation_strategy: "initial_pool_rank",
+    });
+    expect(mockUpsert).toHaveBeenCalledTimes(2);
+    expect(mockUpsert).toHaveBeenCalledWith(
+      expect.any(Array),
+      { onConflict: "pool_id,place_id" }
+    );
     expect(mockUpsert).toHaveBeenCalledWith(
       expect.any(Array),
       { onConflict: "session_id,round,position" }
     );
 
-    const insertedRows = mockUpsert.mock.calls[0][0];
+    const candidatePoolRows = mockUpsert.mock.calls[0][0];
+    expect(candidatePoolRows).toHaveLength(12);
+    expect(candidatePoolRows[0].pool_id).toBe("pool-1");
+    expect(candidatePoolRows[0].source_rank).toBe(1);
+
+    const insertedRows = mockUpsert.mock.calls[1][0];
     expect(insertedRows).toHaveLength(12);
     expect(insertedRows[0].round).toBe(1);
     expect(insertedRows[0].position).toBe(1);
+    expect(insertedRows[0].generation_batch_id).toBe("batch-1");
+    expect(insertedRows[0].surfaced_cycle).toBe(1);
     expect(insertedRows[4].round).toBe(2);
     expect(insertedRows[8].round).toBe(3);
 
