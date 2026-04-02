@@ -5,6 +5,8 @@
 **Depended on by:** DS-04 (Swipe & Match System)
 **User Stories:** US-07 (Venues filtered for first-date safety), US-12 (Venues equidistant from both people)
 
+> Follow-up design: see [DS-03A — Candidate Pool Persistence & Low-Cost Regeneration](./ds-03a-candidate-pool-regeneration.md). DS-03 should evolve from storing only the surfaced 12 venues to storing a broader reusable candidate pool plus the surfaced 12.
+
 ---
 
 ## Architecture Diagram
@@ -150,6 +152,10 @@ classDiagram
 - `generateVenues(sessionId)` — runs the full pipeline for all three rounds (12 venues total). Updates session status from `generating` to `ready_to_swipe` on success, or to `generation_failed` on failure.
 - `getVenuesForRound(sessionId, round)` — retrieves only the venues assigned to a specific round. Used by DS-04 to progressively load rounds.
 
+**Planned extension:**
+- Persist a broader candidate snapshot before narrowing to the first 12 surfaced venues.
+- Track surfaced batches separately so later retry cycles can re-score unused candidates first.
+
 ### PlacesAPIClient
 **Type:** Client
 **Purpose:** Wrapper around the Google Places Nearby Search API. Fetches venue candidates within a radius of a location, filtered by type and price level.
@@ -238,9 +244,10 @@ flowchart TD
     O --> P["Assign next 4 to Round 2 with category diversity bonus"]
     P --> Q["AICurationService.scoreAndCurate(remaining, preferences, round=3)"]
     Q --> R["Assign next 4 to Round 3 as wildcards"]
-    R --> S["Insert 12 venue rows into DB"]
-    S --> T["Update session status → ready_to_swipe"]
-    T --> U["Supabase realtime notifies both clients"]
+    R --> S["Persist broader candidate pool snapshot"]
+    S --> T["Insert surfaced 12 venue rows into DB"]
+    T --> U["Update session status → ready_to_swipe"]
+    U --> V["Supabase realtime notifies both clients"]
 ```
 
 ---

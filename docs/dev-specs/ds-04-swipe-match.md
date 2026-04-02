@@ -5,6 +5,8 @@
 **Depended on by:** DS-05 (Post-Match Actions)
 **User Stories:** US-10 (Swipe on venues privately), US-11 (Match reveal), US-13 (Second/third round if no match)
 
+> Follow-up design: see [DS-03A — Candidate Pool Persistence & Low-Cost Regeneration](./ds-03a-candidate-pool-regeneration.md). DS-04 should evolve from forced auto-match after round 3 to a bounded retry/suggestion flow that can re-score stored candidates before paying for a full regeneration.
+
 ---
 
 ## Architecture Diagram
@@ -113,12 +115,12 @@ classDiagram
 
 ### RoundManager
 **Type:** Service
-**Purpose:** Manages the progressive round mechanic (3 rounds of 4 venues). Determines which round both users are currently in, whether a round is complete (both users have swiped on all 4 venues in the round), and triggers the force-resolution fallback after round 3.
+**Purpose:** Manages the progressive round mechanic (3 rounds of 4 venues). Determines which round both users are currently in, whether a round is complete (both users have swiped on all 4 venues in the round), and triggers the no-match fallback after round 3.
 **Key methods:**
 - `getCurrentRound(sessionId)` — returns 1, 2, or 3 based on how many rounds have been completed
 - `isRoundComplete(sessionId, round)` — returns true if both users have swiped on all 4 venues in the round
 - `hasMatchInRound(sessionId, round)` — returns true if any venue in the round was liked by both users
-- `resolveNoMatch(sessionId)` — called after round 3 if no mutual match exists. Finds the venue each user liked most (or the highest-scored venue overall), sets it as a "suggested" match, and updates session status to `matched`.
+- `resolveNoMatch(sessionId)` — called after round 3 if no mutual match exists. Preferred long-term behavior is to produce a fallback suggestion or bounded retry path rather than silently forcing a true match.
 
 ---
 
@@ -134,7 +136,8 @@ stateDiagram-v2
         Round1 --> Round2 : Both users swiped all 4, no match
         Round2 --> Round3 : Both users swiped all 4, no match
         Round3 --> ForceResolution : Both users swiped all 4, no match
-        ForceResolution --> [*] : Best available venue selected
+        ForceResolution --> RetryOrFallback : Suggest fallback or rerank stored pool
+        RetryOrFallback --> [*] : Mutual acceptance or new swipe batch
 
         Round1 --> [*] : Match found
         Round2 --> [*] : Match found
@@ -142,9 +145,9 @@ stateDiagram-v2
     }
 
     note right of matched
-        Session is finalized.
-        matched_venue_id is set.
-        DS-05 picks up from here.
+        Session is finalized only on mutual match
+        or explicit acceptance of a fallback.
+        DS-05 picks up from there.
     end note
 ```
 
@@ -175,8 +178,11 @@ flowchart TD
     P -- "Yes" --> Q["Load next round of 4 venues"]
     Q --> A
     P -- "No (Round 3 done)" --> R["RoundManager.resolveNoMatch()"]
-    R --> S["Select best available venue"]
-    S --> H
+    R --> S["Offer fallback suggestion or rerank stored candidate pool"]
+    S --> T{"Users retry?"}
+    T -- "Yes" --> U["Build new batch from stored candidates"]
+    U --> A
+    T -- "No, accept suggestion" --> H
 ```
 
 ---
@@ -189,7 +195,7 @@ flowchart TD
 | WebSocket connection drops mid-session | User misses match notification, thinks nothing happened | Client polls `GET /api/sessions/[id]/status` every 5 seconds as fallback. Page reload recovers full state from DB. |
 | User closes browser and reopens later | Swipe progress lost | All swipes are persisted in DB immediately. On page load, `getSwipesForRole()` restores which venues have been swiped, so the user picks up where they left off. |
 | Users swipe at very different speeds | Fast user waits for slow user to finish a round before next round loads | Show "Waiting for partner to finish this round..." state. Round transition only fires when both users have swiped all 4 venues in the current round. |
-| Force resolution after round 3 picks a venue nobody liked | User dissatisfaction with forced match | Priority order: (1) venue both liked (mutual match), (2) venue Person A liked that Person B didn't swipe (benefit of the doubt), (3) venue with highest composite score. Always explain: "This was the closest match we could find." Offer a "Start over" button. |
+| Force resolution after round 3 feels misleading | Users may feel trapped into a venue they did not both choose | Prefer bounded retry or explicit fallback acceptance. Reserve `matched` for mutual like or mutual acceptance. |
 | Duplicate swipe submissions (double-tap, network retry) | Duplicate swipe rows, inflated counts | `UNIQUE (session_id, venue_id, role)` constraint + `ON CONFLICT DO UPDATE` makes swipes idempotent. |
 
 ---
