@@ -107,21 +107,11 @@ export function createSessionStatusSync(
 async function fetchSessionStatus(
   sessionId: string,
 ): Promise<SessionStatusSnapshot> {
-  const response = await fetch(`/api/sessions/${sessionId}`);
+  const response = await fetch(`/api/sessions/${sessionId}/status`);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch session status for ${sessionId}`);
   }
 
-  const payload = (await response.json()) as {
-    session: {
-      status: string;
-      matchedVenueId: string | null;
-    };
-  };
-
-  return {
-    status: payload.session.status,
-    matchedVenueId: payload.session.matchedVenueId,
-  };
+  return (await response.json()) as SessionStatusSnapshot;
 }

@@ -85,7 +85,7 @@ describe("createSessionStatusSync", () => {
     expect(fetchStatus).toHaveBeenCalledOnce();
   });
 
-  it("polls the existing session route when no custom fetchStatus is provided", async () => {
+  it("polls the dedicated session status route when no custom fetchStatus is provided", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -102,6 +102,6 @@ describe("createSessionStatusSync", () => {
     lifecycleHandler("CHANNEL_ERROR");
     await vi.advanceTimersByTimeAsync(5000);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/sessions/session-1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/sessions/session-1/status");
   });
 });

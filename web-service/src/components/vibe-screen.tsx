@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "./button";
+import { CategoryIcon } from "./category-icon";
 import type { BudgetLevel, Category } from "../lib/types/preference";
 
 type VibeScreenProps = {
@@ -12,11 +13,11 @@ type VibeScreenProps = {
   readonly onBack: () => void;
 };
 
-const CATEGORIES: { value: Category; label: string; icon: string }[] = [
-  { value: "RESTAURANT", label: "Food", icon: "🍽" },
-  { value: "BAR", label: "Drinks", icon: "🍸" },
-  { value: "ACTIVITY", label: "Activity", icon: "🎯" },
-  { value: "EVENT", label: "Event", icon: "🎪" },
+const CATEGORIES: { value: Category; label: string }[] = [
+  { value: "RESTAURANT", label: "Food" },
+  { value: "BAR", label: "Drinks" },
+  { value: "ACTIVITY", label: "Activity" },
+  { value: "EVENT", label: "Event" },
 ];
 
 const BUDGETS: { value: BudgetLevel; label: string; symbol: string }[] = [
@@ -81,7 +82,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
       <h1 className="text-h1 font-semibold text-text">What sounds good?</h1>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
-        {CATEGORIES.map(({ value, label, icon }) => {
+        {CATEGORIES.map(({ value, label }) => {
           const isSelected = selectedCategories.includes(value);
           return (
             <button
@@ -93,7 +94,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
                   : "border-muted bg-surface text-text shadow-sm hover:border-text-secondary"
               }`}
             >
-              <span className="text-xl">{icon}</span>
+              <CategoryIcon category={value} className="h-5 w-5" />
               <span className="text-body font-semibold">{label}</span>
             </button>
           );
@@ -105,7 +106,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
         onClick={selectAllCategories}
         className="mt-3 flex cursor-pointer items-center justify-center gap-1.5 self-center text-body text-secondary transition-colors hover:text-secondary/80"
       >
-        <span>✨</span>
+        <span aria-hidden="true">+</span>
         <span className="font-medium">Surprise me</span>
       </button>
 

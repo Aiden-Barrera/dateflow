@@ -64,3 +64,19 @@ body {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes resultReveal {
+  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes confettiBurst {
+  0%   { opacity: 0; transform: translateY(0) scale(0.3); }
+  20%  { opacity: 1; transform: translateY(-14px) scale(1); }
+  100% { opacity: 0; transform: translateY(26px) scale(0.6); }
+}
+
+@keyframes confettiDrift {
+  from { margin-left: 0; }
+  to   { margin-left: 18px; }
+}
