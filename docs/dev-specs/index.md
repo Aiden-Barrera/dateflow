@@ -28,6 +28,7 @@ flowchart TD
 | [DS-01](./ds-01-session-management.md) | Session Management | Independent | — | US-01, US-02, US-03 |
 | [DS-02](./ds-02-preference-input.md) | Preference Input | Dependent | DS-01 | US-04, US-05, US-06 |
 | [DS-03](./ds-03-venue-generation.md) | Venue Generation Engine | Dependent | DS-02 | US-07, US-12 |
+| [DS-03A](./ds-03a-candidate-pool-regeneration.md) | Candidate Pool Persistence & Low-Cost Regeneration | Supplemental | DS-03 | Retry flow follow-up |
 | [DS-04](./ds-04-swipe-match.md) | Swipe & Match System | Dependent | DS-03 | US-10, US-11, US-13 |
 | [DS-05](./ds-05-post-match-actions.md) | Post-Match Actions | Dependent | DS-04 | US-08, US-09 |
 | [DS-06](./ds-06-session-history.md) | Session History | Dependent | DS-01 | US-14 |
