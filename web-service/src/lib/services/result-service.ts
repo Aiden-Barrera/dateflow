@@ -1,11 +1,11 @@
 import { getSupabaseServerClient } from "../supabase-server";
 import type { MatchResult } from "../types/match-result";
 import type { SessionRow } from "../types/session";
-import { toSession } from "../types/session";
 import type { VenueRow } from "../types/venue";
 import { toVenue } from "../types/venue";
 
 const NOT_FOUND_CODE = "PGRST116";
+type MatchedSessionRow = SessionRow & { readonly matched_venue_id: string };
 
 function resolveMatchedAt(sessionRow: SessionRow): Date {
   // The current schema does not persist a dedicated match timestamp yet.
@@ -14,7 +14,7 @@ function resolveMatchedAt(sessionRow: SessionRow): Date {
   return new Date(sessionRow.created_at);
 }
 
-async function getMatchedSession(sessionId: string): Promise<SessionRow> {
+async function getMatchedSession(sessionId: string): Promise<MatchedSessionRow> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("sessions")
@@ -38,7 +38,7 @@ async function getMatchedSession(sessionId: string): Promise<SessionRow> {
     throw new Error("Session does not have a matched venue");
   }
 
-  return data;
+  return data as MatchedSessionRow;
 }
 
 async function getMatchedVenue(
@@ -66,19 +66,10 @@ async function getMatchedVenue(
 
 export async function getMatchResult(sessionId: string): Promise<MatchResult> {
   const sessionRow = await getMatchedSession(sessionId);
-  const session = toSession(sessionRow);
-  const matchedVenueId = sessionRow.matched_venue_id;
-
-  if (!matchedVenueId) {
-    throw new Error("Session does not have a matched venue");
-  }
-
-  const venue = toVenue(
-    await getMatchedVenue(sessionId, matchedVenueId),
-  );
+  const venue = toVenue(await getMatchedVenue(sessionId, sessionRow.matched_venue_id));
 
   return {
-    sessionId: session.id,
+    sessionId,
     venue,
     matchedAt: resolveMatchedAt(sessionRow),
   };

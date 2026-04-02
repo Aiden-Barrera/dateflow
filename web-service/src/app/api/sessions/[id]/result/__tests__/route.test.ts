@@ -75,7 +75,7 @@ describe("GET /api/sessions/[id]/result", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body.error).toBe("Session id is required");
+    expect(body.error).toBe("Session ID is required");
     expect(mockGetMatchResult).not.toHaveBeenCalled();
   });
 
@@ -101,5 +101,31 @@ describe("GET /api/sessions/[id]/result", () => {
 
     expect(response.status).toBe(409);
     expect(body.error).toBe("Session is not matched");
+  });
+
+  it("returns 404 when the matched venue does not exist", async () => {
+    mockGetMatchResult.mockRejectedValue(new Error("Matched venue not found"));
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error).toBe("Matched venue not found");
+  });
+
+  it("returns 409 when the matched session is missing a matched venue id", async () => {
+    mockGetMatchResult.mockRejectedValue(
+      new Error("Session does not have a matched venue"),
+    );
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toBe("Session does not have a matched venue");
   });
 });
