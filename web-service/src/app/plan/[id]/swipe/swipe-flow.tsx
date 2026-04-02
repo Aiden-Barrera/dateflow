@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
@@ -55,6 +55,8 @@ export function SwipeFlow({
   const [venues, setVenues] = useState<readonly Venue[]>([]);
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const loadedRoundRef = useRef<number | null>(null);
+  const loadingRoundRef = useRef<number | null>(null);
   const [toast, setToast] = useState<string | null>(
     demoMode ? "Demo assist is on. Your partner's swipes will be mirrored." : null,
   );
@@ -74,21 +76,36 @@ export function SwipeFlow({
   }, [sessionId]);
 
   const loadRound = useCallback(async (nextRound: number) => {
+    if (
+      loadedRoundRef.current === nextRound ||
+      loadingRoundRef.current === nextRound
+    ) {
+      return;
+    }
+
+    loadingRoundRef.current = nextRound;
     setStatus("loading");
     setStatusMessage(nextRound === 1 ? "Loading the first round..." : `Loading round ${nextRound}...`);
 
-    const response = await fetch(`/api/sessions/${sessionId}/venues?round=${nextRound}`);
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/venues?round=${nextRound}`);
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch venues");
+      if (!response.ok) {
+        throw new Error("Failed to fetch venues");
+      }
+
+      const body = (await response.json()) as { venues: Venue[] };
+      loadedRoundRef.current = nextRound;
+      setRound(nextRound);
+      setVenues(body.venues);
+      setIndex(0);
+      setStatus("ready");
+      setStatusMessage("");
+    } finally {
+      if (loadingRoundRef.current === nextRound) {
+        loadingRoundRef.current = null;
+      }
     }
-
-    const body = (await response.json()) as { venues: Venue[] };
-    setRound(nextRound);
-    setVenues(body.venues);
-    setIndex(0);
-    setStatus("ready");
-    setStatusMessage("");
   }, [sessionId]);
 
   const bootstrap = useCallback(async () => {
