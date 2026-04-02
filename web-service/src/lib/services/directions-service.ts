@@ -7,6 +7,10 @@ export function detectPlatform(userAgent: string): Platform {
     return "ios";
   }
 
+  if (/Macintosh/i.test(userAgent) && /Mobile/i.test(userAgent)) {
+    return "ios";
+  }
+
   if (/Android/i.test(userAgent)) {
     return "android";
   }

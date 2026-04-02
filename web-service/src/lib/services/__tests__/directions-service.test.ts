@@ -47,6 +47,14 @@ describe("directions-service", () => {
     expect(platform).toBe("android");
   });
 
+  it("detects ipad os desktop-style user agents as ios", () => {
+    const platform = detectPlatform(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+    );
+
+    expect(platform).toBe("ios");
+  });
+
   it("defaults to desktop for non-mobile user agents", () => {
     const platform = detectPlatform(
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
