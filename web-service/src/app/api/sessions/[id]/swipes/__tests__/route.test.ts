@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetSession = vi.fn();
 const mockRecordSwipe = vi.fn();
@@ -31,8 +31,14 @@ const readySession = {
 };
 
 describe("POST /api/sessions/[id]/swipes", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-03T12:00:00Z"));
     mockGetSession.mockResolvedValue(readySession);
     mockRecordSwipe.mockResolvedValue({
       matched: false,
@@ -118,5 +124,62 @@ describe("POST /api/sessions/[id]/swipes", () => {
     expect(response.status).toBe(409);
     expect(body.error).toContain("not accepting swipes");
     expect(mockRecordSwipe).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the session is awaiting a fallback decision", async () => {
+    mockGetSession.mockResolvedValue({
+      ...readySession,
+      status: "fallback_pending",
+      matchedVenueId: "venue-12",
+    });
+
+    const response = await POST(makePostRequest({
+      venueId: "venue-1",
+      role: "a",
+      liked: true,
+    }), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toContain("fallback decision");
+    expect(mockRecordSwipe).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when recordSwipe reports a bad venue or current round error", async () => {
+    mockRecordSwipe.mockRejectedValue(
+      new Error("Venue venue-9 is not in the current round"),
+    );
+
+    const response = await POST(makePostRequest({
+      venueId: "venue-9",
+      role: "a",
+      liked: true,
+    }), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("current round");
+  });
+
+  it("returns 409 when recordSwipe reports an invalid session state", async () => {
+    mockRecordSwipe.mockRejectedValue(
+      new Error("cannot swipe when session status is generating"),
+    );
+
+    const response = await POST(makePostRequest({
+      venueId: "venue-1",
+      role: "a",
+      liked: true,
+    }), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toContain("session status");
   });
 });

@@ -93,10 +93,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    if (
-      session.status !== "ready_to_swipe" &&
-      session.status !== "fallback_pending"
-    ) {
+    if (session.status === "fallback_pending") {
+      return NextResponse.json(
+        {
+          error:
+            "This session is awaiting a fallback decision and is not accepting swipes",
+        },
+        { status: 409 },
+      );
+    }
+
+    if (session.status !== "ready_to_swipe") {
       return NextResponse.json(
         { error: "This session is not accepting swipes" },
         { status: 409 },
@@ -112,6 +119,22 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+
+    if (message.includes("current round") || message.includes("Venue ")) {
+      return NextResponse.json(
+        { error: message },
+        { status: 400 },
+      );
+    }
+
+    if (message.includes("session status")) {
+      return NextResponse.json(
+        { error: message },
+        { status: 409 },
+      );
+    }
+
     console.error(`[POST /api/sessions/${id}/swipes] Failed:`, err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

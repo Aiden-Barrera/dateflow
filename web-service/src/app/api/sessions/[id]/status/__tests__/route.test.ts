@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetSession = vi.fn();
 const mockGetCurrentRound = vi.fn();
@@ -34,8 +34,14 @@ const readySession = {
 };
 
 describe("GET /api/sessions/[id]/status", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-03T12:00:00Z"));
     mockGetSession.mockResolvedValue(readySession);
     mockGetCurrentRound.mockResolvedValue(2);
     mockGetRoundCompletion.mockResolvedValue({
@@ -94,8 +100,47 @@ describe("GET /api/sessions/[id]/status", () => {
     expect(body).toEqual({
       status: "matched",
       matchedVenueId: "venue-12",
-      currentRound: undefined,
-      roundComplete: undefined,
+    });
+  });
+
+  it("returns active non-swipeable states without round progress", async () => {
+    mockGetSession.mockResolvedValue({
+      ...readySession,
+      status: "generating",
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockGetCurrentRound).not.toHaveBeenCalled();
+    expect(mockGetRoundCompletion).not.toHaveBeenCalled();
+    expect(body).toEqual({
+      status: "generating",
+      matchedVenueId: null,
+    });
+  });
+
+  it("returns expired status when the session has passed expiresAt even if DB status has not flipped yet", async () => {
+    mockGetSession.mockResolvedValue({
+      ...readySession,
+      expiresAt: new Date("2026-04-02T12:00:00Z"),
+      status: "ready_to_swipe",
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockGetCurrentRound).not.toHaveBeenCalled();
+    expect(mockGetRoundCompletion).not.toHaveBeenCalled();
+    expect(body).toEqual({
+      status: "expired",
+      matchedVenueId: null,
     });
   });
 });
