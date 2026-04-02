@@ -1,10 +1,11 @@
 /**
- * The 7 states a session moves through during its lifecycle.
+ * The session states used across the planning lifecycle.
  *
  * DS-01 introduces:  pending_b, expired
  * DS-02 adds:        both_ready
  * DS-03 adds:        generating, generation_failed
- * DS-04 adds:        ready_to_swipe, matched
+ * DS-04 adds:        ready_to_swipe, fallback_pending, retry_pending,
+ *                    reranking, matched
  */
 export type SessionStatus =
   | "pending_b"
@@ -12,6 +13,9 @@ export type SessionStatus =
   | "generating"
   | "generation_failed"
   | "ready_to_swipe"
+  | "fallback_pending"
+  | "retry_pending"
+  | "reranking"
   | "matched"
   | "expired";
 
@@ -19,7 +23,7 @@ export type SessionStatus =
  * A planning session between two people.
  *
  * Created when Person A starts the flow (/plan page).
- * Persists until matched (both swiped right) or expired (48h timeout).
+ * Persists until matched, expired, or otherwise reaches a terminal result.
  */
 export type Session = {
   readonly id: string;

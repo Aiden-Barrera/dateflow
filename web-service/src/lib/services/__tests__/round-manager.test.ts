@@ -187,7 +187,7 @@ describe("round-manager", () => {
       reason: "single_like",
     });
     expect(mockSessionUpdate).toHaveBeenCalledWith({
-      status: "matched",
+      status: "fallback_pending",
       matched_venue_id: "venue-7",
     });
     expect(mockSessionUpdateEq).toHaveBeenCalledWith("id", "session-1");
@@ -211,7 +211,7 @@ describe("round-manager", () => {
       reason: "highest_scored",
     });
     expect(mockSessionUpdate).toHaveBeenCalledWith({
-      status: "matched",
+      status: "fallback_pending",
       matched_venue_id: "venue-11",
     });
   });

@@ -7,6 +7,7 @@ import {
 import { getSupabaseServerClient } from "../supabase-server";
 import { FINAL_ROUND } from "../swipe-config";
 import type { Role } from "../types/preference";
+import type { SessionStatus } from "../types/session";
 import { toSwipe, type Swipe, type SwipeRow } from "../types/swipe";
 import type { VenueRow } from "../types/venue";
 
@@ -15,6 +16,7 @@ export type SwipeResult = {
   readonly matchedVenueId: string | null;
   readonly roundComplete: boolean;
   readonly currentRound: number;
+  readonly sessionStatus: SessionStatus;
 };
 
 export type RoundCompletion = {
@@ -51,10 +53,11 @@ export async function recordSwipe(
     const resolution = await resolveNoMatch(sessionId);
 
     return {
-      matched: true,
+      matched: false,
       matchedVenueId: resolution.venueId,
       roundComplete: true,
       currentRound,
+      sessionStatus: "fallback_pending",
     };
   }
 
@@ -63,6 +66,7 @@ export async function recordSwipe(
     matchedVenueId: matchResult.venueId,
     roundComplete,
     currentRound,
+    sessionStatus: matchResult.matched ? "matched" : "ready_to_swipe",
   };
 }
 

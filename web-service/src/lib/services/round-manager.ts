@@ -88,7 +88,7 @@ async function finalizeSessionMatch(
   const { error } = await supabase
     .from("sessions")
     .update({
-      status: "matched",
+      status: "fallback_pending",
       matched_venue_id: venueId,
     })
     .eq("id", sessionId);
