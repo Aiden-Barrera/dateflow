@@ -1,4 +1,8 @@
 import { getSupabaseServerClient } from "../supabase-server";
+import type {
+  CandidatePoolSource,
+  GenerationStrategy,
+} from "../types/candidate-pool";
 import type { BudgetLevel, Category, Preference } from "../types/preference";
 import { toVenue, type Venue, type VenueRow } from "../types/venue";
 import { getBothPreferences } from "./preference-service";
@@ -89,6 +93,8 @@ type InsertVenueRow = {
   readonly score_first_date_suitability: number;
   readonly score_quality_signal: number;
   readonly score_time_of_day_fit: number;
+  readonly generation_batch_id: string;
+  readonly surfaced_cycle: number;
 };
 
 async function insertVenues(rows: readonly InsertVenueRow[]): Promise<void> {
@@ -100,6 +106,81 @@ async function insertVenues(rows: readonly InsertVenueRow[]): Promise<void> {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+type InsertCandidatePoolItemRow = {
+  readonly pool_id: string;
+  readonly place_id: string;
+  readonly name: string;
+  readonly category: Category;
+  readonly address: string;
+  readonly lat: number;
+  readonly lng: number;
+  readonly price_level: number;
+  readonly rating: number;
+  readonly photo_url: string | null;
+  readonly raw_types: readonly string[];
+  readonly raw_tags: readonly string[];
+  readonly source_rank: number;
+};
+
+async function createCandidatePool(
+  sessionId: string,
+  source: CandidatePoolSource,
+): Promise<string> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("session_candidate_pools")
+    .insert({
+      session_id: sessionId,
+      source,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data.id;
+}
+
+async function insertCandidatePoolItems(
+  rows: readonly InsertCandidatePoolItemRow[],
+): Promise<void> {
+  const supabase = getSupabaseServerClient();
+  const { error } = await supabase
+    .from("session_candidate_pool_items")
+    .upsert(rows, { onConflict: "pool_id,place_id" });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+async function createGenerationBatch(
+  sessionId: string,
+  poolId: string,
+  batchNumber: number,
+  generationStrategy: GenerationStrategy,
+): Promise<string> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("venue_generation_batches")
+    .insert({
+      session_id: sessionId,
+      pool_id: poolId,
+      batch_number: batchNumber,
+      generation_strategy: generationStrategy,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data.id;
 }
 
 export async function generateVenues(sessionId: string): Promise<readonly Venue[]> {
@@ -124,6 +205,32 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
       maxPrice
     );
     const safeCandidates = applySafetyFilter(candidates);
+    const poolId = await createCandidatePool(sessionId, "initial_generation");
+
+    await insertCandidatePoolItems(
+      safeCandidates.map((candidate, index) => ({
+        pool_id: poolId,
+        place_id: candidate.placeId,
+        name: candidate.name,
+        category: candidate.category,
+        address: candidate.address,
+        lat: candidate.location.lat,
+        lng: candidate.location.lng,
+        price_level: candidate.priceLevel === 0 ? 1 : candidate.priceLevel,
+        rating: candidate.rating,
+        photo_url: null,
+        raw_types: candidate.types,
+        raw_tags: candidate.tags,
+        source_rank: index + 1,
+      })),
+    );
+
+    const generationBatchId = await createGenerationBatch(
+      sessionId,
+      poolId,
+      1,
+      "initial_pool_rank",
+    );
 
     const selectedRows: InsertVenueRow[] = [];
     let remaining = [...safeCandidates];
@@ -152,6 +259,8 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           score_first_date_suitability: venue.score.firstDateSuitability,
           score_quality_signal: venue.score.qualitySignal,
           score_time_of_day_fit: venue.score.timeOfDayFit,
+          generation_batch_id: generationBatchId,
+          surfaced_cycle: 1,
         });
       });
 
