@@ -8,6 +8,23 @@ function isUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
 
+export function getQstashReadiness(): {
+  readonly ready: boolean;
+  readonly missing: readonly string[];
+} {
+  const missing = [
+    ["QSTASH_TOKEN", process.env.QSTASH_TOKEN],
+    ["NEXT_PUBLIC_APP_URL", process.env.NEXT_PUBLIC_APP_URL],
+  ]
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+
+  return {
+    ready: missing.length === 0,
+    missing,
+  };
+}
+
 function getQstashClient(): Client {
   if (qstashClient) {
     return qstashClient;
@@ -59,11 +76,12 @@ export async function enqueueVenueGeneration(sessionId: string): Promise<void> {
     throw new Error("Session ID must be a UUID");
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-  if (!appUrl) {
-    throw new Error("Missing NEXT_PUBLIC_APP_URL");
+  const readiness = getQstashReadiness();
+  if (!readiness.ready) {
+    throw new Error(`Missing ${readiness.missing.join(", ")}`);
   }
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL as string;
   const client = getQstashClient();
 
   await client.publishJSON({

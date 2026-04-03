@@ -23,6 +23,20 @@ const FIELD_MASK = [
   "places.photos",
 ].join(",");
 
+export function getGooglePlacesReadiness(): {
+  readonly ready: boolean;
+  readonly missing: readonly string[];
+} {
+  const missing = process.env.GOOGLE_PLACES_API_KEY
+    ? []
+    : ["GOOGLE_PLACES_API_KEY"];
+
+  return {
+    ready: missing.length === 0,
+    missing,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Google price level string → numeric mapping
 // ---------------------------------------------------------------------------
@@ -173,10 +187,11 @@ export async function searchNearby(
   types: readonly string[],
   maxPrice: number
 ): Promise<readonly PlaceCandidate[]> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
+  const readiness = getGooglePlacesReadiness();
+  if (!readiness.ready) {
     throw new Error("GOOGLE_PLACES_API_KEY environment variable is not set");
   }
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY as string;
 
   const body = {
     includedTypes: types,

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { searchNearby, mapGoogleTypeToCategory } from "../places-api-client";
+import {
+  getGooglePlacesReadiness,
+  mapGoogleTypeToCategory,
+  searchNearby,
+} from "../places-api-client";
 import type { Location } from "../../types/preference";
 
 // Mock global fetch — PlacesAPIClient uses it to call Google's REST API
@@ -12,6 +16,23 @@ vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-api-key");
 describe("places-api-client", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-api-key");
+  });
+
+  it("reports ready when Google Places config is present", () => {
+    expect(getGooglePlacesReadiness()).toEqual({
+      ready: true,
+      missing: [],
+    });
+  });
+
+  it("reports missing Google Places config explicitly", () => {
+    vi.stubEnv("GOOGLE_PLACES_API_KEY", "");
+
+    expect(getGooglePlacesReadiness()).toEqual({
+      ready: false,
+      missing: ["GOOGLE_PLACES_API_KEY"],
+    });
   });
 
   // ------------------------------------------------------------------
