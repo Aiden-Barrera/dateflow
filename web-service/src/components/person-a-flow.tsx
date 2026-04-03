@@ -144,9 +144,23 @@ export function PersonAFlow() {
       return;
     }
 
-    await navigator.clipboard.writeText(createdSession.shareUrl);
-    setCopyState("copied");
-    window.setTimeout(() => setCopyState("idle"), 1800);
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== "function"
+    ) {
+      setError("Copy is not available here yet. Please copy the invite link manually.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(createdSession.shareUrl);
+      setCopyState("copied");
+      setError(null);
+      window.setTimeout(() => setCopyState("idle"), 1800);
+    } catch {
+      setError("We couldn't copy the invite link. Please copy it manually.");
+    }
   }
 
   return (

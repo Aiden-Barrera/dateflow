@@ -65,15 +65,20 @@ export function SwipeDeckCard({
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
+    let secondFrame: number | null = null;
+
     const firstFrame = requestAnimationFrame(() => {
-      const secondFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
         setIsSettled(true);
       });
-
-      return () => cancelAnimationFrame(secondFrame);
     });
 
-    return () => cancelAnimationFrame(firstFrame);
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      if (secondFrame !== null) {
+        cancelAnimationFrame(secondFrame);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -148,11 +153,14 @@ export function SwipeDeckCard({
       return;
     }
 
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const relativeY = event.clientY - bounds.top;
+
     setDragState({
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      startRegionY: clamp(event.nativeEvent.offsetY / event.currentTarget.clientHeight, 0, 1),
+      startRegionY: clamp(relativeY / bounds.height, 0, 1),
       offsetX: 0,
       offsetY: 0,
       velocityX: 0,
