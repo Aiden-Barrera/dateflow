@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
+  buildGooglePlacePhotoUrl,
   getGooglePlacesReadiness,
   mapGoogleTypeToCategory,
   searchNearby,
@@ -58,6 +59,20 @@ describe("places-api-client", () => {
 
     it("returns ACTIVITY as fallback for unknown types", () => {
       expect(mapGoogleTypeToCategory(["unknown_type"])).toBe("ACTIVITY");
+    });
+  });
+
+  describe("buildGooglePlacePhotoUrl", () => {
+    it("builds a renderable Google Places photo media URL from a photo reference", () => {
+      expect(
+        buildGooglePlacePhotoUrl("places/ChIJ_abc123/photos/ref123")
+      ).toBe(
+        "https://places.googleapis.com/v1/places/ChIJ_abc123/photos/ref123/media?maxHeightPx=1200&skipHttpRedirect=true&key=test-api-key"
+      );
+    });
+
+    it("returns null when a place has no photo reference", () => {
+      expect(buildGooglePlacePhotoUrl(null)).toBeNull();
     });
   });
 

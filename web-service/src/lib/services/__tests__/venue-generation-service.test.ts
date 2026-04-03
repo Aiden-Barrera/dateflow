@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateVenues } from "../venue-generation-service";
 import type { Preference } from "../../types/preference";
 import type { CuratedVenueCandidate, VenueRow } from "../../types/venue";
@@ -101,6 +101,8 @@ const preferences: readonly [Preference, Preference] = [
   },
 ];
 
+const originalGooglePlacesApiKey = process.env.GOOGLE_PLACES_API_KEY;
+
 function makeCuratedVenue(index: number): CuratedVenueCandidate {
   return {
     placeId: `place-${index}`,
@@ -112,7 +114,8 @@ function makeCuratedVenue(index: number): CuratedVenueCandidate {
     priceLevel: 1,
     rating: 4.5,
     reviewCount: 200 + index,
-    photoReference: null,
+    photoReference:
+      index % 2 === 0 ? `places/place-${index}/photos/photo-${index}` : null,
     tags: ["unscored"],
     score: {
       categoryOverlap: 1,
@@ -155,6 +158,7 @@ function makeVenueRow(index: number): VenueRow {
 describe("generateVenues", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.GOOGLE_PLACES_API_KEY = "test-api-key";
     mockGetBothPreferences.mockResolvedValue(preferences);
     mockCalculateMidpoint.mockReturnValue({
       lat: 30.265,
@@ -185,6 +189,10 @@ describe("generateVenues", () => {
       data: Array.from({ length: 12 }, (_, index) => makeVenueRow(index)),
       error: null,
     });
+  });
+
+  afterEach(() => {
+    process.env.GOOGLE_PLACES_API_KEY = originalGooglePlacesApiKey;
   });
 
   it("generates, saves, and returns 12 venues across 3 rounds", async () => {
@@ -222,6 +230,10 @@ describe("generateVenues", () => {
     expect(candidatePoolRows).toHaveLength(12);
     expect(candidatePoolRows[0].pool_id).toBe("pool-1");
     expect(candidatePoolRows[0].source_rank).toBe(1);
+    expect(candidatePoolRows[0].photo_url).toBeNull();
+    expect(candidatePoolRows[1].photo_url).toBe(
+      "https://places.googleapis.com/v1/places/place-2/photos/photo-2/media?maxHeightPx=1200&skipHttpRedirect=true&key=test-api-key"
+    );
 
     const insertedRows = mockUpsert.mock.calls[1][0];
     expect(insertedRows).toHaveLength(12);
@@ -229,6 +241,10 @@ describe("generateVenues", () => {
     expect(insertedRows[0].position).toBe(1);
     expect(insertedRows[0].generation_batch_id).toBe("batch-1");
     expect(insertedRows[0].surfaced_cycle).toBe(1);
+    expect(insertedRows[0].photo_url).toBeNull();
+    expect(insertedRows[1].photo_url).toBe(
+      "https://places.googleapis.com/v1/places/place-2/photos/photo-2/media?maxHeightPx=1200&skipHttpRedirect=true&key=test-api-key"
+    );
     expect(insertedRows[4].round).toBe(2);
     expect(insertedRows[8].round).toBe(3);
 

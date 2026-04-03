@@ -6,6 +6,7 @@ import type { PlaceCandidate } from "../types/venue";
  * Uses the v1 REST API with field masks to minimize cost.
  */
 const PLACES_API_URL = "https://places.googleapis.com/v1/places:searchNearby";
+const PLACES_PHOTO_BASE_URL = "https://places.googleapis.com/v1";
 
 /**
  * The fields we request from Google. Each field has a billing cost tier —
@@ -35,6 +36,25 @@ export function getGooglePlacesReadiness(): {
     ready: missing.length === 0,
     missing,
   };
+}
+
+export function buildGooglePlacePhotoUrl(
+  photoReference: string | null,
+): string | null {
+  if (!photoReference) {
+    return null;
+  }
+
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  const photoPath = photoReference.startsWith("places/")
+    ? photoReference
+    : `places/${photoReference}`;
+
+  return `${PLACES_PHOTO_BASE_URL}/${photoPath}/media?maxHeightPx=1200&skipHttpRedirect=true&key=${encodeURIComponent(apiKey)}`;
 }
 
 // ---------------------------------------------------------------------------
