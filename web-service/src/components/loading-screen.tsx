@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LoadingOrnament } from "./loading-ornament";
 import { Logo } from "./logo";
 
 const SUBTITLES = [
@@ -43,31 +44,7 @@ export function LoadingScreen({ demoMode = false }: { readonly demoMode?: boolea
       </div>
 
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-10 rounded-[2rem] border border-white/70 bg-white/80 px-8 py-10 text-center shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm">
-        <div className="relative flex items-center justify-center">
-          <div
-            className="absolute h-36 w-36 rounded-full border-4 opacity-40"
-            style={{
-              borderColor: "var(--color-primary)",
-              animation: "spin 3s linear infinite",
-              borderTopColor: "transparent",
-            }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute h-24 w-24 rounded-full border-4 opacity-60"
-            style={{
-              borderColor: "var(--color-secondary)",
-              animation: "spin 2s linear infinite reverse",
-              borderTopColor: "transparent",
-            }}
-            aria-hidden="true"
-          />
-          <div
-            className="h-4 w-4 rounded-full"
-            style={{ background: "var(--color-primary)" }}
-            aria-hidden="true"
-          />
-        </div>
+        <LoadingOrnament variant={demoMode ? "demo-deck" : "venue"} />
 
         <div className="max-w-2xl">
           <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">

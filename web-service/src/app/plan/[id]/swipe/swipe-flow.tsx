@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
+import { LoadingOrnament } from "../../../../components/loading-ornament";
 import { Logo } from "../../../../components/logo";
 import { createSessionStatusSync } from "../../../../lib/session-status-sync";
 import type { Role, Category } from "../../../../lib/types/preference";
@@ -33,6 +34,10 @@ type SwipeApiResult = {
 };
 
 type WaitingStage = "preferences" | "generation" | "round" | "session";
+type DemoRoundSwipe = {
+  readonly venueId: string;
+  readonly liked: boolean;
+};
 
 const CATEGORY_LABELS: Record<Category, string> = {
   RESTAURANT: "Restaurant",
@@ -57,13 +62,16 @@ export function SwipeFlow({
   const [submitting, setSubmitting] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
+  const roundSwipesRef = useRef<Record<number, DemoRoundSwipe[]>>({});
+  const demoRoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toast, setToast] = useState<string | null>(
-    demoMode ? "Demo assist is on. Your partner's swipes will be mirrored." : null,
+    demoMode ? "Demo preview is on. Your partner will respond after each round." : null,
   );
 
   const currentVenue = venues[index] ?? null;
   const nextVenue = venues[index + 1] ?? null;
   const progressLabel = useMemo(() => `Round ${round} of 3`, [round]);
+  const currentVenueSlides = currentVenue ? getVenueSlides(currentVenue) : [];
 
   const fetchStatus = useCallback(async (): Promise<SessionStatusPayload> => {
     const response = await fetch(`/api/sessions/${sessionId}/status`);
@@ -96,6 +104,7 @@ export function SwipeFlow({
 
       const body = (await response.json()) as { venues: Venue[] };
       loadedRoundRef.current = nextRound;
+      roundSwipesRef.current[nextRound] = [];
       setRound(nextRound);
       setVenues(body.venues);
       setIndex(0);
@@ -154,6 +163,14 @@ export function SwipeFlow({
     void bootstrap();
   }, [bootstrap]);
 
+  useEffect(() => {
+    return () => {
+      if (demoRoundTimerRef.current) {
+        clearTimeout(demoRoundTimerRef.current);
+      }
+    };
+  }, []);
+
   async function postSwipe(nextRole: Role, venueId: string, liked: boolean) {
     const response = await fetch(`/api/sessions/${sessionId}/swipes`, {
       method: "POST",
@@ -174,6 +191,45 @@ export function SwipeFlow({
     return body as SwipeApiResult;
   }
 
+  async function runDemoPartnerRound(
+    completedRound: number,
+    swipes: readonly DemoRoundSwipe[],
+  ) {
+    const mirroredRole: Role = role === "a" ? "b" : "a";
+    let lastResult: SwipeApiResult | null = null;
+
+    for (const swipe of swipes) {
+      lastResult = await postSwipe(mirroredRole, swipe.venueId, swipe.liked);
+
+      if (lastResult.matched || lastResult.sessionStatus === "matched") {
+        router.push(`/plan/${sessionId}/results`);
+        return;
+      }
+    }
+
+    if (!lastResult) {
+      return;
+    }
+
+    if (lastResult.sessionStatus === "fallback_pending") {
+      setStatus("error");
+      setStatusMessage(
+        "This session moved into fallback resolution. The no-match ending screen is still pending.",
+      );
+      return;
+    }
+
+    if (lastResult.roundComplete && completedRound < 3) {
+      loadedRoundRef.current = null;
+      await loadRound(completedRound + 1);
+      return;
+    }
+
+    setWaitingStage("round");
+    setStatus("waiting");
+    setStatusMessage("Your partner is still finishing the date flow.");
+  }
+
   async function handleSwipe(liked: boolean) {
     if (!currentVenue || submitting) {
       return;
@@ -183,11 +239,13 @@ export function SwipeFlow({
     setToast(null);
 
     try {
-      let swipeResult = await postSwipe(role, currentVenue.id, liked);
-
+      const swipeResult = await postSwipe(role, currentVenue.id, liked);
       if (demoMode) {
-        const mirroredRole: Role = role === "a" ? "b" : "a";
-        swipeResult = await postSwipe(mirroredRole, currentVenue.id, liked);
+        const currentRoundSwipes = roundSwipesRef.current[round] ?? [];
+        roundSwipesRef.current[round] = [
+          ...currentRoundSwipes,
+          { venueId: currentVenue.id, liked },
+        ];
       }
 
       if (swipeResult.matched || swipeResult.sessionStatus === "matched") {
@@ -205,7 +263,24 @@ export function SwipeFlow({
       } else {
         setWaitingStage("round");
         setStatus("waiting");
-        setStatusMessage("You are set for this round. We will keep watch for your partner's next picks.");
+        setStatusMessage(
+          demoMode
+            ? "You are set for this round. Your demo partner will answer in a moment."
+            : "You are set for this round. We will keep watch for your partner's next picks.",
+        );
+
+        if (demoMode) {
+          const completedRound = round;
+          const demoRoundSwipes = [...(roundSwipesRef.current[completedRound] ?? [])];
+
+          if (demoRoundTimerRef.current) {
+            clearTimeout(demoRoundTimerRef.current);
+          }
+
+          demoRoundTimerRef.current = setTimeout(() => {
+            void runDemoPartnerRound(completedRound, demoRoundSwipes);
+          }, 2200);
+        }
       }
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Failed to record swipe.");
@@ -236,7 +311,7 @@ export function SwipeFlow({
     return (
       <SwipeShell creatorName={creatorName} role={role}>
         <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-white/85 px-6 py-10 text-center shadow-[0_20px_60px_rgba(45,42,38,0.12)] backdrop-blur-sm sm:px-8">
-          <RomanceOrbit />
+          <LoadingOrnament variant={getWaitingLoaderVariant(waitingStage)} />
           <p className="mt-6 text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
             {waitingCopy.eyebrow}
           </p>
@@ -317,9 +392,9 @@ export function SwipeFlow({
           ) : null}
           <article className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-[0_24px_80px_rgba(45,42,38,0.16)] backdrop-blur-sm">
             <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
-              {currentVenue.photoUrl ? (
+              {currentVenueSlides.length > 0 ? (
                 <Image
-                  src={currentVenue.photoUrl}
+                  src={currentVenueSlides[0]}
                   alt={currentVenue.name}
                   fill
                   sizes="(max-width: 768px) 100vw, 480px"
@@ -327,40 +402,73 @@ export function SwipeFlow({
                   unoptimized
                 />
               ) : (
-                <div className="flex h-full items-end bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.94),_transparent_58%),linear-gradient(135deg,var(--color-secondary),var(--color-primary))] p-6">
-                  <div className="rounded-full border border-white/60 bg-white/15 px-3 py-1 text-caption font-medium text-white backdrop-blur">
-                    Venue photo pending
+                <div className="relative flex h-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.92),_transparent_42%),linear-gradient(135deg,var(--color-secondary),var(--color-primary))] p-6">
+                  <div className="absolute -right-8 top-8 h-28 w-28 rounded-[2rem] border border-white/18 bg-white/10 backdrop-blur-sm" />
+                  <div className="absolute left-6 top-8 h-20 w-16 rounded-[1.3rem] border border-white/18 bg-white/10 backdrop-blur-sm" />
+                  <div className="relative max-w-[15rem] rounded-[1.4rem] border border-white/18 bg-white/14 px-4 py-3 text-left text-white backdrop-blur">
+                    <p className="text-caption font-semibold uppercase tracking-[0.18em] text-white/72">
+                      Photo unavailable
+                    </p>
+                    <p className="mt-2 text-body text-white/88">
+                      The venue is still worth considering. We will show a live photo once the generator resolves one.
+                    </p>
                   </div>
                 </div>
               )}
+
+              <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,transparent,rgba(28,25,23,0.42))]" />
 
               <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption font-medium text-text shadow-sm">
                 <CategoryIcon category={currentVenue.category} />
                 {CATEGORY_LABELS[currentVenue.category]}
               </div>
+
+              {currentVenueSlides.length > 1 ? (
+                <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/20 px-2 py-1 backdrop-blur-sm">
+                  {currentVenueSlides.map((slide, slideIndex) => (
+                    <span
+                      key={`${slide}-${slideIndex}`}
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        slideIndex === 0 ? "bg-white" : "bg-white/45"
+                      }`}
+                    />
+                  ))}
+                </div>
+              ) : null}
             </div>
 
-            <div className="space-y-5 p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-h1 font-semibold">{currentVenue.name}</h2>
-                  <p className="mt-2 text-body text-text-secondary">{currentVenue.address}</p>
-                </div>
-                <div className="rounded-[1.25rem] bg-primary-muted px-3 py-2 text-right">
-                  <div className="text-caption uppercase tracking-[0.18em] text-text-secondary">
-                    Price
+            <div className="space-y-4 p-6">
+              <div className="rounded-[1.6rem] border border-muted bg-bg/78 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <h2 className="text-h1 font-semibold leading-tight">{currentVenue.name}</h2>
+                    <p className="mt-1.5 text-body text-text-secondary">{currentVenue.address}</p>
                   </div>
-                  <div className="text-h2 font-semibold text-primary">
-                    {toPriceLabel(currentVenue.priceLevel)}
+                  <div className="rounded-[1.15rem] bg-primary-muted px-3 py-2 text-right">
+                    <div className="text-[0.68rem] uppercase tracking-[0.16em] text-text-secondary">
+                      Price
+                    </div>
+                    <div className="text-h2 font-semibold text-primary">
+                      {toPriceLabel(currentVenue.priceLevel)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-secondary-muted px-3 py-1.5 text-secondary">
+                    <StarIcon />
+                    {currentVenue.rating.toFixed(1)} rating
+                  </div>
+                  <div className="rounded-full border border-muted bg-white px-3 py-1.5 text-caption font-medium text-text-secondary">
+                    {CATEGORY_LABELS[currentVenue.category]}
+                  </div>
+                  <div className="rounded-full border border-muted bg-white px-3 py-1.5 text-caption font-medium text-text-secondary">
+                    Round {currentVenue.round}
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <div className="inline-flex items-center gap-2 rounded-full bg-secondary-muted px-3 py-1.5 text-secondary">
-                  <StarIcon />
-                  {currentVenue.rating.toFixed(1)} rating
-                </div>
                 {currentVenue.tags.map((tag) => (
                   <span
                     key={tag}
@@ -415,6 +523,10 @@ export function SwipeFlow({
   );
 }
 
+function getVenueSlides(venue: Venue): readonly string[] {
+  return venue.photoUrl ? [venue.photoUrl] : [];
+}
+
 function SwipeShell({
   children,
   creatorName,
@@ -448,41 +560,6 @@ function SwipeShell({
         {children}
       </div>
     </main>
-  );
-}
-
-function RomanceOrbit() {
-  return (
-    <div className="relative h-32 w-32" aria-hidden="true">
-      <div
-        className="absolute inset-2 rounded-full opacity-80 blur-2xl"
-        style={{
-          background:
-            "radial-gradient(circle, rgba(255,126,107,0.28) 0%, rgba(255,126,107,0.08) 50%, transparent 72%)",
-        }}
-      />
-      <div className="absolute inset-0 rounded-full border border-primary/18" />
-      <div
-        className="absolute inset-0 motion-safe:animate-spin motion-reduce:animate-none"
-        style={{ animationDuration: "10s" }}
-      >
-        <div className="absolute left-1/2 top-0 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-white/90 text-primary shadow-[0_10px_24px_rgba(45,42,38,0.12)]">
-          <MiniHeartIcon />
-        </div>
-      </div>
-      <div className="absolute inset-4 rounded-full border border-secondary/25" />
-      <div
-        className="absolute inset-0 motion-safe:animate-spin motion-reduce:animate-none"
-        style={{ animationDirection: "reverse", animationDuration: "7s" }}
-      >
-        <div className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full bg-secondary shadow-[0_0_0_6px_rgba(120,214,201,0.18)]" />
-      </div>
-      <div className="absolute inset-[2.3rem] flex items-center justify-center rounded-full bg-white/90 shadow-[0_18px_40px_rgba(45,42,38,0.14)]">
-        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary-muted text-primary motion-safe:animate-pulse motion-reduce:animate-none">
-          <HeartIcon className="h-5 w-5" />
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -535,10 +612,6 @@ function HeartIcon({ className = "h-5 w-5" }: { readonly className?: string }) {
   );
 }
 
-function MiniHeartIcon() {
-  return <HeartIcon className="h-3.5 w-3.5" />;
-}
-
 function getWaitingState(status: string): {
   readonly stage: WaitingStage;
   readonly message: string;
@@ -561,6 +634,24 @@ function getWaitingState(status: string): {
     stage: "session",
     message: "This session is not ready for swiping yet, but we are still watching for updates.",
   };
+}
+
+function getWaitingLoaderVariant(
+  stage: WaitingStage,
+): "partner-preferences" | "venue" | "partner-round" | "session-check" {
+  if (stage === "preferences") {
+    return "partner-preferences";
+  }
+
+  if (stage === "generation") {
+    return "venue";
+  }
+
+  if (stage === "session") {
+    return "session-check";
+  }
+
+  return "partner-round";
 }
 
 function getWaitingCopy(stage: WaitingStage): {

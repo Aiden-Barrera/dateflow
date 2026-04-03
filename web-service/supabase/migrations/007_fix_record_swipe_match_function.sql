@@ -1,6 +1,8 @@
 -- 007_fix_record_swipe_match_function.sql
--- Qualify the RPC return alias so Postgres does not confuse the
--- returned venue_id column with swipes.venue_id inside RETURN QUERY.
+-- Recreate the RPC with a safer OUT parameter name so Postgres does not
+-- confuse function-scoped venue_id with swipes.venue_id inside the body.
+
+DROP FUNCTION IF EXISTS record_swipe_and_check_match(uuid, uuid, text, boolean);
 
 CREATE OR REPLACE FUNCTION record_swipe_and_check_match(
   input_session_id uuid,
@@ -8,14 +10,14 @@ CREATE OR REPLACE FUNCTION record_swipe_and_check_match(
   input_role text,
   input_liked boolean
 )
-RETURNS TABLE (matched boolean, venue_id uuid)
+RETURNS TABLE (matched boolean, matched_venue_id uuid)
 LANGUAGE plpgsql
 AS $$
 DECLARE
   other_role text;
   other_liked boolean;
   current_status text;
-  current_matched_venue_id text;
+  current_session_matched_venue_id text;
 BEGIN
   IF input_role NOT IN ('a', 'b') THEN
     RAISE EXCEPTION 'invalid role: %', input_role;
@@ -23,10 +25,10 @@ BEGIN
 
   other_role := CASE input_role WHEN 'a' THEN 'b' ELSE 'a' END;
 
-  SELECT status, matched_venue_id
-    INTO current_status, current_matched_venue_id
+  SELECT sessions.status, sessions.matched_venue_id
+    INTO current_status, current_session_matched_venue_id
   FROM sessions
-  WHERE id = input_session_id
+  WHERE sessions.id = input_session_id
   FOR UPDATE;
 
   IF NOT FOUND THEN
@@ -65,21 +67,21 @@ BEGIN
       UPDATE sessions
       SET status = 'matched',
           matched_venue_id = input_venue_id
-      WHERE id = input_session_id
+      WHERE sessions.id = input_session_id
         AND status = 'ready_to_swipe';
 
-      SELECT status, matched_venue_id
-        INTO current_status, current_matched_venue_id
+      SELECT sessions.status, sessions.matched_venue_id
+        INTO current_status, current_session_matched_venue_id
       FROM sessions
-      WHERE id = input_session_id;
+      WHERE sessions.id = input_session_id;
     END IF;
   END IF;
 
   RETURN QUERY
   SELECT
-    (current_status = 'matched' AND current_matched_venue_id = input_venue_id::text) AS matched,
+    (current_status = 'matched' AND current_session_matched_venue_id = input_venue_id::text) AS matched,
     CASE
-      WHEN current_status = 'matched' AND current_matched_venue_id = input_venue_id::text
+      WHEN current_status = 'matched' AND current_session_matched_venue_id = input_venue_id::text
         THEN input_venue_id
       ELSE NULL::uuid
     END AS matched_venue_id;

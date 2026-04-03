@@ -23,11 +23,12 @@ export function CategoryIcon({
         strokeLinejoin="round"
         aria-hidden="true"
       >
-        <path d="M6 3v9" />
-        <path d="M10 3v9" />
-        <path d="M6 7h4" />
-        <path d="M18 3v18" />
-        <path d="M14 3c0 2.5 1.8 4 4 4" />
+        <path d="M4.5 5.5h15" />
+        <path d="M6 9.5h12" />
+        <path d="M8.5 13.5h7" />
+        <path d="M7.5 18.5h9" />
+        <path d="M6 5.5l2 13" />
+        <path d="M18 5.5l-2 13" />
       </svg>
     );
   }
