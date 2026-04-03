@@ -1,16 +1,14 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../../../../components/button";
-import { CategoryIcon } from "../../../../components/category-icon";
 import { LoadingOrnament } from "../../../../components/loading-ornament";
 import { Logo } from "../../../../components/logo";
-import { PriceBadge } from "../../../../components/price-badge";
 import { createSessionStatusSync } from "../../../../lib/session-status-sync";
-import type { Role, Category } from "../../../../lib/types/preference";
+import type { Role } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
+import { SwipeDeckCard } from "./swipe-deck-card";
 
 type SwipeFlowProps = {
   readonly sessionId: string;
@@ -40,13 +38,6 @@ type DemoRoundSwipe = {
   readonly liked: boolean;
 };
 
-const CATEGORY_LABELS: Record<Category, string> = {
-  RESTAURANT: "Restaurant",
-  BAR: "Bar",
-  ACTIVITY: "Activity",
-  EVENT: "Event",
-};
-
 export function SwipeFlow({
   sessionId,
   role,
@@ -61,6 +52,7 @@ export function SwipeFlow({
   const [venues, setVenues] = useState<readonly Venue[]>([]);
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
   const roundSwipesRef = useRef<Record<number, DemoRoundSwipe[]>>({});
@@ -72,7 +64,6 @@ export function SwipeFlow({
   const currentVenue = venues[index] ?? null;
   const nextVenue = venues[index + 1] ?? null;
   const progressLabel = useMemo(() => `Round ${round} of 3`, [round]);
-  const currentVenueSlides = currentVenue ? getVenueSlides(currentVenue) : [];
 
   const fetchStatus = useCallback(async (): Promise<SessionStatusPayload> => {
     const response = await fetch(`/api/sessions/${sessionId}/status`);
@@ -236,16 +227,24 @@ export function SwipeFlow({
       return;
     }
 
+    const swipedVenue = currentVenue;
+    const swipedIndex = index;
+    const hasNextVenue = swipedIndex < venues.length - 1;
+
     setSubmitting(true);
     setToast(null);
 
+    if (hasNextVenue) {
+      setIndex(swipedIndex + 1);
+    }
+
     try {
-      const swipeResult = await postSwipe(role, currentVenue.id, liked);
+      const swipeResult = await postSwipe(role, swipedVenue.id, liked);
       if (demoMode) {
         const currentRoundSwipes = roundSwipesRef.current[round] ?? [];
         roundSwipesRef.current[round] = [
           ...currentRoundSwipes,
-          { venueId: currentVenue.id, liked },
+          { venueId: swipedVenue.id, liked },
         ];
       }
 
@@ -254,14 +253,12 @@ export function SwipeFlow({
         return;
       }
 
-      if (index < venues.length - 1) {
-        setIndex((current) => current + 1);
-      } else if (swipeResult.roundComplete && swipeResult.currentRound < 3) {
+      if (!hasNextVenue && swipeResult.roundComplete && swipeResult.currentRound < 3) {
         await loadRound(swipeResult.currentRound + 1);
-      } else if (swipeResult.sessionStatus === "fallback_pending") {
+      } else if (!hasNextVenue && swipeResult.sessionStatus === "fallback_pending") {
         setStatus("error");
         setStatusMessage("This session moved into fallback resolution. The no-match ending screen is still pending.");
-      } else {
+      } else if (!hasNextVenue) {
         setWaitingStage("round");
         setStatus("waiting");
         setStatusMessage(
@@ -284,7 +281,11 @@ export function SwipeFlow({
         }
       }
     } catch (error) {
+      if (hasNextVenue) {
+        setIndex(swipedIndex);
+      }
       setToast(error instanceof Error ? error.message : "Failed to record swipe.");
+      throw error instanceof Error ? error : new Error("Failed to record swipe.");
     } finally {
       setSubmitting(false);
     }
@@ -364,161 +365,67 @@ export function SwipeFlow({
   return (
     <SwipeShell creatorName={creatorName}>
       <div className="mx-auto w-full max-w-md">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
+        <div className="relative mb-4 flex items-center justify-between gap-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/88 px-3 py-2 text-caption font-medium text-text-secondary shadow-sm">
+            <span className="rounded-full bg-secondary-muted px-2.5 py-1 font-semibold text-secondary">
               {progressLabel}
-            </p>
-            <h1 className="mt-2 text-h1 font-semibold">Swipe your picks</h1>
+            </span>
+            <span className="h-4 w-px bg-muted" />
+            <span>
+              Venue {index + 1} of {venues.length}
+            </span>
           </div>
-          <div className="rounded-full border border-white/70 bg-white/85 px-3 py-2 text-caption font-medium text-text-secondary shadow-sm">
-            Card {index + 1} of {venues.length}
-          </div>
+          <button
+            type="button"
+            aria-expanded={showDeckInfo}
+            aria-label="Show swipe help"
+            onClick={() => {
+              setShowDeckInfo((current) => !current);
+            }}
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/70 bg-white/88 text-text-secondary shadow-sm transition-colors duration-200 hover:text-text"
+          >
+            <InfoIcon />
+          </button>
+          {showDeckInfo ? (
+            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-[min(18rem,calc(100vw-3rem))] rounded-[1.35rem] border border-white/70 bg-white/90 p-4 shadow-[0_18px_40px_rgba(45,42,38,0.12)] backdrop-blur-xl">
+              <p className="text-body text-text-secondary">
+                Drag right to like, drag left to pass. You can also use the buttons at the bottom of the card.
+              </p>
+            </div>
+          ) : null}
         </div>
 
-        <div className="mb-4 flex gap-2">
+        <div className="mb-5 flex gap-2">
           {[1, 2, 3].map((step) => (
             <div
               key={step}
-              className={`h-2 flex-1 rounded-full ${
-                step <= round ? "bg-secondary" : "bg-muted"
+              className={`h-2.5 flex-1 rounded-full transition-colors duration-200 ${
+                step < round
+                  ? "bg-secondary"
+                  : step === round
+                    ? "bg-primary"
+                    : "bg-muted"
               }`}
             />
           ))}
         </div>
 
-        <div className="relative min-h-[620px]">
-          {nextVenue ? (
-            <div className="absolute inset-x-3 top-3 h-full rounded-[2rem] border border-white/50 bg-white/60 shadow-sm" aria-hidden="true" />
-          ) : null}
-          <article className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-[0_24px_80px_rgba(45,42,38,0.16)] backdrop-blur-sm">
-            <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
-              {currentVenueSlides.length > 0 ? (
-                <Image
-                  src={currentVenueSlides[0]}
-                  alt={currentVenue.name}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 480px"
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="relative flex h-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.92),_transparent_42%),linear-gradient(135deg,var(--color-secondary),var(--color-primary))] p-6">
-                  <div className="absolute -right-8 top-8 h-28 w-28 rounded-[2rem] border border-white/18 bg-white/10 backdrop-blur-sm" />
-                  <div className="absolute left-6 top-8 h-20 w-16 rounded-[1.3rem] border border-white/18 bg-white/10 backdrop-blur-sm" />
-                  <div className="relative max-w-[15rem] rounded-[1.4rem] border border-white/18 bg-white/14 px-4 py-3 text-left text-white backdrop-blur">
-                    <p className="text-caption font-semibold uppercase tracking-[0.18em] text-white/72">
-                      Photo unavailable
-                    </p>
-                    <p className="mt-2 text-body text-white/88">
-                      The venue is still worth considering. We will show a live photo once the generator resolves one.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,transparent,rgba(28,25,23,0.42))]" />
-
-              <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption font-medium text-text shadow-sm">
-                <CategoryIcon category={currentVenue.category} />
-                {CATEGORY_LABELS[currentVenue.category]}
-              </div>
-
-              {currentVenueSlides.length > 1 ? (
-                <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/20 px-2 py-1 backdrop-blur-sm">
-                  {currentVenueSlides.map((slide, slideIndex) => (
-                    <span
-                      key={`${slide}-${slideIndex}`}
-                      className={`h-1.5 w-1.5 rounded-full ${
-                        slideIndex === 0 ? "bg-white" : "bg-white/45"
-                      }`}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="space-y-4 p-6">
-              <div className="rounded-[1.6rem] border border-muted bg-bg/78 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <h2 className="text-h1 font-semibold leading-tight">{currentVenue.name}</h2>
-                    <p className="mt-1.5 text-body text-text-secondary">{currentVenue.address}</p>
-                  </div>
-                  <PriceBadge priceLevel={currentVenue.priceLevel} />
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-secondary-muted px-3 py-1.5 text-secondary">
-                    <StarIcon />
-                    {currentVenue.rating.toFixed(1)} rating
-                  </div>
-                  <div className="rounded-full border border-muted bg-white px-3 py-1.5 text-caption font-medium text-text-secondary">
-                    {CATEGORY_LABELS[currentVenue.category]}
-                  </div>
-                  <div className="rounded-full border border-muted bg-white px-3 py-1.5 text-caption font-medium text-text-secondary">
-                    Round {currentVenue.round}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {currentVenue.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-muted bg-bg px-3 py-1.5 text-caption font-medium text-text-secondary"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <details className="rounded-[1.5rem] border border-muted bg-bg/70 p-4">
-                <summary className="cursor-pointer list-none text-body font-semibold text-text">
-                  See why it was picked
-                </summary>
-                <div className="mt-4 grid gap-3 text-body text-text-secondary">
-                  <p className="rounded-2xl bg-white px-4 py-3">
-                    Strong venue fit with a composite score of {(currentVenue.score.composite * 100).toFixed(0)}.
-                  </p>
-                  <p className="rounded-2xl bg-white px-4 py-3">
-                    Built for conversation, midpoint fairness, and your combined vibe.
-                  </p>
-                </div>
-              </details>
-            </div>
-          </article>
-        </div>
+        <SwipeDeckCard
+          key={currentVenue.id}
+          venue={currentVenue}
+          nextVenue={nextVenue}
+          cardIndex={index + 1}
+          totalCards={venues.length}
+          submitting={submitting}
+          onSwipe={handleSwipe}
+        />
 
         {toast ? (
           <p className="mt-4 text-center text-caption font-medium text-secondary">{toast}</p>
         ) : null}
-
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <button
-            onClick={() => void handleSwipe(false)}
-            disabled={submitting}
-            className="flex h-14 cursor-pointer items-center justify-center gap-2 rounded-2xl border-[1.5px] border-muted bg-white text-body font-semibold text-text transition-all duration-200 hover:border-text-secondary disabled:cursor-wait disabled:opacity-70"
-          >
-            <PassIcon />
-            Pass
-          </button>
-          <button
-            onClick={() => void handleSwipe(true)}
-            disabled={submitting}
-            className="flex h-14 cursor-pointer items-center justify-center gap-2 rounded-2xl bg-primary text-body font-semibold text-white shadow-sm transition-all duration-200 hover:bg-primary-hover disabled:cursor-wait disabled:opacity-70"
-          >
-            <HeartIcon />
-            Like
-          </button>
-        </div>
       </div>
     </SwipeShell>
   );
-}
-
-function getVenueSlides(venue: Venue): readonly string[] {
-  return venue.photoUrl ? [venue.photoUrl] : [];
 }
 
 function SwipeShell({
@@ -571,18 +478,10 @@ function WaitingCard({
   );
 }
 
-function StarIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 3.75 14.78 9l5.72.78-4.13 4 1 5.72L12 16.98 6.63 19.5l1-5.72-4.13-4L9.22 9 12 3.75Z" />
-    </svg>
-  );
-}
-
-function PassIcon() {
+function InfoIcon() {
   return (
     <svg
-      className="h-5 w-5"
+      className="h-4 w-4"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -591,16 +490,9 @@ function PassIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  );
-}
-
-function HeartIcon({ className = "h-5 w-5" }: { readonly className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 21s-6.72-4.32-9.33-8.35C.96 10.01 1.53 6.5 4.43 4.84c2.35-1.35 4.85-.48 6.1 1.33 1.25-1.81 3.75-2.68 6.1-1.33 2.9 1.66 3.47 5.17 1.76 7.81C18.72 16.68 12 21 12 21Z" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 10v6" />
+      <path d="M12 7h.01" />
     </svg>
   );
 }
