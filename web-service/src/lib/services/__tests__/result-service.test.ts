@@ -33,6 +33,7 @@ const matchedSessionRow: SessionRow = {
   status: "matched",
   creator_display_name: "Alex",
   created_at: "2026-04-02T18:30:00Z",
+  matched_at: "2026-04-03T20:45:00Z",
   expires_at: "2026-04-04T18:30:00Z",
   matched_venue_id: "venue-12",
 };
@@ -76,7 +77,7 @@ describe("result-service", () => {
     expect(mockVenueEqSession).toHaveBeenCalledWith("session_id", "session-1");
     expect(result).toEqual({
       sessionId: "session-1",
-      matchedAt: new Date("2026-04-02T18:30:00Z"),
+      matchedAt: new Date("2026-04-03T20:45:00Z"),
       venue: expect.objectContaining({
         id: "venue-12",
         placeId: "place-12",

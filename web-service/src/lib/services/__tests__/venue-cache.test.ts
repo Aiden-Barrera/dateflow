@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { VenueCache } from "../venue-cache";
 import type { PlaceCandidate } from "../../types/venue";
+import type { Category } from "../../types/preference";
 
 // Mock the Upstash Redis client
 vi.mock("../../upstash-redis", () => ({
@@ -35,7 +36,7 @@ describe("VenueCache", () => {
   describe("buildKey", () => {
     it("builds a consistent key from location, categories, and price level", () => {
       const location = { lat: 30.2672, lng: -97.7431, label: "Austin, TX" };
-      const categories = ["RESTAURANT", "BAR"];
+      const categories: readonly Category[] = ["RESTAURANT", "BAR"];
       const priceLevel = 2;
 
       const key1 = cache.buildKey(location, categories, priceLevel);
@@ -48,8 +49,8 @@ describe("VenueCache", () => {
 
     it("sorts categories so different orderings produce the same key", () => {
       const location = { lat: 30.2672, lng: -97.7431, label: "Austin, TX" };
-      const categories1 = ["RESTAURANT", "BAR"];
-      const categories2 = ["BAR", "RESTAURANT"];
+      const categories1: readonly Category[] = ["RESTAURANT", "BAR"];
+      const categories2: readonly Category[] = ["BAR", "RESTAURANT"];
       const priceLevel = 2;
 
       const key1 = cache.buildKey(location, categories1, priceLevel);
@@ -61,7 +62,7 @@ describe("VenueCache", () => {
     it("produces different keys for different locations", () => {
       const location1 = { lat: 30.2672, lng: -97.7431, label: "Austin, TX" };
       const location2 = { lat: 37.7749, lng: -122.4194, label: "San Francisco, CA" };
-      const categories = ["RESTAURANT"];
+      const categories: readonly Category[] = ["RESTAURANT"];
       const priceLevel = 2;
 
       const key1 = cache.buildKey(location1, categories, priceLevel);
@@ -72,7 +73,7 @@ describe("VenueCache", () => {
 
     it("produces different keys for different price levels", () => {
       const location = { lat: 30.2672, lng: -97.7431, label: "Austin, TX" };
-      const categories = ["RESTAURANT"];
+      const categories: readonly Category[] = ["RESTAURANT"];
 
       const key1 = cache.buildKey(location, categories, 1);
       const key2 = cache.buildKey(location, categories, 3);
