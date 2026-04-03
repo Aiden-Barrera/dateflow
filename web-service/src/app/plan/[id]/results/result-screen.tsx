@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
@@ -50,6 +51,7 @@ export function ResultScreen({
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
+      {revealMode === "confetti" ? <CelebrationConfetti /> : null}
       <div
         className="pointer-events-none absolute -left-20 top-14 h-64 w-64 rounded-full opacity-70 blur-3xl"
         style={{ background: "linear-gradient(135deg, var(--color-primary-muted), transparent)" }}
@@ -102,9 +104,13 @@ export function ResultScreen({
 
           <section
             className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm"
-            style={{ animation: "resultReveal 520ms cubic-bezier(0.2, 1, 0.22, 1)" }}
+            style={{
+              animation:
+                revealMode === "confetti"
+                  ? "resultReveal 720ms cubic-bezier(0.2, 1, 0.22, 1) 520ms both"
+                  : "resultReveal 520ms cubic-bezier(0.2, 1, 0.22, 1) both",
+            }}
           >
-            {revealMode === "confetti" ? <ConfettiHalo /> : null}
             <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
               {venue.photoUrl ? (
                 <Image
@@ -228,28 +234,53 @@ function HeartIcon() {
   );
 }
 
-function ConfettiHalo() {
+function CelebrationConfetti() {
   const particles = [
-    { left: "8%", top: "10%", delay: "0ms", color: "var(--color-primary)" },
-    { left: "18%", top: "2%", delay: "90ms", color: "var(--color-secondary)" },
-    { left: "30%", top: "12%", delay: "160ms", color: "var(--color-primary)" },
-    { left: "72%", top: "8%", delay: "40ms", color: "var(--color-secondary)" },
-    { left: "84%", top: "15%", delay: "200ms", color: "var(--color-primary)" },
-    { left: "90%", top: "4%", delay: "260ms", color: "var(--color-secondary)" },
+    { left: "10%", top: "14%", delay: "0ms", x: "-56px", y: "124px", rotate: "-18deg", color: "var(--color-primary)", shape: "circle", size: 10 },
+    { left: "14%", top: "8%", delay: "40ms", x: "-24px", y: "150px", rotate: "24deg", color: "var(--color-secondary)", shape: "rect", size: 12 },
+    { left: "22%", top: "12%", delay: "90ms", x: "12px", y: "168px", rotate: "-32deg", color: "var(--color-primary)", shape: "rect", size: 9 },
+    { left: "28%", top: "6%", delay: "140ms", x: "38px", y: "142px", rotate: "18deg", color: "var(--color-secondary)", shape: "circle", size: 8 },
+    { left: "36%", top: "10%", delay: "220ms", x: "54px", y: "164px", rotate: "-24deg", color: "var(--color-primary)", shape: "rect", size: 11 },
+    { left: "44%", top: "5%", delay: "160ms", x: "-18px", y: "176px", rotate: "38deg", color: "var(--color-secondary)", shape: "rect", size: 10 },
+    { left: "52%", top: "9%", delay: "120ms", x: "16px", y: "154px", rotate: "-14deg", color: "var(--color-primary)", shape: "circle", size: 9 },
+    { left: "60%", top: "6%", delay: "260ms", x: "-42px", y: "170px", rotate: "34deg", color: "var(--color-secondary)", shape: "rect", size: 10 },
+    { left: "68%", top: "12%", delay: "80ms", x: "22px", y: "148px", rotate: "-28deg", color: "var(--color-primary)", shape: "circle", size: 8 },
+    { left: "76%", top: "9%", delay: "180ms", x: "46px", y: "166px", rotate: "20deg", color: "var(--color-secondary)", shape: "rect", size: 12 },
+    { left: "84%", top: "13%", delay: "240ms", x: "-14px", y: "156px", rotate: "-22deg", color: "var(--color-primary)", shape: "rect", size: 9 },
+    { left: "90%", top: "7%", delay: "300ms", x: "34px", y: "138px", rotate: "28deg", color: "var(--color-secondary)", shape: "circle", size: 10 },
+    { left: "8%", top: "22%", delay: "130ms", x: "18px", y: "118px", rotate: "-26deg", color: "var(--color-secondary)", shape: "rect", size: 8 },
+    { left: "20%", top: "24%", delay: "170ms", x: "-20px", y: "126px", rotate: "26deg", color: "var(--color-primary)", shape: "circle", size: 7 },
+    { left: "32%", top: "20%", delay: "210ms", x: "30px", y: "132px", rotate: "-16deg", color: "var(--color-secondary)", shape: "rect", size: 10 },
+    { left: "48%", top: "22%", delay: "250ms", x: "-28px", y: "124px", rotate: "16deg", color: "var(--color-primary)", shape: "rect", size: 8 },
+    { left: "64%", top: "20%", delay: "290ms", x: "26px", y: "134px", rotate: "-20deg", color: "var(--color-secondary)", shape: "circle", size: 7 },
+    { left: "78%", top: "24%", delay: "330ms", x: "-22px", y: "120px", rotate: "24deg", color: "var(--color-primary)", shape: "rect", size: 9 },
+    { left: "88%", top: "19%", delay: "360ms", x: "16px", y: "128px", rotate: "-18deg", color: "var(--color-secondary)", shape: "circle", size: 8 },
   ] as const;
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+    <div
+      className="pointer-events-none absolute inset-0 z-20 overflow-hidden"
+      aria-hidden="true"
+    >
       {particles.map((particle) => (
         <span
-          key={`${particle.left}-${particle.top}`}
-          className="absolute h-3 w-3 rounded-full opacity-0"
+          key={`${particle.left}-${particle.top}-${particle.delay}`}
+          className={`absolute opacity-0 ${
+            particle.shape === "circle" ? "rounded-full" : "rounded-[3px]"
+          }`}
           style={{
             left: particle.left,
             top: particle.top,
+            width: `${particle.size}px`,
+            height: `${particle.size * (particle.shape === "rect" ? 1.5 : 1)}px`,
             background: particle.color,
-            animation: `confettiBurst 900ms ease-out ${particle.delay} forwards, confettiDrift 1400ms ease-out ${particle.delay} forwards`,
-          }}
+            "--confetti-x": particle.x,
+            "--confetti-y": particle.y,
+            "--confetti-rotate": particle.rotate,
+            animation:
+              `confettiLaunch 1100ms cubic-bezier(0.16, 0.84, 0.32, 1) ${particle.delay} forwards, ` +
+              `confettiFloat 1800ms ease-out ${particle.delay} forwards`,
+          } as CSSProperties}
         />
       ))}
     </div>
