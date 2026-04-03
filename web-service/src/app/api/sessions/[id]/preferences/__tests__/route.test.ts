@@ -88,6 +88,8 @@ const fakePreference = {
   createdAt: new Date("2026-03-29T14:00:00Z"),
 };
 
+const originalCookieSecret = process.env.SESSION_ROLE_COOKIE_SECRET;
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -96,6 +98,7 @@ describe("POST /api/sessions/[id]/preferences", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    process.env.SESSION_ROLE_COOKIE_SECRET = "test-secret";
     // Default: session exists, not expired, no existing preferences
     vi.setSystemTime(new Date("2026-03-28T12:00:00Z"));
     mockGetSession.mockResolvedValue(fakeSession);
@@ -108,6 +111,7 @@ describe("POST /api/sessions/[id]/preferences", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    process.env.SESSION_ROLE_COOKIE_SECRET = originalCookieSecret;
   });
 
   // --- Happy path ---
