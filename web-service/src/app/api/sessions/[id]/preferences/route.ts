@@ -108,19 +108,7 @@ function validateBody(body: unknown): ValidationResult {
 }
 
 function classifyGenerationFailure(error: unknown): GenerationFailureDetails {
-  const message = error instanceof Error ? error.message : "";
-
-  if (
-    message.includes("QSTASH") ||
-    message.includes("GOOGLE_PLACES_API_KEY") ||
-    message.includes("Google Places API error")
-  ) {
-    return {
-      retryable: true,
-      userMessage:
-        "We saved your preferences, but couldn't start venue generation. Please try again shortly.",
-    };
-  }
+  void error;
 
   return {
     retryable: true,
