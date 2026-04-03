@@ -7,6 +7,7 @@ import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
 import { LoadingOrnament } from "../../../../components/loading-ornament";
 import { Logo } from "../../../../components/logo";
+import { PriceBadge } from "../../../../components/price-badge";
 import { createSessionStatusSync } from "../../../../lib/session-status-sync";
 import type { Role, Category } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
@@ -291,7 +292,7 @@ export function SwipeFlow({
 
   if (status === "loading") {
     return (
-      <SwipeShell creatorName={creatorName} role={role}>
+      <SwipeShell creatorName={creatorName}>
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="max-w-sm text-center">
             <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
@@ -309,7 +310,7 @@ export function SwipeFlow({
     const waitingCopy = getWaitingCopy(waitingStage);
 
     return (
-      <SwipeShell creatorName={creatorName} role={role}>
+      <SwipeShell creatorName={creatorName}>
         <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-white/85 px-6 py-10 text-center shadow-[0_20px_60px_rgba(45,42,38,0.12)] backdrop-blur-sm sm:px-8">
           <LoadingOrnament variant={getWaitingLoaderVariant(waitingStage)} />
           <p className="mt-6 text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
@@ -346,7 +347,7 @@ export function SwipeFlow({
 
   if (status === "error" || !currentVenue) {
     return (
-      <SwipeShell creatorName={creatorName} role={role}>
+      <SwipeShell creatorName={creatorName}>
         <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-white/85 px-6 py-10 text-center shadow-[0_20px_60px_rgba(45,42,38,0.12)] backdrop-blur-sm">
           <h1 className="text-h1 font-semibold">Swipe demo unavailable</h1>
           <p className="mt-3 text-body text-text-secondary">{statusMessage}</p>
@@ -361,7 +362,7 @@ export function SwipeFlow({
   }
 
   return (
-    <SwipeShell creatorName={creatorName} role={role}>
+    <SwipeShell creatorName={creatorName}>
       <div className="mx-auto w-full max-w-md">
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
@@ -444,14 +445,7 @@ export function SwipeFlow({
                     <h2 className="text-h1 font-semibold leading-tight">{currentVenue.name}</h2>
                     <p className="mt-1.5 text-body text-text-secondary">{currentVenue.address}</p>
                   </div>
-                  <div className="rounded-[1.15rem] bg-primary-muted px-3 py-2 text-right">
-                    <div className="text-[0.68rem] uppercase tracking-[0.16em] text-text-secondary">
-                      Price
-                    </div>
-                    <div className="text-h2 font-semibold text-primary">
-                      {toPriceLabel(currentVenue.priceLevel)}
-                    </div>
-                  </div>
+                  <PriceBadge priceLevel={currentVenue.priceLevel} />
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -530,11 +524,9 @@ function getVenueSlides(venue: Venue): readonly string[] {
 function SwipeShell({
   children,
   creatorName,
-  role,
 }: {
   readonly children: React.ReactNode;
   readonly creatorName: string;
-  readonly role: Role;
 }) {
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg px-6 pb-10 pt-8 text-text sm:px-8">
@@ -553,7 +545,8 @@ function SwipeShell({
         <div className="mb-8 flex items-center justify-between gap-4">
           <Logo />
           <div className="rounded-full border border-white/70 bg-white/85 px-3 py-2 text-caption font-medium text-text-secondary shadow-sm">
-            {role === "a" ? "Person A" : `${creatorName}'s invite`}
+            {creatorName}
+            {"'"}s invite
           </div>
         </div>
 
@@ -696,8 +689,4 @@ function getWaitingCopy(stage: WaitingStage): {
         cardBody: "The screen refreshes into the next state as soon as the session advances.",
       };
   }
-}
-
-function toPriceLabel(priceLevel: number): string {
-  return "$".repeat(Math.max(1, Math.min(priceLevel, 4)));
 }

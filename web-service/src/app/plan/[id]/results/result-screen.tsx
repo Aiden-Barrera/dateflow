@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
 import { Logo } from "../../../../components/logo";
+import { PriceBadge } from "../../../../components/price-badge";
 import type { MatchResult } from "../../../../lib/types/match-result";
 import type { Category } from "../../../../lib/types/preference";
 import {
@@ -142,14 +143,7 @@ export function ResultScreen({
                     <h2 className="text-h1 font-semibold text-text">{venue.name}</h2>
                     <p className="mt-2 text-body text-text-secondary">{venue.address}</p>
                   </div>
-                  <div className="rounded-[1.25rem] bg-primary-muted px-3 py-2 text-right">
-                    <div className="text-caption uppercase tracking-[0.18em] text-text-secondary">
-                      Price
-                    </div>
-                    <div className="text-h2 font-semibold text-primary">
-                      {toPriceLabel(venue.priceLevel)}
-                    </div>
-                  </div>
+                  <PriceBadge priceLevel={venue.priceLevel} />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 text-body text-text-secondary">
@@ -204,10 +198,6 @@ export function ResultScreen({
   );
 }
 
-function toPriceLabel(priceLevel: number): string {
-  return "$".repeat(Math.max(1, Math.min(priceLevel, 4)));
-}
-
 function StarIcon() {
   return (
     <svg
@@ -219,6 +209,10 @@ function StarIcon() {
       <path d="M12 3.75 14.78 9l5.72.78-4.13 4 1 5.72L12 16.98 6.63 19.5l1-5.72-4.13-4L9.22 9 12 3.75Z" />
     </svg>
   );
+}
+
+function toPriceLabel(priceLevel: number): string {
+  return "$".repeat(Math.max(1, Math.min(priceLevel, 4)));
 }
 
 function HeartIcon() {

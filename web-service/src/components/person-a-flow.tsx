@@ -166,10 +166,7 @@ export function PersonAFlow() {
         <section className="relative z-10 flex flex-col justify-between">
           <div>
             <Logo />
-            <p className="mt-10 text-caption font-semibold uppercase tracking-[0.28em] text-secondary">
-              Person A start
-            </p>
-            <h1 className="mt-4 max-w-2xl text-[clamp(3.2rem,10vw,6.8rem)] font-semibold leading-[0.92] tracking-[-0.06em]">
+            <h1 className="mt-10 max-w-2xl text-[clamp(3.2rem,10vw,6.8rem)] font-semibold leading-[0.92] tracking-[-0.06em]">
               Build the date invite before the vibe goes cold.
             </h1>
             <p className="mt-5 max-w-xl text-body text-text-secondary">
