@@ -12,12 +12,17 @@ export function getQstashReadiness(): {
   readonly ready: boolean;
   readonly missing: readonly string[];
 } {
-  const missing = [
+  const requiredEnv: ReadonlyArray<readonly [string, string | undefined]> = [
     ["QSTASH_TOKEN", process.env.QSTASH_TOKEN],
     ["NEXT_PUBLIC_APP_URL", process.env.NEXT_PUBLIC_APP_URL],
-  ]
-    .filter(([, value]) => !value)
-    .map(([key]) => key);
+  ];
+  const missing = requiredEnv.reduce<string[]>((keys, [key, value]) => {
+    if (!value) {
+      keys.push(key);
+    }
+
+    return keys;
+  }, []);
 
   return {
     ready: missing.length === 0,
