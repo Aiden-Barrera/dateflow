@@ -131,6 +131,15 @@ describe("POST /api/sessions/[id]/preferences", () => {
     expect(mockEnqueueVenueGeneration).not.toHaveBeenCalled();
   });
 
+  it("binds the submitted role to the browser with a session cookie", async () => {
+    const response = await POST(makePostRequest(validBody), makeParams());
+
+    expect(response.status).toBe(201);
+    expect(response.headers.get("set-cookie")).toContain(
+      `dateflow_session_role_${SESSION_ID}=b`,
+    );
+  });
+
   it("enqueues venue generation when the second preference is submitted", async () => {
     mockGetPreferences.mockResolvedValue([
       { ...fakePreference, role: "a" },

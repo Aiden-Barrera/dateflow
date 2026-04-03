@@ -335,7 +335,7 @@ export function PersonAFlow() {
                 <a href={`${createdSession.shareUrl}?demo=1`} className="block">
                   <Button variant="secondary">Run full demo as Person B</Button>
                 </a>
-                <a href={`/plan/${createdSession.id}/swipe?role=a&demo=1`} className="block">
+                <a href={`/plan/${createdSession.id}/swipe?demo=1`} className="block">
                   <Button variant="secondary">Open swipe deck directly</Button>
                 </a>
               </div>

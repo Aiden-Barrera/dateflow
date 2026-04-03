@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "../../../lib/services/session-service";
 import { isExpired } from "../../../lib/services/session-helpers";
+import {
+  getSessionRoleCookieName,
+  normalizeSessionRole,
+} from "../../../lib/session-role-access";
 import { PlanFlow } from "./plan-flow";
 
 type PageProps = {
@@ -88,7 +93,26 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
   }
 
   if (session.status === "ready_to_swipe") {
-    redirect(`/plan/${session.id}/swipe?role=b${demo === "1" ? "&demo=1" : ""}`);
+    const cookieStore = await cookies();
+    const boundRole = normalizeSessionRole(
+      cookieStore.get(getSessionRoleCookieName(session.id))?.value,
+    );
+
+    if (boundRole) {
+      redirect(`/plan/${session.id}/swipe${demo === "1" ? "?demo=1" : ""}`);
+    }
+
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-bg px-6 text-center">
+        <h1 className="text-h1 font-semibold text-text">
+          This swipe deck is tied to another browser
+        </h1>
+        <p className="mt-3 max-w-xl text-body text-text-secondary">
+          Reopen the original browser that joined this session to keep swiping.
+          If you need a fresh invite, start a new session.
+        </p>
+      </div>
+    );
   }
 
   return (

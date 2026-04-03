@@ -21,6 +21,17 @@ function makePostRequest(body: unknown): Request {
   });
 }
 
+function makePostRequestWithCookie(body: unknown, cookie: string): Request {
+  return new Request("http://localhost:3000/api/sessions/session-1/swipes", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Cookie: cookie,
+    },
+    body: JSON.stringify(body),
+  });
+}
+
 const readySession = {
   id: "session-1",
   status: "ready_to_swipe" as const,
@@ -50,11 +61,11 @@ describe("POST /api/sessions/[id]/swipes", () => {
   });
 
   it("records a swipe when the request is valid", async () => {
-    const response = await POST(makePostRequest({
+    const response = await POST(makePostRequestWithCookie({
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }), {
+    }, "dateflow_session_role_session-1=a"), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -75,6 +86,39 @@ describe("POST /api/sessions/[id]/swipes", () => {
     });
   });
 
+  it("rejects swipes when the browser has no established session role", async () => {
+    const response = await POST(makePostRequest({
+      venueId: "venue-1",
+      role: "a",
+      liked: true,
+    }), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(body.error).toContain("role-bound access");
+    expect(mockRecordSwipe).not.toHaveBeenCalled();
+  });
+
+  it("uses the established session role instead of trusting the request body", async () => {
+    const response = await POST(makePostRequestWithCookie({
+      venueId: "venue-1",
+      role: "a",
+      liked: true,
+    }, "dateflow_session_role_session-1=b"), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockRecordSwipe).toHaveBeenCalledWith(
+      "session-1",
+      "venue-1",
+      "b",
+      true,
+    );
+  });
+
   it("returns 400 when the request body is invalid", async () => {
     const response = await POST(makePostRequest({
       venueId: 123,
@@ -93,11 +137,11 @@ describe("POST /api/sessions/[id]/swipes", () => {
   it("returns 404 when the session does not exist", async () => {
     mockGetSession.mockResolvedValue(null);
 
-    const response = await POST(makePostRequest({
+    const response = await POST(makePostRequestWithCookie({
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }), {
+    }, "dateflow_session_role_session-1=a"), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -112,11 +156,11 @@ describe("POST /api/sessions/[id]/swipes", () => {
       status: "generating",
     });
 
-    const response = await POST(makePostRequest({
+    const response = await POST(makePostRequestWithCookie({
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }), {
+    }, "dateflow_session_role_session-1=a"), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -133,11 +177,11 @@ describe("POST /api/sessions/[id]/swipes", () => {
       matchedVenueId: "venue-12",
     });
 
-    const response = await POST(makePostRequest({
+    const response = await POST(makePostRequestWithCookie({
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }), {
+    }, "dateflow_session_role_session-1=a"), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -152,11 +196,11 @@ describe("POST /api/sessions/[id]/swipes", () => {
       new Error("Venue venue-9 is not in the current round"),
     );
 
-    const response = await POST(makePostRequest({
+    const response = await POST(makePostRequestWithCookie({
       venueId: "venue-9",
       role: "a",
       liked: true,
-    }), {
+    }, "dateflow_session_role_session-1=a"), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -170,11 +214,11 @@ describe("POST /api/sessions/[id]/swipes", () => {
       new Error("cannot swipe when session status is generating"),
     );
 
-    const response = await POST(makePostRequest({
+    const response = await POST(makePostRequestWithCookie({
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }), {
+    }, "dateflow_session_role_session-1=a"), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
