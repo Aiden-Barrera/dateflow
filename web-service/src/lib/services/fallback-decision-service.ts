@@ -14,7 +14,10 @@ export async function acceptFallbackSuggestion(
     throw new Error("Fallback suggestion is missing a venue");
   }
 
-  return updateSessionStatus(sessionId, "matched");
+  return updateSession(sessionId, {
+    status: "matched",
+    matched_at: new Date().toISOString(),
+  });
 }
 
 export async function requestFallbackRetry(
@@ -37,6 +40,7 @@ export async function requestFallbackRetry(
     return updateSession(sessionId, {
       status: "ready_to_swipe",
       matched_venue_id: null,
+      matched_at: null,
     });
   } catch (error) {
     await updateSessionStatus(sessionId, "fallback_pending");
@@ -86,7 +90,7 @@ async function clearSessionSwipes(sessionId: string): Promise<void> {
 
 async function updateSession(
   sessionId: string,
-  updates: Partial<Pick<SessionRow, "status" | "matched_venue_id">>,
+  updates: Partial<Pick<SessionRow, "status" | "matched_venue_id" | "matched_at">>,
 ): Promise<Session> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase

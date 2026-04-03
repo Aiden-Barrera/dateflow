@@ -9,6 +9,7 @@ const testSession: Session = {
   createdAt: new Date("2026-03-27T12:00:00Z"),
   expiresAt: new Date("2026-03-29T12:00:00Z"),
   matchedVenueId: null,
+  matchedAt: null,
 };
 
 describe("serializeSession", () => {
@@ -38,8 +39,16 @@ describe("serializeSession", () => {
     const sessionWithVenue: Session = {
       ...testSession,
       matchedVenueId: "venue-xyz",
+      matchedAt: new Date("2026-03-28T15:30:00Z"),
     };
     const result = serializeSession(sessionWithVenue);
     expect(result.matchedVenueId).toBe("venue-xyz");
+    expect(result.matchedAt).toBe("2026-03-28T15:30:00.000Z");
+  });
+
+  it("serializes null matchedAt when no match has happened", () => {
+    const result = serializeSession(testSession);
+
+    expect(result.matchedAt).toBeNull();
   });
 });

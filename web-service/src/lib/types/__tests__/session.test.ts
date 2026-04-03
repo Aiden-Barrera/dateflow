@@ -10,6 +10,7 @@ describe("toSession", () => {
     created_at: "2026-03-27T12:00:00Z",
     expires_at: "2026-03-29T12:00:00Z",
     matched_venue_id: null,
+    matched_at: null,
   };
 
   it("maps snake_case row fields to camelCase Session fields", () => {
@@ -40,9 +41,11 @@ describe("toSession", () => {
     const rowWithVenue: SessionRow = {
       ...baseRow,
       matched_venue_id: "venue-abc-123",
+      matched_at: "2026-03-28T13:00:00Z",
     };
     const session = toSession(rowWithVenue);
 
     expect(session.matchedVenueId).toBe("venue-abc-123");
+    expect(session.matchedAt?.toISOString()).toBe("2026-03-28T13:00:00.000Z");
   });
 });

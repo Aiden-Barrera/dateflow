@@ -32,6 +32,7 @@ export type Session = {
   readonly createdAt: Date;
   readonly expiresAt: Date;
   readonly matchedVenueId: string | null;
+  readonly matchedAt: Date | null;
 };
 
 /**
@@ -62,6 +63,7 @@ export type SessionRow = {
   readonly created_at: string;
   readonly expires_at: string;
   readonly matched_venue_id: string | null;
+  readonly matched_at: string | null;
 };
 
 /**
@@ -78,5 +80,6 @@ export function toSession(row: SessionRow): Session {
     createdAt: new Date(row.created_at),
     expiresAt: new Date(row.expires_at),
     matchedVenueId: row.matched_venue_id,
+    matchedAt: row.matched_at ? new Date(row.matched_at) : null,
   };
 }

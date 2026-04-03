@@ -51,6 +51,7 @@ const baseRow: SessionRow = {
   created_at: "2026-04-02T12:00:00Z",
   expires_at: "2026-04-04T12:00:00Z",
   matched_venue_id: "venue-12",
+  matched_at: null,
 };
 
 describe("fallback-decision-service", () => {
@@ -69,20 +70,35 @@ describe("fallback-decision-service", () => {
 
   it("accepts a fallback suggestion by promoting the session to matched", async () => {
     mockUpdateSingle.mockResolvedValue({
-      data: { ...baseRow, status: "matched" },
+      data: {
+        ...baseRow,
+        status: "matched",
+        matched_at: "2026-04-03T16:00:00Z",
+      },
       error: null,
     });
 
     const session = await acceptFallbackSuggestion("session-1");
 
-    expect(mockUpdate).toHaveBeenCalledWith({ status: "matched" });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "matched",
+        matched_at: expect.any(String),
+      }),
+    );
     expect(session.status).toBe("matched");
     expect(session.matchedVenueId).toBe("venue-12");
+    expect(session.matchedAt?.toISOString()).toBe("2026-04-03T16:00:00.000Z");
   });
 
   it("moves a fallback session into retry_pending when users request retry", async () => {
     mockUpdateSingle.mockResolvedValue({
-      data: { ...baseRow, status: "ready_to_swipe", matched_venue_id: null },
+      data: {
+        ...baseRow,
+        status: "ready_to_swipe",
+        matched_venue_id: null,
+        matched_at: null,
+      },
       error: null,
     });
 
@@ -100,11 +116,13 @@ describe("fallback-decision-service", () => {
     expect(mockUpdate).toHaveBeenNthCalledWith(2, {
       status: "ready_to_swipe",
       matched_venue_id: null,
+      matched_at: null,
     });
     expect(mockDelete).toHaveBeenCalledTimes(1);
     expect(mockDeleteEq).toHaveBeenCalledWith("session_id", "session-1");
     expect(session.status).toBe("ready_to_swipe");
     expect(session.matchedVenueId).toBeNull();
+    expect(session.matchedAt).toBeNull();
   });
 
   it("moves a fallback session to retry_pending when rerank requires full regeneration", async () => {

@@ -8,10 +8,13 @@ const NOT_FOUND_CODE = "PGRST116";
 type MatchedSessionRow = SessionRow & { readonly matched_venue_id: string };
 
 function resolveMatchedAt(sessionRow: SessionRow): Date {
-  // The current schema does not persist a dedicated match timestamp yet.
-  // Use the session creation time as the only available persisted timestamp
-  // until DS-05 introduces an explicit matched_at field.
-  return new Date(sessionRow.created_at);
+  const timestamp = sessionRow.matched_at ?? sessionRow.created_at;
+
+  if (!timestamp) {
+    throw new Error("Session does not have a matched or created timestamp");
+  }
+
+  return new Date(timestamp);
 }
 
 async function getMatchedSession(sessionId: string): Promise<MatchedSessionRow> {

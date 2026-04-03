@@ -52,6 +52,7 @@ const fakeRow: SessionRow = {
   created_at: "2026-03-27T12:00:00Z",
   expires_at: "2026-03-29T12:00:00Z",
   matched_venue_id: null,
+  matched_at: null,
 };
 
 describe("createSession", () => {

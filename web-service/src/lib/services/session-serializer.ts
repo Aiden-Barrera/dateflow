@@ -11,6 +11,7 @@ export type SerializedSession = {
   readonly createdAt: string;
   readonly expiresAt: string;
   readonly matchedVenueId: string | null;
+  readonly matchedAt: string | null;
 };
 
 /**
@@ -25,5 +26,6 @@ export function serializeSession(session: Session): SerializedSession {
     createdAt: session.createdAt.toISOString(),
     expiresAt: session.expiresAt.toISOString(),
     matchedVenueId: session.matchedVenueId,
+    matchedAt: session.matchedAt ? session.matchedAt.toISOString() : null,
   };
 }

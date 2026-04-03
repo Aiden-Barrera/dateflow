@@ -11,6 +11,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
     createdAt: new Date("2026-03-27T12:00:00Z"),
     expiresAt: new Date("2026-03-29T12:00:00Z"),
     matchedVenueId: null,
+    matchedAt: null,
     ...overrides,
   };
 }
