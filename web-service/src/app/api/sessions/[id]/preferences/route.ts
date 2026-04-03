@@ -9,6 +9,7 @@ import { serializePreference } from "../../../../../lib/services/preference-seri
 import { isExpired } from "../../../../../lib/services/session-helpers";
 import { generateDemoVenues } from "../../../../../lib/services/demo-venue-service";
 import { generateVenues } from "../../../../../lib/services/venue-generation-service";
+import { buildSessionRoleCookieValue } from "../../../../../lib/session-role-access";
 import type { BudgetLevel, Category, Role } from "../../../../../lib/types/preference";
 
 type RouteParams = {
@@ -188,13 +189,26 @@ export async function POST(request: Request, { params }: RouteParams) {
       categories,
     });
 
+    const response = NextResponse.json(
+      { preference: serializePreference(preference) },
+      { status: 201 }
+    );
+    response.headers.append(
+      "set-cookie",
+      buildSessionRoleCookieValue(id, role),
+    );
+
     if (willCompleteBothPreferences) {
       if (demo) {
-        await generateDemoVenues(id);
-        return NextResponse.json(
-          { preference: serializePreference(preference) },
-          { status: 201 }
-        );
+        try {
+          await generateDemoVenues(id);
+        } catch (demoGenerationErr) {
+          console.error(
+            `[POST /api/sessions/${id}/preferences] Demo venue generation failed after preference submission:`,
+            demoGenerationErr,
+          );
+        }
+        return response;
       }
 
       try {
@@ -216,10 +230,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    return NextResponse.json(
-      { preference: serializePreference(preference) },
-      { status: 201 }
-    );
+    return response;
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
     const isUniqueViolation = message.includes("unique") || message.includes("duplicate");

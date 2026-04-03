@@ -20,7 +20,7 @@ export function getPlanFlowSyncAction(
   if (snapshot.status === "ready_to_swipe") {
     return {
       type: "redirect",
-      href: `/plan/${sessionId}/swipe?role=b${options.demoMode ? "&demo=1" : ""}`,
+      href: `/plan/${sessionId}/swipe${options.demoMode ? "?demo=1" : ""}`,
     };
   }
 

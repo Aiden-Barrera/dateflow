@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSession } from "../../../../../lib/services/session-service";
 import { recordSwipe } from "../../../../../lib/services/swipe-service";
 import { isExpired } from "../../../../../lib/services/session-helpers";
+import { readBoundSessionRole } from "../../../../../lib/session-role-access";
 import type { Role } from "../../../../../lib/types/preference";
 
 type RouteParams = {
@@ -20,7 +21,6 @@ type ValidationResult =
   | {
       valid: true;
       venueId: string;
-      role: Role;
       liked: boolean;
     }
   | {
@@ -33,14 +33,10 @@ function validateBody(body: unknown): ValidationResult {
     return { valid: false, error: "Request body must be a JSON object" };
   }
 
-  const { venueId, role, liked } = body as SwipeRequestBody;
+  const { venueId, liked } = body as SwipeRequestBody;
 
   if (typeof venueId !== "string" || venueId.trim().length === 0) {
     return { valid: false, error: "venueId is required" };
-  }
-
-  if (!VALID_ROLES.includes(role as Role)) {
-    return { valid: false, error: "role must be 'a' or 'b'" };
   }
 
   if (typeof liked !== "boolean") {
@@ -50,7 +46,6 @@ function validateBody(body: unknown): ValidationResult {
   return {
     valid: true,
     venueId: venueId.trim(),
-    role: role as Role,
     liked,
   };
 }
@@ -78,6 +73,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   try {
     const session = await getSession(id);
+    const boundRole = readBoundSessionRole(id, request.headers.get("cookie"));
 
     if (!session) {
       return NextResponse.json(
@@ -110,10 +106,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
+    if (!boundRole) {
+      return NextResponse.json(
+        { error: "This session requires role-bound access before swiping" },
+        { status: 403 },
+      );
+    }
+
     const result = await recordSwipe(
       id,
       validation.venueId,
-      validation.role,
+      boundRole,
       validation.liked,
     );
 

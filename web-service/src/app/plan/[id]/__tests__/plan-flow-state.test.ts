@@ -30,7 +30,7 @@ describe("getPlanFlowSyncAction", () => {
       ),
     ).toEqual({
       type: "redirect",
-      href: "/plan/session-1/swipe?role=b&demo=1",
+      href: "/plan/session-1/swipe?demo=1",
     });
   });
 

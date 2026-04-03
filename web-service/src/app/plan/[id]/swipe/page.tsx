@@ -1,7 +1,11 @@
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { SwipeFlow } from "./swipe-flow";
 import { getSession } from "../../../../lib/services/session-service";
-import type { Role } from "../../../../lib/types/preference";
+import {
+  getBoundSessionRole,
+  getSessionRoleCookieName,
+} from "../../../../lib/session-role-access";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -10,7 +14,7 @@ type PageProps = {
 
 export default async function SwipePage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { role, demo } = await searchParams;
+  const { demo } = await searchParams;
   const session = await getSession(id);
 
   if (!session) {
@@ -21,7 +25,15 @@ export default async function SwipePage({ params, searchParams }: PageProps) {
     redirect(`/plan/${id}/results`);
   }
 
-  const resolvedRole: Role = role === "a" ? "a" : "b";
+  const cookieStore = await cookies();
+  const resolvedRole = getBoundSessionRole(
+    id,
+    cookieStore.get(getSessionRoleCookieName(id))?.value,
+  );
+
+  if (!resolvedRole) {
+    redirect(`/plan/${id}${demo === "1" ? "?demo=1" : ""}`);
+  }
 
   return (
     <SwipeFlow
