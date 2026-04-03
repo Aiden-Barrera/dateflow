@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+
+const currentFile = fileURLToPath(import.meta.url);
+const currentDir = dirname(currentFile);
 
 const migrationPath = join(
-  process.cwd(),
+  currentDir,
+  "..",
+  "..",
+  "..",
   "supabase",
   "migrations",
   "008_add_matched_at_to_sessions.sql",
@@ -26,7 +33,7 @@ describe("008_add_matched_at_to_sessions.sql", () => {
 
     expect(migration).toContain("SET status = 'matched'");
     expect(migration).toContain("matched_venue_id = input_venue_id");
-    expect(migration).toContain("matched_at = now()");
+    expect(migration).toContain("matched_at = clock_timestamp()");
   });
 
   it("clears matched_at when a fallback retry reopens swiping", () => {

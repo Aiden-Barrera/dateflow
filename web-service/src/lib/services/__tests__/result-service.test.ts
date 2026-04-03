@@ -120,4 +120,15 @@ describe("result-service", () => {
       "Matched venue not found",
     );
   });
+
+  it("falls back to created_at when matched_at is missing", async () => {
+    mockSessionSingle.mockResolvedValue({
+      data: { ...matchedSessionRow, matched_at: null },
+      error: null,
+    });
+
+    const result = await getMatchResult("session-1");
+
+    expect(result.matchedAt).toEqual(new Date("2026-04-02T18:30:00Z"));
+  });
 });

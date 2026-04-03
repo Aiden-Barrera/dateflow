@@ -8,11 +8,13 @@ const NOT_FOUND_CODE = "PGRST116";
 type MatchedSessionRow = SessionRow & { readonly matched_venue_id: string };
 
 function resolveMatchedAt(sessionRow: SessionRow): Date {
-  if (!sessionRow.matched_at) {
-    throw new Error("Session does not have a matched timestamp");
+  const timestamp = sessionRow.matched_at ?? sessionRow.created_at;
+
+  if (!timestamp) {
+    throw new Error("Session does not have a matched or created timestamp");
   }
 
-  return new Date(sessionRow.matched_at);
+  return new Date(timestamp);
 }
 
 async function getMatchedSession(sessionId: string): Promise<MatchedSessionRow> {

@@ -16,7 +16,8 @@ WHERE status = 'matched'
 -- matched timestamp.
 UPDATE sessions
 SET matched_at = null
-WHERE status = 'ready_to_swipe';
+WHERE status = 'ready_to_swipe'
+  AND matched_at IS NOT NULL;
 
 DROP FUNCTION IF EXISTS record_swipe_and_check_match(uuid, uuid, text, boolean);
 
@@ -83,7 +84,7 @@ BEGIN
       UPDATE sessions
       SET status = 'matched',
           matched_venue_id = input_venue_id,
-          matched_at = now()
+          matched_at = clock_timestamp()
       WHERE sessions.id = input_session_id
         AND status = 'ready_to_swipe';
 
