@@ -165,6 +165,22 @@ describe("POST /api/sessions/[id]/preferences", () => {
     expect(mockGenerateVenues).toHaveBeenCalledWith(SESSION_ID);
   });
 
+  it("returns 503 with retry guidance when enqueue and direct generation both fail", async () => {
+    mockGetPreferences.mockResolvedValue([{ ...fakePreference, role: "a" }]);
+    mockEnqueueVenueGeneration.mockRejectedValueOnce(new Error("Missing QSTASH_TOKEN"));
+    mockGenerateVenues.mockRejectedValueOnce(
+      new Error("GOOGLE_PLACES_API_KEY environment variable is not set"),
+    );
+
+    const response = await POST(makePostRequest(validBody), makeParams());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error).toContain("couldn't start venue generation");
+    expect(body.retryable).toBe(true);
+    expect(body.preferenceSaved).toBe(true);
+  });
+
   it("uses demo venue generation instead of qstash when demo mode is enabled", async () => {
     mockGetPreferences.mockResolvedValue([{ ...fakePreference, role: "a" }]);
 

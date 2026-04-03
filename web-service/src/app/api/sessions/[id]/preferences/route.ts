@@ -16,6 +16,11 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
+type GenerationFailureDetails = {
+  readonly retryable: boolean;
+  readonly userMessage: string;
+};
+
 // ---------------------------------------------------------------------------
 // Allowed values — used for input validation
 // ---------------------------------------------------------------------------
@@ -99,6 +104,28 @@ function validateBody(body: unknown): ValidationResult {
     budget: budget as BudgetLevel,
     categories: categories as Category[],
     demo: demo === true,
+  };
+}
+
+function classifyGenerationFailure(error: unknown): GenerationFailureDetails {
+  const message = error instanceof Error ? error.message : "";
+
+  if (
+    message.includes("QSTASH") ||
+    message.includes("GOOGLE_PLACES_API_KEY") ||
+    message.includes("Google Places API error")
+  ) {
+    return {
+      retryable: true,
+      userMessage:
+        "We saved your preferences, but couldn't start venue generation. Please try again shortly.",
+    };
+  }
+
+  return {
+    retryable: true,
+    userMessage:
+      "We saved your preferences, but couldn't start venue generation. Please try again shortly.",
   };
 }
 
@@ -225,6 +252,20 @@ export async function POST(request: Request, { params }: RouteParams) {
           console.error(
             `[POST /api/sessions/${id}/preferences] Direct generation fallback failed:`,
             generationErr
+          );
+
+          const failure = classifyGenerationFailure(generationErr);
+
+          return NextResponse.json(
+            {
+              error: failure.userMessage,
+              retryable: failure.retryable,
+              preferenceSaved: true,
+            },
+            {
+              status: 503,
+              headers: response.headers,
+            },
           );
         }
       }
