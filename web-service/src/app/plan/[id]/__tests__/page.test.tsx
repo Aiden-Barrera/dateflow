@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildSessionRoleCookieValue } from "../../../../lib/session-role-access";
 
 const mockGetSession = vi.fn();
 const mockCookies = vi.fn();
@@ -27,8 +28,11 @@ import PlanPage from "../page";
 describe("/plan/[id] page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SESSION_ROLE_COOKIE_SECRET = "test-secret";
     mockCookies.mockResolvedValue({
-      get: () => ({ value: "b" }),
+      get: () => ({
+        value: buildSessionRoleCookieValue("session-1", "b").split(";")[0]?.split("=")[1],
+      }),
     });
   });
 

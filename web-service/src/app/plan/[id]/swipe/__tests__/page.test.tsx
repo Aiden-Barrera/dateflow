@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { buildSessionRoleCookieValue } from "../../../../../lib/session-role-access";
 
 const mockGetSession = vi.fn();
 const mockNotFound = vi.fn(() => {
@@ -34,13 +35,14 @@ describe("/plan/[id]/swipe page", () => {
       expiresAt: new Date("2026-04-04T18:30:00Z"),
       matchedVenueId: null,
     });
+    process.env.SESSION_ROLE_COOKIE_SECRET = "test-secret";
   });
 
   it("uses the bound role cookie instead of the query param", async () => {
     mockCookies.mockResolvedValue({
       get: (name: string) =>
         name === "dateflow_session_role_session-1"
-          ? { value: "a" }
+          ? { value: buildSessionRoleCookieValue("session-1", "a").split(";")[0]?.split("=")[1] }
           : undefined,
     });
 

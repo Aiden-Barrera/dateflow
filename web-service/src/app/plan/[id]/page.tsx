@@ -4,8 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { getSession } from "../../../lib/services/session-service";
 import { isExpired } from "../../../lib/services/session-helpers";
 import {
+  getBoundSessionRole,
   getSessionRoleCookieName,
-  normalizeSessionRole,
 } from "../../../lib/session-role-access";
 import { PlanFlow } from "./plan-flow";
 
@@ -94,7 +94,8 @@ export default async function PlanPage({ params, searchParams }: PageProps) {
 
   if (session.status === "ready_to_swipe") {
     const cookieStore = await cookies();
-    const boundRole = normalizeSessionRole(
+    const boundRole = getBoundSessionRole(
+      session.id,
       cookieStore.get(getSessionRoleCookieName(session.id))?.value,
     );
 

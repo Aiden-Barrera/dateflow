@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { SwipeFlow } from "./swipe-flow";
 import { getSession } from "../../../../lib/services/session-service";
 import {
+  getBoundSessionRole,
   getSessionRoleCookieName,
-  normalizeSessionRole,
 } from "../../../../lib/session-role-access";
 
 type PageProps = {
@@ -26,7 +26,8 @@ export default async function SwipePage({ params, searchParams }: PageProps) {
   }
 
   const cookieStore = await cookies();
-  const resolvedRole = normalizeSessionRole(
+  const resolvedRole = getBoundSessionRole(
+    id,
     cookieStore.get(getSessionRoleCookieName(id))?.value,
   );
 

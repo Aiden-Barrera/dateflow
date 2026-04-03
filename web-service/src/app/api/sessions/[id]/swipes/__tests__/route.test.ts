@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { buildSessionRoleCookieValue } from "../../../../../../lib/session-role-access";
 
 const mockGetSession = vi.fn();
 const mockRecordSwipe = vi.fn();
@@ -32,6 +33,10 @@ function makePostRequestWithCookie(body: unknown, cookie: string): Request {
   });
 }
 
+function makeSessionRoleCookie(sessionId: string, role: "a" | "b"): string {
+  return buildSessionRoleCookieValue(sessionId, role).split(";")[0] ?? "";
+}
+
 const readySession = {
   id: "session-1",
   status: "ready_to_swipe" as const,
@@ -50,6 +55,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-03T12:00:00Z"));
+    process.env.SESSION_ROLE_COOKIE_SECRET = "test-secret";
     mockGetSession.mockResolvedValue(readySession);
     mockRecordSwipe.mockResolvedValue({
       matched: false,
@@ -65,7 +71,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }, "dateflow_session_role_session-1=a"), {
+    }, makeSessionRoleCookie("session-1", "a")), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -106,7 +112,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }, "dateflow_session_role_session-1=b"), {
+    }, makeSessionRoleCookie("session-1", "b")), {
       params: Promise.resolve({ id: "session-1" }),
     });
 
@@ -134,6 +140,22 @@ describe("POST /api/sessions/[id]/swipes", () => {
     expect(mockRecordSwipe).not.toHaveBeenCalled();
   });
 
+  it("rejects tampered role cookies", async () => {
+    const validCookie = makeSessionRoleCookie("session-1", "a");
+    const tamperedCookie = validCookie.replace(/^dateflow_session_role_session-1=a\./, "dateflow_session_role_session-1=b.");
+
+    const response = await POST(makePostRequestWithCookie({
+      venueId: "venue-1",
+      role: "a",
+      liked: true,
+    }, tamperedCookie), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+
+    expect(response.status).toBe(403);
+    expect(mockRecordSwipe).not.toHaveBeenCalled();
+  });
+
   it("returns 404 when the session does not exist", async () => {
     mockGetSession.mockResolvedValue(null);
 
@@ -141,7 +163,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }, "dateflow_session_role_session-1=a"), {
+    }, makeSessionRoleCookie("session-1", "a")), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -160,7 +182,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }, "dateflow_session_role_session-1=a"), {
+    }, makeSessionRoleCookie("session-1", "a")), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -181,7 +203,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }, "dateflow_session_role_session-1=a"), {
+    }, makeSessionRoleCookie("session-1", "a")), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -200,7 +222,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
       venueId: "venue-9",
       role: "a",
       liked: true,
-    }, "dateflow_session_role_session-1=a"), {
+    }, makeSessionRoleCookie("session-1", "a")), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
@@ -218,7 +240,7 @@ describe("POST /api/sessions/[id]/swipes", () => {
       venueId: "venue-1",
       role: "a",
       liked: true,
-    }, "dateflow_session_role_session-1=a"), {
+    }, makeSessionRoleCookie("session-1", "a")), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
