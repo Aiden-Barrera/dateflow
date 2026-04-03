@@ -10,7 +10,10 @@ export function buildSessionRoleCookieValue(
   sessionId: string,
   role: Role,
 ): string {
-  return `${getSessionRoleCookieName(sessionId)}=${role}; Path=/; HttpOnly; SameSite=Lax`;
+  const secureAttribute =
+    process.env.NODE_ENV === "production" ? "; Secure" : "";
+
+  return `${getSessionRoleCookieName(sessionId)}=${role}; Path=/; HttpOnly; SameSite=Lax${secureAttribute}`;
 }
 
 export function normalizeSessionRole(value: string | undefined): Role | null {

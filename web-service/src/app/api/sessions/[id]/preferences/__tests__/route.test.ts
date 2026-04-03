@@ -175,6 +175,21 @@ describe("POST /api/sessions/[id]/preferences", () => {
     expect(mockGenerateVenues).not.toHaveBeenCalled();
   });
 
+  it("still returns the bound role cookie when demo generation fails after preference submission", async () => {
+    mockGetPreferences.mockResolvedValue([{ ...fakePreference, role: "a" }]);
+    mockGenerateDemoVenues.mockRejectedValueOnce(new Error("demo generation failed"));
+
+    const response = await POST(
+      makePostRequest({ ...validBody, demo: true }),
+      makeParams(),
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.headers.get("set-cookie")).toContain(
+      `dateflow_session_role_${SESSION_ID}=b`,
+    );
+  });
+
   it("returns 400 when the session id is not a UUID", async () => {
     const response = await POST(makePostRequest(validBody), makeParams("abc-123"));
     const body = await response.json();

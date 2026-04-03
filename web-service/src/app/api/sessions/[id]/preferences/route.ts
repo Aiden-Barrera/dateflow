@@ -200,7 +200,14 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     if (willCompleteBothPreferences) {
       if (demo) {
-        await generateDemoVenues(id);
+        try {
+          await generateDemoVenues(id);
+        } catch (demoGenerationErr) {
+          console.error(
+            `[POST /api/sessions/${id}/preferences] Demo venue generation failed after preference submission:`,
+            demoGenerationErr,
+          );
+        }
         return response;
       }
 
