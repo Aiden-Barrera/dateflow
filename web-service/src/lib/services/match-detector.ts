@@ -3,7 +3,7 @@ import type { Role } from "../types/preference";
 
 type MatchRpcRow = {
   matched: boolean;
-  venue_id: string | null;
+  matched_venue_id: string | null;
 };
 
 export type MatchCheckResult = {
@@ -29,10 +29,13 @@ export async function checkAndRecordMatch(
     throw new Error(error.message);
   }
 
-  const row = (data?.[0] ?? { matched: false, venue_id: null }) as MatchRpcRow;
+  const row = (data?.[0] ?? {
+    matched: false,
+    matched_venue_id: null,
+  }) as MatchRpcRow;
 
   return {
     matched: row.matched,
-    venueId: row.venue_id,
+    venueId: row.matched_venue_id,
   };
 }

@@ -64,3 +64,34 @@ body {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+@keyframes resultReveal {
+  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes confettiLaunch {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -10px, 0) rotate(0deg) scale(0.35);
+  }
+  18% {
+    opacity: 1;
+    transform: translate3d(calc(var(--confetti-x) * 0.28), calc(var(--confetti-y) * 0.14), 0)
+      rotate(calc(var(--confetti-rotate) * 0.45)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--confetti-x), var(--confetti-y), 0)
+      rotate(var(--confetti-rotate)) scale(0.82);
+  }
+}
+
+@keyframes confettiFloat {
+  0% {
+    filter: blur(0);
+  }
+  100% {
+    filter: blur(0.2px);
+  }
+}

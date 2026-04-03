@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getSession } from "../../../lib/services/session-service";
 import { isExpired } from "../../../lib/services/session-helpers";
 import { PlanFlow } from "./plan-flow";
 
 type PageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ demo?: string }>;
 };
 
 /**
@@ -58,8 +59,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
  * (secure, fast, no client-side API call), then hands the data to
  * PlanFlow — a client component that manages the multi-screen flow.
  */
-export default async function PlanPage({ params }: PageProps) {
+export default async function PlanPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { demo } = await searchParams;
 
   const session = await getSession(id);
 
@@ -81,10 +83,24 @@ export default async function PlanPage({ params }: PageProps) {
     );
   }
 
+  if (session.status === "matched") {
+    redirect(`/plan/${session.id}/results`);
+  }
+
+  if (session.status === "ready_to_swipe") {
+    redirect(`/plan/${session.id}/swipe?role=b${demo === "1" ? "&demo=1" : ""}`);
+  }
+
   return (
     <PlanFlow
       sessionId={session.id}
       creatorName={session.creatorDisplayName}
+      demoMode={demo === "1"}
+      initialStep={
+        session.status === "both_ready" || session.status === "generating"
+          ? "loading"
+          : "hook"
+      }
     />
   );
 }

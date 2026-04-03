@@ -54,16 +54,19 @@ describe("createSessionStatusSync", () => {
     });
   });
 
-  it("starts 5-second polling when the realtime channel closes", async () => {
+  it("polls immediately and continues polling on the interval", async () => {
     createSessionStatusSync("session-1", onUpdate, { fetchStatus });
-
-    const lifecycleHandler = mockSubscribe.mock.calls[0][0];
-    lifecycleHandler("CHANNEL_ERROR");
 
     await vi.advanceTimersByTimeAsync(5000);
 
-    expect(fetchStatus).toHaveBeenCalledOnce();
-    expect(onUpdate).toHaveBeenCalledWith({
+    expect(fetchStatus).toHaveBeenCalledTimes(2);
+    expect(onUpdate).toHaveBeenNthCalledWith(1, {
+      status: "ready_to_swipe",
+      matchedVenueId: null,
+      currentRound: 1,
+      roundComplete: false,
+    });
+    expect(onUpdate).toHaveBeenNthCalledWith(2, {
       status: "ready_to_swipe",
       matchedVenueId: null,
       currentRound: 1,
@@ -73,35 +76,28 @@ describe("createSessionStatusSync", () => {
 
   it("cleans up the realtime channel and polling interval", async () => {
     const sync = createSessionStatusSync("session-1", onUpdate, { fetchStatus });
-
-    const lifecycleHandler = mockSubscribe.mock.calls[0][0];
-    lifecycleHandler("TIMED_OUT");
     await vi.advanceTimersByTimeAsync(5000);
 
     sync.stop();
     await vi.advanceTimersByTimeAsync(5000);
 
     expect(mockUnsubscribe).toHaveBeenCalledOnce();
-    expect(fetchStatus).toHaveBeenCalledOnce();
+    expect(fetchStatus).toHaveBeenCalledTimes(2);
   });
 
-  it("polls the existing session route when no custom fetchStatus is provided", async () => {
+  it("polls the dedicated session status route when no custom fetchStatus is provided", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       json: async () => ({
-        session: {
-          status: "matched",
-          matchedVenueId: "venue-4",
-        },
+        status: "matched",
+        matchedVenueId: "venue-4",
       }),
     });
 
     createSessionStatusSync("session-1", onUpdate);
 
-    const lifecycleHandler = mockSubscribe.mock.calls[0][0];
-    lifecycleHandler("CHANNEL_ERROR");
-    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(0);
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/sessions/session-1");
+    expect(fetchMock).toHaveBeenCalledWith("/api/sessions/session-1/status");
   });
 });

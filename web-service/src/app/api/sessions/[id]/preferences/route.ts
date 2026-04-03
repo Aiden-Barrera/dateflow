@@ -7,6 +7,7 @@ import {
 } from "../../../../../lib/services/preference-service";
 import { serializePreference } from "../../../../../lib/services/preference-serializer";
 import { isExpired } from "../../../../../lib/services/session-helpers";
+import { generateDemoVenues } from "../../../../../lib/services/demo-venue-service";
 import { generateVenues } from "../../../../../lib/services/venue-generation-service";
 import type { BudgetLevel, Category, Role } from "../../../../../lib/types/preference";
 
@@ -35,7 +36,7 @@ const SESSION_ID_PATTERN =
 // ---------------------------------------------------------------------------
 
 type ValidationResult =
-  | { valid: true; role: Role; location: { lat: number; lng: number; label: string }; budget: BudgetLevel; categories: Category[] }
+  | { valid: true; role: Role; location: { lat: number; lng: number; label: string }; budget: BudgetLevel; categories: Category[]; demo: boolean }
   | { valid: false; error: string };
 
 function validateBody(body: unknown): ValidationResult {
@@ -43,7 +44,7 @@ function validateBody(body: unknown): ValidationResult {
     return { valid: false, error: "Request body must be a JSON object" };
   }
 
-  const { role, location, budget, categories } = body as Record<string, unknown>;
+  const { role, location, budget, categories, demo } = body as Record<string, unknown>;
 
   // Role
   if (!role || !VALID_ROLES.includes(role as Role)) {
@@ -96,6 +97,7 @@ function validateBody(body: unknown): ValidationResult {
     location: { lat: lat as number, lng: lng as number, label: (label as string).trim() },
     budget: budget as BudgetLevel,
     categories: categories as Category[],
+    demo: demo === true,
   };
 }
 
@@ -137,7 +139,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const { role, location, budget, categories } = validation;
+  const { role, location, budget, categories, demo } = validation;
 
   try {
     // 3. Check session exists
@@ -187,6 +189,14 @@ export async function POST(request: Request, { params }: RouteParams) {
     });
 
     if (willCompleteBothPreferences) {
+      if (demo) {
+        await generateDemoVenues(id);
+        return NextResponse.json(
+          { preference: serializePreference(preference) },
+          { status: 201 }
+        );
+      }
+
       try {
         await enqueueVenueGeneration(id);
       } catch (enqueueErr) {

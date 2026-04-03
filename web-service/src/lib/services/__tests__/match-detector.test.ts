@@ -14,7 +14,7 @@ describe("checkAndRecordMatch", () => {
 
   it("calls the swipe RPC with the expected parameter names", async () => {
     mockRpc.mockResolvedValue({
-      data: [{ matched: false, venue_id: null }],
+      data: [{ matched: false, matched_venue_id: null }],
       error: null,
     });
 
@@ -30,7 +30,7 @@ describe("checkAndRecordMatch", () => {
 
   it("maps a matched RPC response into the app-level result", async () => {
     mockRpc.mockResolvedValue({
-      data: [{ matched: true, venue_id: "venue-456" }],
+      data: [{ matched: true, matched_venue_id: "venue-456" }],
       error: null,
     });
 
@@ -44,7 +44,7 @@ describe("checkAndRecordMatch", () => {
 
   it("maps an unmatched RPC response into the app-level result", async () => {
     mockRpc.mockResolvedValue({
-      data: [{ matched: false, venue_id: null }],
+      data: [{ matched: false, matched_venue_id: null }],
       error: null,
     });
 

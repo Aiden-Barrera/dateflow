@@ -1,15 +1,20 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { HookScreen } from "../../../components/hook-screen";
 import { LocationScreen } from "../../../components/location-screen";
 import { VibeScreen } from "../../../components/vibe-screen";
 import { LoadingScreen } from "../../../components/loading-screen";
+import { createSessionStatusSync } from "../../../lib/session-status-sync";
 import type { Location, BudgetLevel, Category } from "../../../lib/types/preference";
+import { getPlanFlowSyncAction } from "./plan-flow-state";
 
 type PlanFlowProps = {
   readonly sessionId: string;
   readonly creatorName: string;
+  readonly demoMode?: boolean;
+  readonly initialStep?: FlowStep;
 };
 
 /**
@@ -24,44 +29,69 @@ type PlanFlowProps = {
  */
 type FlowStep = "hook" | "location" | "vibe" | "loading";
 
-export function PlanFlow({ sessionId, creatorName }: PlanFlowProps) {
-  const [step, setStep] = useState<FlowStep>("hook");
+export function PlanFlow({
+  sessionId,
+  creatorName,
+  demoMode = false,
+  initialStep = "hook",
+}: PlanFlowProps) {
+  const router = useRouter();
+  const [step, setStep] = useState<FlowStep>(initialStep);
   const [location, setLocation] = useState<Location | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const submitPreferences = useCallback(
-    async (
-      loc: Location,
-      vibeCategories: Category[],
-      vibeBudget: BudgetLevel
-    ) => {
-      try {
-        const response = await fetch(
-          `/api/sessions/${sessionId}/preferences`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              role: "b",
-              location: { lat: loc.lat, lng: loc.lng, label: loc.label },
-              budget: vibeBudget,
-              categories: vibeCategories,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          const message =
-            body.error ?? "Something went wrong. Please try again.";
-          setSubmitError(message);
+  async function submitPreferences(
+    loc: Location,
+    vibeCategories: Category[],
+    vibeBudget: BudgetLevel
+  ) {
+    try {
+      const response = await fetch(
+        `/api/sessions/${sessionId}/preferences`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: "b",
+            location: { lat: loc.lat, lng: loc.lng, label: loc.label },
+            budget: vibeBudget,
+            categories: vibeCategories,
+            demo: demoMode,
+          }),
         }
-      } catch {
-        setSubmitError("Could not connect. Check your internet and try again.");
+      );
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        const message =
+          body.error ?? "Something went wrong. Please try again.";
+        setSubmitError(message);
       }
-    },
-    [sessionId]
-  );
+    } catch {
+      setSubmitError("Could not connect. Check your internet and try again.");
+    }
+  }
+
+  useEffect(() => {
+    if (step !== "loading") {
+      return;
+    }
+
+    const sync = createSessionStatusSync(sessionId, (snapshot) => {
+      const action = getPlanFlowSyncAction(snapshot, sessionId, { demoMode });
+
+      if (action.type === "redirect") {
+        router.push(action.href);
+        return;
+      }
+
+      if (action.type === "error") {
+        setSubmitError(action.message);
+      }
+    });
+
+    return () => sync.stop();
+  }, [demoMode, router, sessionId, step]);
 
   if (step === "hook") {
     return (
@@ -117,5 +147,5 @@ export function PlanFlow({ sessionId, creatorName }: PlanFlowProps) {
     );
   }
 
-  return <LoadingScreen />;
+  return <LoadingScreen demoMode={demoMode} />;
 }

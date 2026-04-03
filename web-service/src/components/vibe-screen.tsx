@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "./button";
+import { CategoryIcon } from "./category-icon";
 import type { BudgetLevel, Category } from "../lib/types/preference";
 
 type VibeScreenProps = {
@@ -12,11 +13,11 @@ type VibeScreenProps = {
   readonly onBack: () => void;
 };
 
-const CATEGORIES: { value: Category; label: string; icon: string }[] = [
-  { value: "RESTAURANT", label: "Food", icon: "🍽" },
-  { value: "BAR", label: "Drinks", icon: "🍸" },
-  { value: "ACTIVITY", label: "Activity", icon: "🎯" },
-  { value: "EVENT", label: "Event", icon: "🎪" },
+const CATEGORIES: { value: Category; label: string }[] = [
+  { value: "RESTAURANT", label: "Food" },
+  { value: "BAR", label: "Drinks" },
+  { value: "ACTIVITY", label: "Activity" },
+  { value: "EVENT", label: "Event" },
 ];
 
 const BUDGETS: { value: BudgetLevel; label: string; symbol: string }[] = [
@@ -62,87 +63,131 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col bg-bg px-6 pb-24">
-      {/* Progress indicator */}
-      <div className="flex flex-col items-center pt-6 pb-2">
-        <span className="text-caption text-text-secondary">Step 2 of 2</span>
-        <div className="mt-2 flex gap-1.5">
-          <div className="h-1.5 w-8 rounded-full bg-secondary" />
-          <div className="h-1.5 w-8 rounded-full bg-secondary" />
+    <div className="relative flex min-h-dvh flex-col bg-bg px-6 pb-24 pt-6">
+      <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col">
+        <div className="flex items-center justify-between">
+          <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-caption font-medium text-text-secondary shadow-sm">
+            Step 2 of 2
+          </span>
+          <div className="flex gap-1.5">
+            <div className="h-2 w-10 rounded-full bg-secondary" />
+            <div className="h-2 w-10 rounded-full bg-secondary" />
+          </div>
+        </div>
+
+        <button onClick={onBack} className="pt-4 pb-4 cursor-pointer" aria-label="Go back">
+          <BackArrow />
+        </button>
+
+        <div className="grid flex-1 gap-8 lg:grid-cols-[1fr_0.86fr]">
+          <section>
+            <h1 className="text-[clamp(2.4rem,8vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
+              What kind of date feels easy right now?
+            </h1>
+            <p className="mt-3 max-w-xl text-body text-text-secondary">
+              Pick the formats you would actually say yes to. The shortlist gets better when this stays honest.
+            </p>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {CATEGORIES.map(({ value, label }) => {
+                const isSelected = selectedCategories.includes(value);
+                return (
+                  <button
+                    key={value}
+                    onClick={() => toggleCategory(value)}
+                    className={`flex h-[84px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[1.6rem] border-[1.5px] transition-all duration-200 active:scale-[0.97] ${
+                      isSelected
+                        ? "border-primary bg-primary text-white shadow-sm"
+                        : "border-muted bg-surface text-text shadow-sm hover:border-text-secondary"
+                    }`}
+                  >
+                    <CategoryIcon category={value} className="h-5 w-5" />
+                    <span className="text-body font-semibold">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={selectAllCategories}
+              className="mt-4 flex cursor-pointer items-center justify-center gap-1.5 rounded-full border border-muted bg-white px-4 py-2 text-body text-secondary transition-colors hover:border-secondary/50 hover:text-secondary/80"
+            >
+              <span aria-hidden="true">+</span>
+              <span className="font-medium">Surprise me</span>
+            </button>
+
+            <div className="my-8 h-px bg-muted" />
+
+            <h2 className="text-h2 font-semibold text-text">Budget vibe?</h2>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {BUDGETS.map(({ value, label, symbol }) => {
+                const isSelected = selectedBudget === value;
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setSelectedBudget(value)}
+                    className={`flex h-[70px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-[1.45rem] border-[1.5px] transition-all duration-200 active:scale-[0.97] ${
+                      isSelected
+                        ? "border-secondary bg-secondary-muted text-secondary"
+                        : "border-muted bg-surface text-text shadow-sm hover:border-text-secondary"
+                    }`}
+                  >
+                    <span className="text-body font-bold">{symbol}</span>
+                    <span className="text-caption">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <aside className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm">
+            <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
+              Final check
+            </p>
+            <div className="mt-4 space-y-4">
+              <SummaryCard
+                title="Formats"
+                body={
+                  selectedCategories.length > 0
+                    ? `${selectedCategories.length} selected`
+                    : "Choose at least one"
+                }
+              />
+              <SummaryCard
+                title="Budget"
+                body={selectedBudget ?? "Pick one tier"}
+              />
+              <SummaryCard
+                title="What happens next"
+                body="Once you submit, Dateflow starts building the shared venue deck."
+              />
+            </div>
+          </aside>
+        </div>
+
+        <div className="fixed bottom-0 left-0 right-0 bg-bg/95 px-6 pb-8 pt-4 backdrop-blur">
+          <div className="mx-auto max-w-sm">
+            <Button disabled={!isComplete} onClick={handleSubmit}>
+              Find our places
+            </Button>
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Back arrow */}
-      <button onClick={onBack} className="pt-2 pb-4 cursor-pointer" aria-label="Go back">
-        <BackArrow />
-      </button>
-
-      {/* --- Section 1: Categories --- */}
-      <h1 className="text-h1 font-semibold text-text">What sounds good?</h1>
-
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        {CATEGORIES.map(({ value, label, icon }) => {
-          const isSelected = selectedCategories.includes(value);
-          return (
-            <button
-              key={value}
-              onClick={() => toggleCategory(value)}
-              className={`flex h-[72px] cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-[1.5px] transition-all duration-200 active:scale-[0.97] ${
-                isSelected
-                  ? "border-primary bg-primary text-white shadow-sm"
-                  : "border-muted bg-surface text-text shadow-sm hover:border-text-secondary"
-              }`}
-            >
-              <span className="text-xl">{icon}</span>
-              <span className="text-body font-semibold">{label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Surprise me */}
-      <button
-        onClick={selectAllCategories}
-        className="mt-3 flex cursor-pointer items-center justify-center gap-1.5 self-center text-body text-secondary transition-colors hover:text-secondary/80"
-      >
-        <span>✨</span>
-        <span className="font-medium">Surprise me</span>
-      </button>
-
-      {/* Divider */}
-      <div className="my-6 h-px bg-muted" />
-
-      {/* --- Section 2: Budget --- */}
-      <h2 className="text-h2 font-semibold text-text">Budget vibe?</h2>
-
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        {BUDGETS.map(({ value, label, symbol }) => {
-          const isSelected = selectedBudget === value;
-          return (
-            <button
-              key={value}
-              onClick={() => setSelectedBudget(value)}
-              className={`flex h-[64px] cursor-pointer flex-col items-center justify-center gap-0.5 rounded-2xl border-[1.5px] transition-all duration-200 active:scale-[0.97] ${
-                isSelected
-                  ? "border-secondary bg-secondary-muted text-secondary"
-                  : "border-muted bg-surface text-text shadow-sm hover:border-text-secondary"
-              }`}
-            >
-              <span className="text-body font-bold">{symbol}</span>
-              <span className="text-caption">{label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* --- Sticky CTA --- */}
-      <div className="fixed bottom-0 left-0 right-0 bg-bg px-6 pb-8 pt-4">
-        <div className="mx-auto max-w-sm">
-          <Button disabled={!isComplete} onClick={handleSubmit}>
-            Find our places
-          </Button>
-        </div>
-      </div>
+function SummaryCard({
+  title,
+  body,
+}: {
+  readonly title: string;
+  readonly body: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-muted bg-bg/75 p-4">
+      <h3 className="text-body font-semibold text-text">{title}</h3>
+      <p className="mt-2 text-body text-text-secondary">{body}</p>
     </div>
   );
 }
