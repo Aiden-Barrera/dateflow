@@ -47,4 +47,20 @@ describe("getPlanFlowSyncAction", () => {
       type: "stay",
     });
   });
+
+  it("returns actionable retry guidance when venue generation fails", () => {
+    expect(
+      getPlanFlowSyncAction(
+        {
+          status: "generation_failed",
+          matchedVenueId: null,
+        },
+        "session-1",
+      ),
+    ).toEqual({
+      type: "error",
+      message:
+        "We couldn't finish venue generation. Please retry in a moment or start a new session if the problem keeps happening.",
+    });
+  });
 });

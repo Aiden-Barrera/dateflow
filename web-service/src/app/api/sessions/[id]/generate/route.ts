@@ -11,6 +11,14 @@ type GenerateBody = {
   sessionId?: string;
 };
 
+function isDependencyFailure(message: string): boolean {
+  return (
+    message.includes("GOOGLE_PLACES_API_KEY") ||
+    message.includes("Google Places API error") ||
+    message.includes("QSTASH")
+  );
+}
+
 export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
 
@@ -56,6 +64,24 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ status: "generating" }, { status: 200 });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+
+    if (isDependencyFailure(message)) {
+      console.error(
+        `[POST /api/sessions/${id}/generate] Dependency failure:`,
+        err,
+      );
+
+      return NextResponse.json(
+        {
+          error:
+            "We couldn't finish venue generation right now. Please retry shortly.",
+          retryable: true,
+        },
+        { status: 503 },
+      );
+    }
+
     console.error(`[POST /api/sessions/${id}/generate] Failed:`, err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

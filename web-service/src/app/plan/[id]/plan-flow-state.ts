@@ -34,7 +34,8 @@ export function getPlanFlowSyncAction(
   if (snapshot.status === "generation_failed") {
     return {
       type: "error",
-      message: "We couldn't finish venue generation. Please try again.",
+      message:
+        "We couldn't finish venue generation. Please retry in a moment or start a new session if the problem keeps happening.",
     };
   }
 

@@ -20,7 +20,11 @@ vi.mock("@upstash/qstash", () => {
 });
 
 import { SignatureError } from "@upstash/qstash";
-import { enqueueVenueGeneration, verifyQstashRequest } from "../qstash";
+import {
+  enqueueVenueGeneration,
+  getQstashReadiness,
+  verifyQstashRequest,
+} from "../qstash";
 
 describe("qstash helpers", () => {
   const sessionId = "123e4567-e89b-42d3-a456-426614174000";
@@ -70,5 +74,22 @@ describe("qstash helpers", () => {
     );
 
     expect(mockPublishJSON).not.toHaveBeenCalled();
+  });
+
+  it("reports ready when QStash env is configured", () => {
+    expect(getQstashReadiness()).toEqual({
+      ready: true,
+      missing: [],
+    });
+  });
+
+  it("reports missing QStash config explicitly", () => {
+    vi.stubEnv("QSTASH_TOKEN", "");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+
+    expect(getQstashReadiness()).toEqual({
+      ready: false,
+      missing: ["QSTASH_TOKEN", "NEXT_PUBLIC_APP_URL"],
+    });
   });
 });

@@ -110,4 +110,17 @@ describe("POST /api/sessions/[id]/generate", () => {
     expect(body.error).toBe("Session is not ready for venue generation");
     expect(mockGenerateVenues).not.toHaveBeenCalled();
   });
+
+  it("returns 503 with retry guidance when generation dependencies are unavailable", async () => {
+    mockGenerateVenues.mockRejectedValueOnce(
+      new Error("GOOGLE_PLACES_API_KEY environment variable is not set"),
+    );
+
+    const response = await POST(makeRequest(), makeParams());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error).toContain("couldn't finish venue generation");
+    expect(body.retryable).toBe(true);
+  });
 });
