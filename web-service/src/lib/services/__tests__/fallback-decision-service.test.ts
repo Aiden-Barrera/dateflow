@@ -187,4 +187,16 @@ describe("fallback-decision-service", () => {
     );
     expect(mockUpdate).not.toHaveBeenCalled();
   });
+
+  it("standardizes Supabase not-found errors for fallback decisions", async () => {
+    mockSelectSingle.mockResolvedValue({
+      data: null,
+      error: { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" },
+    });
+
+    await expect(acceptFallbackSuggestion("session-1")).rejects.toThrow(
+      "Session not found",
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
 });

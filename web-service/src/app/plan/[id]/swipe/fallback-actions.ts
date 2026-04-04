@@ -1,19 +1,22 @@
+import type { BudgetLevel, Category } from "../../../../lib/types/preference";
+import type { SessionStatus } from "../../../../lib/types/session";
+
 type FallbackActionResponse = {
   readonly session?: {
-    readonly status: string;
+    readonly status: SessionStatus;
     readonly matchedVenueId: string | null;
   };
   readonly error?: string;
 };
 
 type FallbackRetryPreferences = {
-  readonly categories: readonly string[];
-  readonly budget: string;
+  readonly categories: readonly Category[];
+  readonly budget: BudgetLevel;
   readonly radiusMeters?: number;
 };
 
 export async function acceptFallbackDecision(sessionId: string): Promise<{
-  readonly status: string;
+  readonly status: SessionStatus;
   readonly matchedVenueId: string | null;
 }> {
   const response = await fetch(`/api/sessions/${sessionId}/fallback`, {
@@ -42,7 +45,7 @@ export async function requestFallbackRetryDecision(
   sessionId: string,
   preferences: FallbackRetryPreferences,
 ): Promise<{
-  readonly status: string;
+  readonly status: SessionStatus;
   readonly matchedVenueId: string | null;
 }> {
   const response = await fetch(`/api/sessions/${sessionId}/fallback`, {

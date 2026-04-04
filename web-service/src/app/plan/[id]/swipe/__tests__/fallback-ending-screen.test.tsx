@@ -30,5 +30,9 @@ describe("FallbackEndingScreen", () => {
     expect(html).toContain("Start over");
     expect(html).not.toContain("still pending");
     expect(html).toContain("Alex");
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain('role="radio"');
+    expect(html).toContain('aria-checked="true"');
   });
 });

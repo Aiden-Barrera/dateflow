@@ -192,7 +192,10 @@ export function SwipeFlow({
       }
 
       if (snapshot.status === "fallback_pending") {
-        void loadFallback(snapshot.matchedVenueId);
+        void loadFallback(snapshot.matchedVenueId).catch(() => {
+          setStatus("error");
+          setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
+        });
         return;
       }
 

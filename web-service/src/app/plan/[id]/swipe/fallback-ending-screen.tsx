@@ -128,6 +128,7 @@ export function FallbackEndingScreen({
               <button
                 key={value}
                 type="button"
+                aria-pressed={isSelected}
                 onClick={() => toggleCategory(value)}
                 className={`flex cursor-pointer items-center gap-3 rounded-[1.35rem] border px-4 py-3 text-left transition-colors duration-200 ${
                   isSelected
@@ -142,7 +143,11 @@ export function FallbackEndingScreen({
           })}
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div
+          role="radiogroup"
+          aria-label="Retry budget"
+          className="mt-4 grid grid-cols-3 gap-3"
+        >
           {RETRY_BUDGETS.map(({ value, label, symbol }) => {
             const isSelected = selectedBudget === value;
 
@@ -150,6 +155,8 @@ export function FallbackEndingScreen({
               <button
                 key={value}
                 type="button"
+                role="radio"
+                aria-checked={isSelected}
                 onClick={() => setSelectedBudget(value)}
                 className={`flex cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border px-3 py-3 transition-colors duration-200 ${
                   isSelected
