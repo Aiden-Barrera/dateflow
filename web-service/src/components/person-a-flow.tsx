@@ -6,7 +6,6 @@ import { CategoryIcon } from "./category-icon";
 import { Logo } from "./logo";
 import { createSessionStatusSync } from "../lib/session-status-sync";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
-import type { SessionStatus } from "../lib/types/session";
 
 type CreatedSession = {
   readonly id: string;
@@ -16,11 +15,18 @@ type CreatedSession = {
 type InviteReadyStateProps = {
   readonly sessionId: string;
   readonly shareUrl: string;
-  readonly sessionStatus?: SessionStatus;
+  readonly sessionStatus?: InviteReadySessionState;
   readonly copyState: "idle" | "copied";
   readonly errorMessage: string | null;
   readonly onCopyInvite: () => void;
 };
+
+type InviteReadySessionState =
+  | "pending_b"
+  | "ready_to_swipe"
+  | "matched"
+  | "generation_failed"
+  | "expired";
 
 const CATEGORIES: { value: Category; label: string }[] = [
   { value: "RESTAURANT", label: "Food" },
@@ -45,7 +51,8 @@ export function PersonAFlow() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [createdSession, setCreatedSession] = useState<CreatedSession | null>(null);
-  const [createdSessionStatus, setCreatedSessionStatus] = useState<SessionStatus>("pending_b");
+  const [createdSessionStatus, setCreatedSessionStatus] =
+    useState<InviteReadySessionState>("pending_b");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
 
   const canSubmit =
@@ -181,7 +188,7 @@ export function PersonAFlow() {
     }
 
     const sync = createSessionStatusSync(createdSession.id, (snapshot) => {
-      setCreatedSessionStatus(getInviteReadySessionStatus(snapshot.status as SessionStatus));
+      setCreatedSessionStatus(getInviteReadySessionStatus(snapshot.status));
     });
 
     return () => sync.stop();
@@ -360,7 +367,18 @@ export function InviteReadyState({
       ? "View your result"
       : sessionStatus === "ready_to_swipe"
         ? "Continue to your swipe deck"
+        : sessionStatus === "expired"
+          ? "Start a new session"
+          : sessionStatus === "generation_failed"
+            ? "Open live session"
         : "Open live session";
+  const liveSessionHref = sessionStatus === "expired" ? "/" : `/plan/${sessionId}`;
+  const statusMessage =
+    sessionStatus === "expired"
+      ? "This invite expired before the plan came together. Start a new session and send a fresh link."
+      : sessionStatus === "generation_failed"
+        ? "Venue generation hit a snag. Reopen the live session to retry or start over if the problem keeps happening."
+        : "Share this link with your date, then come back here once they join.";
 
   return (
     <div className="space-y-6">
@@ -372,7 +390,7 @@ export function InviteReadyState({
           Your side is set. Now hand off the link.
         </h2>
         <p className="mt-3 max-w-xl text-body text-white/80">
-          Share this link with your date, then come back here once they join.
+          {statusMessage}
         </p>
       </div>
 
@@ -387,8 +405,11 @@ export function InviteReadyState({
         <Button onClick={onCopyInvite}>
           {copyState === "copied" ? "Copied invite link" : "Copy invite link"}
         </Button>
-        <a href={`/plan/${sessionId}`} className="block">
-          <Button variant="secondary">{liveSessionLabel}</Button>
+        <a
+          href={liveSessionHref}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-[1.5px] border-muted bg-surface text-body font-semibold text-text transition-all duration-200 hover:border-text-secondary active:scale-[0.98] h-14 cursor-pointer"
+        >
+          {liveSessionLabel}
         </a>
       </div>
 
@@ -397,13 +418,21 @@ export function InviteReadyState({
   );
 }
 
-export function getInviteReadySessionStatus(status: SessionStatus): SessionStatus {
+export function getInviteReadySessionStatus(status: string): InviteReadySessionState {
   if (status === "ready_to_swipe" || status === "fallback_pending") {
     return "ready_to_swipe";
   }
 
   if (status === "matched") {
     return "matched";
+  }
+
+  if (status === "generation_failed") {
+    return "generation_failed";
+  }
+
+  if (status === "expired") {
+    return "expired";
   }
 
   return "pending_b";

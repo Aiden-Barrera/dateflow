@@ -15,4 +15,10 @@ describe("getInviteReadySessionStatus", () => {
     expect(getInviteReadySessionStatus("fallback_pending")).toBe("ready_to_swipe");
     expect(getInviteReadySessionStatus("matched")).toBe("matched");
   });
+
+  it("preserves explicit terminal and failure states", () => {
+    expect(getInviteReadySessionStatus("generation_failed")).toBe("generation_failed");
+    expect(getInviteReadySessionStatus("expired")).toBe("expired");
+    expect(getInviteReadySessionStatus("unknown_status")).toBe("pending_b");
+  });
 });
