@@ -183,16 +183,26 @@ export function PersonAFlow() {
   }
 
   useEffect(() => {
-    if (!createdSession) {
+    const createdSessionId = createdSession?.id;
+
+    if (!createdSessionId) {
       return;
     }
 
-    const sync = createSessionStatusSync(createdSession.id, (snapshot) => {
+    let active = true;
+    const sync = createSessionStatusSync(createdSessionId, (snapshot) => {
+      if (!active) {
+        return;
+      }
+
       setCreatedSessionStatus(getInviteReadySessionStatus(snapshot.status));
     });
 
-    return () => sync.stop();
-  }, [createdSession]);
+    return () => {
+      active = false;
+      sync.stop();
+    };
+  }, [createdSession?.id]);
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
