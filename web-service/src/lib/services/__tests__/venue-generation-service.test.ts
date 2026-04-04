@@ -102,6 +102,7 @@ const preferences: readonly [Preference, Preference] = [
 ];
 
 const originalGooglePlacesApiKey = process.env.GOOGLE_PLACES_API_KEY;
+const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
 
 function makeCuratedVenue(index: number): CuratedVenueCandidate {
   return {
@@ -159,6 +160,7 @@ describe("generateVenues", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.GOOGLE_PLACES_API_KEY = "test-api-key";
+    process.env.NEXT_PUBLIC_APP_URL = "https://dateflow.test";
     mockGetBothPreferences.mockResolvedValue(preferences);
     mockCalculateMidpoint.mockReturnValue({
       lat: 30.265,
@@ -193,6 +195,7 @@ describe("generateVenues", () => {
 
   afterEach(() => {
     process.env.GOOGLE_PLACES_API_KEY = originalGooglePlacesApiKey;
+    process.env.NEXT_PUBLIC_APP_URL = originalAppUrl;
   });
 
   it("generates, saves, and returns 12 venues across 3 rounds", async () => {
@@ -232,7 +235,7 @@ describe("generateVenues", () => {
     expect(candidatePoolRows[0].source_rank).toBe(1);
     expect(candidatePoolRows[0].photo_url).toBeNull();
     expect(candidatePoolRows[1].photo_url).toBe(
-      "https://places.googleapis.com/v1/places/place-2/photos/photo-2/media?maxHeightPx=1200&skipHttpRedirect=true&key=test-api-key"
+      "https://dateflow.test/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
     );
 
     const insertedRows = mockUpsert.mock.calls[1][0];
@@ -243,7 +246,7 @@ describe("generateVenues", () => {
     expect(insertedRows[0].surfaced_cycle).toBe(1);
     expect(insertedRows[0].photo_url).toBeNull();
     expect(insertedRows[1].photo_url).toBe(
-      "https://places.googleapis.com/v1/places/place-2/photos/photo-2/media?maxHeightPx=1200&skipHttpRedirect=true&key=test-api-key"
+      "https://dateflow.test/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
     );
     expect(insertedRows[4].round).toBe(2);
     expect(insertedRows[8].round).toBe(3);
