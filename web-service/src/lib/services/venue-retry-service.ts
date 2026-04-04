@@ -87,6 +87,11 @@ type InsertVenueRow = {
   readonly surfaced_cycle: number;
 };
 
+type RetryVenueCandidate = PlaceCandidate &
+  Partial<CuratedVenueCandidate> & {
+    readonly photoUrl: string | null;
+  };
+
 export async function rerankStoredCandidates(
   sessionId: string,
   input: RetryPreferencesInput,
@@ -273,6 +278,9 @@ async function buildSurfacedVenueRows(
   for (const round of [1, 2, 3] as const) {
     const curated = await scoreAndCurate(remaining, preferences, round, midpoint);
     const roundPicks = curated.slice(0, 4);
+    const photoUrlsByPlaceId = new Map(
+      remaining.map((candidate) => [candidate.placeId, candidate.photoUrl]),
+    );
 
     roundPicks.forEach((venue, index) => {
       selectedRows.push({
@@ -285,7 +293,7 @@ async function buildSurfacedVenueRows(
         lng: venue.location.lng,
         price_level: venue.priceLevel === 0 ? 1 : venue.priceLevel,
         rating: venue.rating,
-        photo_url: null,
+        photo_url: photoUrlsByPlaceId.get(venue.placeId) ?? null,
         tags: venue.tags,
         round,
         position: index + 1,
@@ -308,7 +316,7 @@ async function buildSurfacedVenueRows(
 
 function toPlaceCandidate(
   candidate: SessionCandidatePoolItem,
-): PlaceCandidate & Partial<CuratedVenueCandidate> {
+): RetryVenueCandidate {
   return {
     placeId: candidate.placeId,
     name: candidate.name,
@@ -323,6 +331,7 @@ function toPlaceCandidate(
     rating: candidate.rating,
     reviewCount: 250,
     photoReference: null,
+    photoUrl: candidate.photoUrl,
     category: candidate.category,
     tags: candidate.rawTags,
     score: {

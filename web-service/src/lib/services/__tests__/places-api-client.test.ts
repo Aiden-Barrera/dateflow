@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
+  buildGooglePlacePhotoUrl,
   getGooglePlacesReadiness,
   mapGoogleTypeToCategory,
   searchNearby,
@@ -17,6 +18,7 @@ describe("places-api-client", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-api-key");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://dateflow.test");
   });
 
   it("reports ready when Google Places config is present", () => {
@@ -58,6 +60,30 @@ describe("places-api-client", () => {
 
     it("returns ACTIVITY as fallback for unknown types", () => {
       expect(mapGoogleTypeToCategory(["unknown_type"])).toBe("ACTIVITY");
+    });
+  });
+
+  describe("buildGooglePlacePhotoUrl", () => {
+    it("builds an internal proxied photo URL from a photo reference", () => {
+      expect(
+        buildGooglePlacePhotoUrl("places/ChIJ_abc123/photos/ref123")
+      ).toBe(
+        "https://dateflow.test/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200"
+      );
+    });
+
+    it("returns null when a place has no photo reference", () => {
+      expect(buildGooglePlacePhotoUrl(null)).toBeNull();
+    });
+
+    it("falls back to a relative internal URL when app url is not configured", () => {
+      vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+
+      expect(
+        buildGooglePlacePhotoUrl("places/ChIJ_abc123/photos/ref123")
+      ).toBe(
+        "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200"
+      );
     });
   });
 
