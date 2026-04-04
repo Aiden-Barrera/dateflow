@@ -458,10 +458,10 @@ export function SwipeFlow({
     return (
       <SwipeShell creatorName={creatorName}>
         <FallbackEndingScreen
+          key={fallbackVenue.id}
           creatorName={creatorName}
           venueName={fallbackVenue.name}
           venuePhotoUrl={fallbackVenue.photoUrl}
-          venueCategory={fallbackVenue.category}
           venueCategoryLabel={CATEGORY_LABELS[fallbackVenue.category]}
           venueAddress={fallbackVenue.address}
           explanation={buildFallbackExplanation(fallbackVenue)}

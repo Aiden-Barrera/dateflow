@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useState } from "react";
 import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
 import type { BudgetLevel, Category } from "../../../../lib/types/preference";
@@ -10,7 +11,6 @@ type FallbackEndingScreenProps = {
   readonly venueName: string;
   readonly venuePhotoUrl?: string | null;
   readonly venueCategoryLabel: string;
-  readonly venueCategory: Category;
   readonly initialRetryCategories: readonly Category[];
   readonly initialRetryBudget: BudgetLevel;
   readonly venueAddress: string;
@@ -43,7 +43,6 @@ export function FallbackEndingScreen({
   venueName,
   venuePhotoUrl = null,
   venueCategoryLabel,
-  venueCategory,
   initialRetryCategories,
   initialRetryBudget,
   venueAddress,
@@ -60,11 +59,6 @@ export function FallbackEndingScreen({
   const [selectedBudget, setSelectedBudget] = useState<BudgetLevel>(
     initialRetryBudget,
   );
-
-  useEffect(() => {
-    setSelectedCategories([...initialRetryCategories]);
-    setSelectedBudget(initialRetryBudget);
-  }, [initialRetryBudget, initialRetryCategories]);
 
   function toggleCategory(category: Category) {
     setSelectedCategories((current) =>
@@ -95,9 +89,12 @@ export function FallbackEndingScreen({
         <div className="rounded-[1.75rem] border border-white/80 bg-white/88 p-5 shadow-[0_18px_40px_rgba(45,42,38,0.08)]">
           {venuePhotoUrl ? (
             <div className="mb-4 overflow-hidden rounded-[1.35rem] border border-white/70">
-              <img
+              <Image
                 src={venuePhotoUrl}
                 alt={venueName}
+                width={640}
+                height={384}
+                unoptimized
                 className="h-48 w-full object-cover"
               />
             </div>

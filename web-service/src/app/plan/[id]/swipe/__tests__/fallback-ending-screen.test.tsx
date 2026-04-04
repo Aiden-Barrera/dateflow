@@ -9,7 +9,6 @@ describe("FallbackEndingScreen", () => {
         creatorName="Alex"
         venueName="Cafe Blue"
         venuePhotoUrl={null}
-        venueCategory="RESTAURANT"
         venueCategoryLabel="Restaurant"
         initialRetryCategories={["RESTAURANT"]}
         initialRetryBudget="MODERATE"

@@ -97,4 +97,37 @@ describe("POST /api/sessions/[id]/fallback", () => {
     expect(response.status).toBe(400);
     expect(body.error).toContain("action");
   });
+
+  it("returns 404 when the fallback service reports the session is missing", async () => {
+    mockAcceptFallbackSuggestion.mockRejectedValueOnce(new Error("Session not found"));
+
+    const response = await POST(makePostRequest({ action: "accept" }), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error).toBe("Session not found");
+  });
+
+  it("returns 500 when the fallback service throws an unexpected database error", async () => {
+    mockRequestFallbackRetry.mockRejectedValueOnce(new Error("duplicate key value violates unique constraint"));
+
+    const response = await POST(
+      makePostRequest({
+        action: "retry",
+        preferences: {
+          categories: ["BAR", "ACTIVITY"],
+          budget: "UPSCALE",
+        },
+      }),
+      {
+        params: Promise.resolve({ id: "session-1" }),
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error).toBe("Something went wrong. Please try again.");
+  });
 });
