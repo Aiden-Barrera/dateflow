@@ -93,6 +93,7 @@ function validateRetryPreferences(body: RequestBody): {
 
 export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  // TODO(ds-06): enforce session ownership once authenticated users and session history exist.
 
   let body: RequestBody;
   try {
@@ -145,6 +146,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ session: serializeSession(session) });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
+
+    if (message.includes("Session not found")) {
+      return NextResponse.json(
+        { error: "Session not found" },
+        { status: 404 },
+      );
+    }
 
     if (message.includes("fallback_pending")) {
       return NextResponse.json(

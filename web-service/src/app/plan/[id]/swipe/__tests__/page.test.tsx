@@ -70,4 +70,32 @@ describe("/plan/[id]/swipe page", () => {
       }),
     ).rejects.toThrowError("NEXT_REDIRECT:/plan/session-1?demo=1");
   });
+
+  it("allows fallback-pending sessions to enter the swipe route with the bound role", async () => {
+    mockGetSession.mockResolvedValue({
+      id: "session-1",
+      status: "fallback_pending",
+      creatorDisplayName: "Alex",
+      createdAt: new Date("2026-04-02T18:30:00Z"),
+      expiresAt: new Date("2026-04-04T18:30:00Z"),
+      matchedVenueId: "venue-12",
+    });
+    mockCookies.mockResolvedValue({
+      get: (name: string) =>
+        name === "dateflow_session_role_session-1"
+          ? { value: buildSessionRoleCookieValue("session-1", "b").split(";")[0]?.split("=")[1] }
+          : undefined,
+    });
+
+    const page = await SwipePage({
+      params: Promise.resolve({ id: "session-1" }),
+      searchParams: Promise.resolve({ demo: "1" }),
+    });
+
+    expect(page.props).toMatchObject({
+      sessionId: "session-1",
+      role: "b",
+      demoMode: true,
+    });
+  });
 });

@@ -5,6 +5,8 @@ import {
   type RetryPreferencesInput,
 } from "./venue-retry-service";
 
+const NOT_FOUND_CODE = "PGRST116";
+
 export async function acceptFallbackSuggestion(
   sessionId: string,
 ): Promise<Session> {
@@ -57,6 +59,10 @@ async function getFallbackPendingSession(sessionId: string): Promise<Session> {
     .single<SessionRow>();
 
   if (error) {
+    if (error.code === NOT_FOUND_CODE) {
+      throw new Error("Session not found");
+    }
+
     throw new Error(error.message);
   }
 

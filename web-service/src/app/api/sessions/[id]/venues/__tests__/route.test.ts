@@ -116,4 +116,19 @@ describe("GET /api/sessions/[id]/venues", () => {
     expect(body.error).toBe("Venues are not ready yet");
     expect(mockGetVenues).not.toHaveBeenCalled();
   });
+
+  it("returns venues for fallback-pending sessions so the no-match ending can resolve its suggestion", async () => {
+    mockGetSession.mockResolvedValueOnce({
+      ...readySession,
+      status: "fallback_pending",
+      matchedVenueId: "venue-1",
+    });
+
+    const response = await GET(makeRequest(), makeParams());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.venues).toEqual(fakeVenues);
+    expect(mockGetVenues).toHaveBeenCalledWith("session-123", undefined);
+  });
 });

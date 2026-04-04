@@ -6,9 +6,21 @@ import { Button } from "../../../../components/button";
 import { LoadingOrnament } from "../../../../components/loading-ornament";
 import { Logo } from "../../../../components/logo";
 import { createSessionStatusSync } from "../../../../lib/session-status-sync";
-import type { Role } from "../../../../lib/types/preference";
+import type { BudgetLevel, Category, Role } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
 import { SwipeDeckCard } from "./swipe-deck-card";
+import { FallbackEndingScreen } from "./fallback-ending-screen";
+import {
+  acceptFallbackDecision,
+  getFallbackStartOverHref,
+  requestFallbackRetryDecision,
+} from "./fallback-actions";
+import {
+  buildFallbackExplanation,
+  buildInitialRetryPreferences,
+  resolveFallbackVenue,
+} from "./fallback-ending-state";
+import { getSwipeFlowStatusState, type WaitingStage } from "./swipe-flow-state";
 
 type SwipeFlowProps = {
   readonly sessionId: string;
@@ -32,7 +44,6 @@ type SwipeApiResult = {
   readonly sessionStatus: string;
 };
 
-type WaitingStage = "preferences" | "generation" | "round" | "session";
 type DemoRoundSwipe = {
   readonly venueId: string;
   readonly liked: boolean;
@@ -44,14 +55,22 @@ export function SwipeFlow({
   creatorName,
   demoMode,
 }: SwipeFlowProps) {
+  const CATEGORY_LABELS: Record<Category, string> = {
+    RESTAURANT: "Restaurant",
+    BAR: "Bar",
+    ACTIVITY: "Activity",
+    EVENT: "Event",
+  };
   const router = useRouter();
-  const [status, setStatus] = useState<"loading" | "ready" | "waiting" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "waiting" | "fallback" | "error">("loading");
   const [statusMessage, setStatusMessage] = useState("Loading your first round...");
   const [waitingStage, setWaitingStage] = useState<WaitingStage>("preferences");
   const [round, setRound] = useState(1);
   const [venues, setVenues] = useState<readonly Venue[]>([]);
   const [index, setIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [submittingFallbackAction, setSubmittingFallbackAction] = useState<"accept" | "retry" | null>(null);
+  const [fallbackVenue, setFallbackVenue] = useState<Venue | null>(null);
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
@@ -73,6 +92,29 @@ export function SwipeFlow({
     }
 
     return (await response.json()) as SessionStatusPayload;
+  }, [sessionId]);
+
+  const loadFallback = useCallback(async (matchedVenueId: string | null) => {
+    setStatus("loading");
+    setStatusMessage("Preparing your fallback pick...");
+
+    const response = await fetch(`/api/sessions/${sessionId}/venues`);
+
+    if (!response.ok) {
+      throw new Error("Failed to load the fallback suggestion.");
+    }
+
+    const body = (await response.json()) as { venues: Venue[] };
+    const resolvedVenue = resolveFallbackVenue(matchedVenueId, body.venues);
+
+    if (!resolvedVenue) {
+      throw new Error("We couldn't find the fallback venue for this session.");
+    }
+
+    setVenues(body.venues);
+    setFallbackVenue(resolvedVenue);
+    setStatus("fallback");
+    setStatusMessage("");
   }, [sessionId]);
 
   const loadRound = useCallback(async (nextRound: number) => {
@@ -122,10 +164,16 @@ export function SwipeFlow({
       }
 
       if (snapshot.status !== "ready_to_swipe") {
-        const waitingState = getWaitingState(snapshot.status);
-        setWaitingStage(waitingState.stage);
+        const nextState = getSwipeFlowStatusState(snapshot.status);
+
+        if (nextState.kind === "fallback") {
+          await loadFallback(snapshot.matchedVenueId);
+          return;
+        }
+
+        setWaitingStage(nextState.stage);
         setStatus("waiting");
-        setStatusMessage(waitingState.message);
+        setStatusMessage(nextState.message);
         return;
       }
 
@@ -134,12 +182,20 @@ export function SwipeFlow({
       setStatus("error");
       setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
     }
-  }, [fetchStatus, loadRound, router, sessionId]);
+  }, [fetchStatus, loadFallback, loadRound, router, sessionId]);
 
   useEffect(() => {
     const sync = createSessionStatusSync(sessionId, (snapshot) => {
       if (snapshot.status === "matched") {
         router.push(`/plan/${sessionId}/results`);
+        return;
+      }
+
+      if (snapshot.status === "fallback_pending") {
+        void loadFallback(snapshot.matchedVenueId).catch(() => {
+          setStatus("error");
+          setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
+        });
         return;
       }
 
@@ -149,7 +205,7 @@ export function SwipeFlow({
     });
 
     return () => sync.stop();
-  }, [loadRound, router, sessionId]);
+  }, [loadFallback, loadRound, router, sessionId]);
 
   useEffect(() => {
     void bootstrap();
@@ -204,10 +260,7 @@ export function SwipeFlow({
     }
 
     if (lastResult.sessionStatus === "fallback_pending") {
-      setStatus("error");
-      setStatusMessage(
-        "This session moved into fallback resolution. The no-match ending screen is still pending.",
-      );
+      await loadFallback(lastResult.matchedVenueId);
       return;
     }
 
@@ -256,8 +309,7 @@ export function SwipeFlow({
       if (!hasNextVenue && swipeResult.roundComplete && swipeResult.currentRound < 3) {
         await loadRound(swipeResult.currentRound + 1);
       } else if (!hasNextVenue && swipeResult.sessionStatus === "fallback_pending") {
-        setStatus("error");
-        setStatusMessage("This session moved into fallback resolution. The no-match ending screen is still pending.");
+        await loadFallback(swipeResult.matchedVenueId);
       } else if (!hasNextVenue) {
         setWaitingStage("round");
         setStatus("waiting");
@@ -289,6 +341,63 @@ export function SwipeFlow({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleAcceptFallback() {
+    setSubmittingFallbackAction("accept");
+    setToast(null);
+
+    try {
+      const result = await acceptFallbackDecision(sessionId);
+
+      if (result.status === "matched") {
+        router.push(`/plan/${sessionId}/results`);
+        return;
+      }
+
+      await bootstrap();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Failed to accept the fallback pick.");
+    } finally {
+      setSubmittingFallbackAction(null);
+    }
+  }
+
+  async function handleRetryFallback(preferences: {
+    readonly categories: readonly Category[];
+    readonly budget: BudgetLevel;
+  }) {
+    setSubmittingFallbackAction("retry");
+    setToast(null);
+
+    try {
+      const result = await requestFallbackRetryDecision(sessionId, preferences);
+      setFallbackVenue(null);
+
+      if (result.status === "ready_to_swipe") {
+        loadedRoundRef.current = null;
+        await loadRound(1);
+        return;
+      }
+
+      const nextState = getSwipeFlowStatusState(result.status);
+      if (nextState.kind === "waiting") {
+        setWaitingStage(nextState.stage);
+        setStatus("waiting");
+        setStatusMessage(nextState.message);
+        return;
+      }
+
+      await bootstrap();
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Failed to refresh the fallback picks.");
+    } finally {
+      setSubmittingFallbackAction(null);
+    }
+  }
+
+  function handleFallbackStartOver() {
+    router.push(getFallbackStartOverHref());
   }
 
   if (status === "loading") {
@@ -342,6 +451,31 @@ export function SwipeFlow({
             </Button>
           </div>
         </div>
+      </SwipeShell>
+    );
+  }
+
+  if (status === "fallback" && fallbackVenue) {
+    const retryDefaults = buildInitialRetryPreferences(fallbackVenue);
+
+    return (
+      <SwipeShell creatorName={creatorName}>
+        <FallbackEndingScreen
+          key={fallbackVenue.id}
+          creatorName={creatorName}
+          venueName={fallbackVenue.name}
+          venuePhotoUrl={fallbackVenue.photoUrl}
+          venueCategoryLabel={CATEGORY_LABELS[fallbackVenue.category]}
+          venueAddress={fallbackVenue.address}
+          explanation={buildFallbackExplanation(fallbackVenue)}
+          initialRetryCategories={retryDefaults.categories}
+          initialRetryBudget={retryDefaults.budget}
+          onAccept={handleAcceptFallback}
+          onRetry={handleRetryFallback}
+          onStartOver={handleFallbackStartOver}
+          submittingAction={submittingFallbackAction}
+          errorMessage={toast}
+        />
       </SwipeShell>
     );
   }
@@ -495,30 +629,6 @@ function InfoIcon() {
       <path d="M12 7h.01" />
     </svg>
   );
-}
-
-function getWaitingState(status: string): {
-  readonly stage: WaitingStage;
-  readonly message: string;
-} {
-  if (status === "pending_b") {
-    return {
-      stage: "preferences",
-      message: "Your partner still has a few quick preferences to share before the deck can open.",
-    };
-  }
-
-  if (status === "both_ready" || status === "generating") {
-    return {
-      stage: "generation",
-      message: "Both sides are in. Dateflow is shaping the first shortlist now.",
-    };
-  }
-
-  return {
-    stage: "session",
-    message: "This session is not ready for swiping yet, but we are still watching for updates.",
-  };
 }
 
 function getWaitingLoaderVariant(
