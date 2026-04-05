@@ -48,6 +48,10 @@ describe("/plan/[id]/results page", () => {
         lng: -97.74,
         priceLevel: 2,
         rating: 4.6,
+        photoUrls: [
+          "https://example.com/cafe-blue.jpg",
+          "https://example.com/cafe-blue-2.jpg",
+        ],
         photoUrl: "https://example.com/cafe-blue.jpg",
         tags: ["cozy patio", "walkable"],
         round: 1,
@@ -91,6 +95,10 @@ describe("/plan/[id]/results page", () => {
     expect(metadata.openGraph?.images).toEqual([
       {
         url: "https://example.com/cafe-blue.jpg",
+        alt: "Cafe Blue",
+      },
+      {
+        url: "https://example.com/cafe-blue-2.jpg",
         alt: "Cafe Blue",
       },
     ]);

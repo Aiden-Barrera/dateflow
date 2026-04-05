@@ -126,8 +126,53 @@ describe("places-api-client", () => {
         priceLevel: 2,
         rating: 4.5,
         reviewCount: 1200,
+        photoReferences: [
+          "places/ChIJ_abc123/photos/ref123",
+        ],
+        photoUrls: [
+          "https://dateflow.test/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200",
+        ],
         photoReference: "places/ChIJ_abc123/photos/ref123",
       });
+    });
+
+    it("keeps multiple Google photo references in order and maps them to proxied urls", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          places: [
+            {
+              id: "ChIJ_multi123",
+              displayName: { text: "Cafe Bloom" },
+              formattedAddress: "500 Congress Ave, Austin, TX",
+              location: { latitude: 30.2677, longitude: -97.7429 },
+              types: ["cafe", "restaurant"],
+              priceLevel: "PRICE_LEVEL_MODERATE",
+              rating: 4.7,
+              userRatingCount: 803,
+              photos: [
+                { name: "places/ChIJ_multi123/photos/ref-a" },
+                { name: "places/ChIJ_multi123/photos/ref-b" },
+                { name: "places/ChIJ_multi123/photos/ref-c" },
+              ],
+            },
+          ],
+        }),
+      });
+
+      const results = await searchNearby(location, 2000, ["cafe"], 3);
+
+      expect(results[0].photoReference).toBe("places/ChIJ_multi123/photos/ref-a");
+      expect(results[0].photoReferences).toEqual([
+        "places/ChIJ_multi123/photos/ref-a",
+        "places/ChIJ_multi123/photos/ref-b",
+        "places/ChIJ_multi123/photos/ref-c",
+      ]);
+      expect(results[0].photoUrls).toEqual([
+        "https://dateflow.test/api/places/photos?name=places%2FChIJ_multi123%2Fphotos%2Fref-a&maxHeightPx=1200",
+        "https://dateflow.test/api/places/photos?name=places%2FChIJ_multi123%2Fphotos%2Fref-b&maxHeightPx=1200",
+        "https://dateflow.test/api/places/photos?name=places%2FChIJ_multi123%2Fphotos%2Fref-c&maxHeightPx=1200",
+      ]);
     });
 
     it("maps Google price level strings to numeric values", async () => {
@@ -187,6 +232,8 @@ describe("places-api-client", () => {
       expect(results[0].priceLevel).toBe(0);
       expect(results[0].reviewCount).toBe(0);
       expect(results[0].photoReference).toBeNull();
+      expect(results[0].photoReferences).toEqual([]);
+      expect(results[0].photoUrls).toEqual([]);
     });
 
     it("returns empty array when no results", async () => {

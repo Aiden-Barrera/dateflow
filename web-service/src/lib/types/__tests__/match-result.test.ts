@@ -16,6 +16,10 @@ describe("match result type mappers", () => {
       price_level: 2,
       rating: 4.6,
       photo_url: "https://example.com/photo.jpg",
+      photo_urls: [
+        "https://example.com/photo.jpg",
+        "https://example.com/photo-2.jpg",
+      ],
       tags: ["cozy", "patio"],
       round: 3,
       position: 4,
@@ -34,6 +38,10 @@ describe("match result type mappers", () => {
     expect(result.venue.placeId).toBe("place-12");
     expect(result.venue.name).toBe("Cafe Blue");
     expect(result.venue.photoUrl).toBe("https://example.com/photo.jpg");
+    expect(result.venue.photoUrls).toEqual([
+      "https://example.com/photo.jpg",
+      "https://example.com/photo-2.jpg",
+    ]);
     expect(result.venue.tags).toEqual(["cozy", "patio"]);
   });
 });

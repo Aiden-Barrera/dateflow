@@ -24,6 +24,13 @@ export async function generateMetadata({
     };
   }
 
+  const galleryImages =
+    matchResult.venue.photoUrls.length > 0
+      ? matchResult.venue.photoUrls
+      : matchResult.venue.photoUrl
+        ? [matchResult.venue.photoUrl]
+        : [];
+
   return {
     title: `${session.creatorDisplayName} matched on ${matchResult.venue.name}`,
     description: "See your matched venue, Get directions, and add it to your calendar.",
@@ -33,21 +40,20 @@ export async function generateMetadata({
         "See your matched venue, Get directions, and add it to your calendar.",
       siteName: "Dateflow",
       type: "website",
-      images: matchResult.venue.photoUrl
-        ? [
-            {
-              url: matchResult.venue.photoUrl,
+      images:
+        galleryImages.length > 0
+          ? galleryImages.map((url) => ({
+              url,
               alt: matchResult.venue.name,
-            },
-          ]
-        : undefined,
+            }))
+          : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: `${session.creatorDisplayName} matched on ${matchResult.venue.name}`,
       description:
         "See your matched venue, Get directions, and add it to your calendar.",
-      images: matchResult.venue.photoUrl ? [matchResult.venue.photoUrl] : undefined,
+      images: galleryImages.length > 0 ? [...galleryImages] : undefined,
     },
   };
 }

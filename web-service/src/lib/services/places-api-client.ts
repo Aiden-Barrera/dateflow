@@ -59,6 +59,14 @@ export function buildGooglePlacePhotoUrl(
   return `${appUrl}${PLACES_PHOTO_ROUTE}?${photoQuery}`;
 }
 
+export function buildGooglePlacePhotoUrls(
+  photoReferences: readonly string[],
+): readonly string[] {
+  return photoReferences
+    .map((photoReference) => buildGooglePlacePhotoUrl(photoReference))
+    .filter((photoUrl): photoUrl is string => photoUrl !== null);
+}
+
 // ---------------------------------------------------------------------------
 // Google price level string → numeric mapping
 // ---------------------------------------------------------------------------
@@ -247,19 +255,25 @@ export async function searchNearby(
   const data = await response.json();
   const places: readonly GooglePlace[] = data.places ?? [];
 
-  return places.map((place) => ({
-    placeId: place.id,
-    name: place.displayName.text,
-    address: place.formattedAddress,
-    location: {
-      lat: place.location.latitude,
-      lng: place.location.longitude,
-      label: place.displayName.text,
-    },
-    types: place.types,
-    priceLevel: parsePriceLevel(place.priceLevel),
-    rating: place.rating ?? 0,
-    reviewCount: place.userRatingCount ?? 0,
-    photoReference: place.photos?.[0]?.name ?? null,
-  }));
+  return places.map((place) => {
+    const photoReferences = (place.photos ?? []).map((photo) => photo.name);
+
+    return {
+      placeId: place.id,
+      name: place.displayName.text,
+      address: place.formattedAddress,
+      location: {
+        lat: place.location.latitude,
+        lng: place.location.longitude,
+        label: place.displayName.text,
+      },
+      types: place.types,
+      priceLevel: parsePriceLevel(place.priceLevel),
+      rating: place.rating ?? 0,
+      reviewCount: place.userRatingCount ?? 0,
+      photoReferences,
+      photoReference: photoReferences[0] ?? null,
+      photoUrls: buildGooglePlacePhotoUrls(photoReferences),
+    };
+  });
 }

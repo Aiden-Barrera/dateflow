@@ -32,6 +32,7 @@ export function ResultScreen({
   matchResult,
 }: ResultScreenProps) {
   const { venue } = matchResult;
+  const galleryImages = getVenueGalleryImages(venue);
   const [directionsUrl, setDirectionsUrl] = useState(() =>
     getResultDirectionsHref(venue, ""),
   );
@@ -113,9 +114,9 @@ export function ResultScreen({
             }}
           >
             <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
-              {venue.photoUrl ? (
+              {galleryImages.length > 0 ? (
                 <Image
-                  src={venue.photoUrl}
+                  src={galleryImages[0]}
                   alt={venue.name}
                   fill
                   sizes="(max-width: 1024px) 100vw, 520px"
@@ -137,6 +138,42 @@ export function ResultScreen({
             </div>
 
             <div className="space-y-5 p-6">
+              {galleryImages.length > 1 ? (
+                <section className="space-y-3" aria-label="Photo gallery">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-caption font-semibold uppercase tracking-[0.18em] text-secondary">
+                        Photo gallery
+                      </p>
+                      <p className="mt-1 text-body text-text-secondary">
+                        {galleryImages.length} photos
+                      </p>
+                    </div>
+                    <div className="hidden rounded-full border border-muted bg-bg px-3 py-1.5 text-caption font-medium text-text-secondary sm:inline-flex">
+                      Swipe-worthy details
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    {galleryImages.slice(0, 3).map((photoUrl, photoIndex) => (
+                      <div
+                        key={`${photoUrl}-${photoIndex}`}
+                        className="relative aspect-[5/4] overflow-hidden rounded-[1.25rem] border border-white/70 bg-bg shadow-[0_10px_24px_rgba(45,42,38,0.08)]"
+                      >
+                        <Image
+                          src={photoUrl}
+                          alt={`${venue.name} photo ${photoIndex + 1}`}
+                          fill
+                          sizes="(max-width: 1024px) 33vw, 150px"
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -209,6 +246,16 @@ function StarIcon() {
       <path d="M12 3.75 14.78 9l5.72.78-4.13 4 1 5.72L12 16.98 6.63 19.5l1-5.72-4.13-4L9.22 9 12 3.75Z" />
     </svg>
   );
+}
+
+function getVenueGalleryImages(
+  venue: MatchResult["venue"],
+): readonly string[] {
+  if (venue.photoUrls.length > 0) {
+    return venue.photoUrls;
+  }
+
+  return venue.photoUrl ? [venue.photoUrl] : [];
 }
 
 function toPriceLabel(priceLevel: number): string {

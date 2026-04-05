@@ -143,7 +143,12 @@ describe("rerankStoredCandidates", () => {
     expect(insertedRows[0].photo_url).toBe(
       "https://example.com/place-13.jpg",
     );
+    expect(insertedRows[0].photo_urls).toEqual([
+      "https://example.com/place-13.jpg",
+      "https://example.com/place-13-b.jpg",
+    ]);
     expect(insertedRows[1].photo_url).toBeNull();
+    expect(insertedRows[1].photo_urls).toEqual([]);
 
     expect(result).toEqual({
       strategy: "pool_rerank",
@@ -205,6 +210,13 @@ function makePoolItemRow(index: number): SessionCandidatePoolItemRow {
     lng: -97.74,
     price_level: 2,
     rating: 4.5,
+    photo_urls:
+      index % 2 === 1
+        ? [
+            `https://example.com/place-${index}.jpg`,
+            `https://example.com/place-${index}-b.jpg`,
+          ]
+        : null,
     photo_url: index % 2 === 1 ? `https://example.com/place-${index}.jpg` : null,
     raw_types: ["restaurant"],
     raw_tags: [],

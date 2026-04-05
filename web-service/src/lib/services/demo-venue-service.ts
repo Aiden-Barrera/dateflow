@@ -123,6 +123,7 @@ export async function generateDemoVenues(
       lng: midpoint.lng - lngOffset,
       price_level: seed.priceLevel,
       rating: seed.rating,
+      photo_urls: [],
       photo_url: null,
       tags: [...seed.tags, `round ${round}`],
       round,

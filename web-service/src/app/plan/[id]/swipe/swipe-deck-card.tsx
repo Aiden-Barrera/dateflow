@@ -426,6 +426,36 @@ export function SwipeDeckCard({
           </div>
 
           {currentSlides.length > 1 ? (
+            <div className="absolute right-4 top-16 z-20 flex items-center gap-2 rounded-[1.15rem] border border-white/24 bg-black/22 px-2.5 py-2 text-white backdrop-blur-md">
+              <div className="flex -space-x-3">
+                {currentSlides.slice(0, 3).map((slide, slideIndex) => (
+                  <div
+                    key={`${slide}-${slideIndex}`}
+                    className="relative h-11 w-11 overflow-hidden rounded-[0.95rem] border border-white/45 shadow-[0_8px_18px_rgba(15,23,42,0.28)]"
+                  >
+                    <Image
+                      src={slide}
+                      alt=""
+                      fill
+                      sizes="44px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-white/68">
+                  Gallery
+                </p>
+                <p className="text-caption font-medium text-white">
+                  {currentSlides.length} photos
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          {currentSlides.length > 1 ? (
             <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/20 px-2 py-1 backdrop-blur-sm">
               {currentSlides.map((slide, slideIndex) => (
                 <span
@@ -643,7 +673,11 @@ function HeartIcon() {
   );
 }
 
-function getVenueSlides(venue: Venue): readonly string[] {
+export function getVenueSlides(venue: Venue): readonly string[] {
+  if (venue.photoUrls.length > 0) {
+    return venue.photoUrls;
+  }
+
   return venue.photoUrl ? [venue.photoUrl] : [];
 }
 
