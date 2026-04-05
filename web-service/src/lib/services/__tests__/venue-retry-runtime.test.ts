@@ -56,9 +56,10 @@ vi.mock("../midpoint-calculator", async (importOriginal) => {
   };
 });
 
-const mockScoreAndCurate = vi.fn();
+const mockBuildDeterministicRanking = vi.fn();
 vi.mock("../ai-curation-service", () => ({
-  scoreAndCurate: (...args: unknown[]) => mockScoreAndCurate(...args),
+  buildDeterministicRanking: (...args: unknown[]) =>
+    mockBuildDeterministicRanking(...args),
 }));
 
 const preferences: readonly [Preference, Preference] = [
@@ -111,8 +112,8 @@ describe("rerankStoredCandidates", () => {
       error: null,
     });
     mockVenuesUpsert.mockResolvedValue({ error: null });
-    mockScoreAndCurate.mockImplementation((candidates: CuratedVenueCandidate[]) =>
-      Promise.resolve(candidates),
+    mockBuildDeterministicRanking.mockImplementation(
+      (candidates: CuratedVenueCandidate[]) => candidates,
     );
   });
 
@@ -128,7 +129,7 @@ describe("rerankStoredCandidates", () => {
       batch_number: 2,
       generation_strategy: "pool_rerank",
     });
-    expect(mockScoreAndCurate).toHaveBeenCalledTimes(3);
+    expect(mockBuildDeterministicRanking).toHaveBeenCalledTimes(3);
     expect(mockVenuesUpsert).toHaveBeenCalledWith(
       expect.any(Array),
       { onConflict: "session_id,round,position" },
@@ -180,6 +181,15 @@ describe("rerankStoredCandidates", () => {
       venueIds: [],
       requiresFullRegeneration: true,
     });
+  });
+
+  it("keeps retry reranking deterministic even when AI curation exists", async () => {
+    await rerankStoredCandidates("session-1", {
+      categories: ["RESTAURANT", "BAR"],
+      budget: "MODERATE",
+    });
+
+    expect(mockBuildDeterministicRanking).toHaveBeenCalledTimes(3);
   });
 });
 

@@ -9,7 +9,7 @@ import { toSessionCandidatePoolItem } from "../types/candidate-pool";
 import { getSupabaseServerClient } from "../supabase-server";
 import { getBothPreferences } from "./preference-service";
 import { calculateMidpoint } from "./midpoint-calculator";
-import { scoreAndCurate } from "./ai-curation-service";
+import { buildDeterministicRanking } from "./ai-curation-service";
 import type { Category as PreferenceCategory, Preference } from "../types/preference";
 import type { CuratedVenueCandidate, PlaceCandidate } from "../types/venue";
 
@@ -276,7 +276,12 @@ async function buildSurfacedVenueRows(
   let remaining = [...placeCandidates];
 
   for (const round of [1, 2, 3] as const) {
-    const curated = await scoreAndCurate(remaining, preferences, round, midpoint);
+    const curated = buildDeterministicRanking(
+      remaining,
+      preferences,
+      round,
+      midpoint,
+    );
     const roundPicks = curated.slice(0, 4);
     const photoUrlsByPlaceId = new Map(
       remaining.map((candidate) => [candidate.placeId, candidate.photoUrl]),
