@@ -168,17 +168,24 @@ export function mergeAiAdjustments(
   rankedCandidates: readonly CuratedVenueCandidate[],
   adjustments: readonly AiVenueAdjustment[],
 ): readonly CuratedVenueCandidate[] {
+  const rankedCandidateCount = rankedCandidates.length;
   const adjustmentByPlaceId = new Map(
     adjustments.map((adjustment) => [adjustment.placeId, adjustment]),
   );
 
   return rankedCandidates
-    .map((candidate) => {
+    .map((candidate, index) => {
       const adjustment = adjustmentByPlaceId.get(candidate.placeId);
+      const deterministicRankBonus = Math.max(
+        0,
+        rankedCandidateCount - index,
+      ) / (rankedCandidateCount * 10_000);
+      const deterministicRankingComposite =
+        candidate.score.composite + deterministicRankBonus;
 
       if (!adjustment) {
         return {
-          rankingComposite: candidate.score.composite,
+          rankingComposite: deterministicRankingComposite,
           candidate,
         };
       }
@@ -196,7 +203,13 @@ export function mergeAiAdjustments(
       });
 
       return {
-        rankingComposite: Math.min(1, Math.max(0, composite + adjustment.rerankAdjustment)),
+        rankingComposite: Math.min(
+          1,
+          Math.max(
+            0,
+            deterministicRankingComposite + adjustment.rerankAdjustment,
+          ),
+        ),
         candidate: {
           ...candidate,
           score: {
@@ -409,9 +422,11 @@ async function callGeminiForVenueAdjustments(
 }
 
 function classifyAiFallbackReason(error: unknown): string {
+  const name = error instanceof Error ? error.name : "";
   const message = error instanceof Error ? error.message : "";
+  const normalizedMessage = message.toLowerCase();
 
-  if (message.includes("aborted")) {
+  if (name === "AbortError" || normalizedMessage.includes("aborted")) {
     return "provider_timeout";
   }
 
@@ -441,7 +456,13 @@ export async function scoreAndCurate(
     return deterministicRanking;
   }
 
-  if (aiConfig.provider !== "anthropic" && aiConfig.provider !== "gemini") {
+  if (aiConfig.provider !== "gemini") {
+    console.warn("[scoreAndCurate] Falling back to deterministic ranking", {
+      provider: aiConfig.provider,
+      promptVersion: aiConfig.promptVersion,
+      reason: "unsupported_provider",
+      latencyMs: Date.now() - startedAt,
+    });
     return deterministicRanking;
   }
 

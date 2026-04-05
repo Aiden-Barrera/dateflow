@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildDeterministicRanking,
   getAiCurationConfig,
@@ -21,6 +21,11 @@ const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 const mockConsoleInfo = vi.spyOn(console, "info").mockImplementation(() => undefined);
 const mockConsoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+afterAll(() => {
+  mockConsoleInfo.mockRestore();
+  mockConsoleWarn.mockRestore();
+});
 
 const preferences: readonly [Preference, Preference] = [
   {
@@ -168,6 +173,13 @@ describe("scoreAndCurate", () => {
 
     expect(disabledResult[0].tags).toContain("unscored");
     expect(unsupportedProviderResult[0].tags).toContain("unscored");
+    expect(mockConsoleWarn).toHaveBeenCalledWith(
+      "[scoreAndCurate] Falling back to deterministic ranking",
+      expect.objectContaining({
+        provider: "openai",
+        reason: "unsupported_provider",
+      }),
+    );
     expect(getAiCurationConfig()).toEqual({
       enabled: true,
       provider: "openai",
