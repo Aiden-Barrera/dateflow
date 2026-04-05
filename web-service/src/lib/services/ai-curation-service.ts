@@ -12,6 +12,7 @@ import { scoreSafety } from "./safety-filter";
 const REVIEW_COUNT_CAP = 500;
 const DEFAULT_AI_FINALIST_COUNT = 10;
 const DEFAULT_PROMPT_VERSION = "v1";
+const DEFAULT_AI_CURATION_PROVIDER: AiCurationProvider = "gemini";
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 const GEMINI_MODEL = "gemini-2.5-flash";
@@ -25,10 +26,14 @@ type AiVenueAdjustment = {
 };
 
 type AiCurationProvider = "gemini" | "anthropic";
+const AI_CURATION_PROVIDERS = new Set<AiCurationProvider>([
+  "gemini",
+  "anthropic",
+]);
 
 type AiCurationConfig = {
   readonly enabled: boolean;
-  readonly provider: string;
+  readonly provider: AiCurationProvider;
   readonly promptVersion: string;
 };
 
@@ -168,7 +173,6 @@ export function mergeAiAdjustments(
   rankedCandidates: readonly CuratedVenueCandidate[],
   adjustments: readonly AiVenueAdjustment[],
 ): readonly CuratedVenueCandidate[] {
-  const rankedCandidateCount = rankedCandidates.length;
   const adjustmentByPlaceId = new Map(
     adjustments.map((adjustment) => [adjustment.placeId, adjustment]),
   );
@@ -176,12 +180,7 @@ export function mergeAiAdjustments(
   return rankedCandidates
     .map((candidate, index) => {
       const adjustment = adjustmentByPlaceId.get(candidate.placeId);
-      const deterministicRankBonus = Math.max(
-        0,
-        rankedCandidateCount - index,
-      ) / (rankedCandidateCount * 10_000);
-      const deterministicRankingComposite =
-        candidate.score.composite + deterministicRankBonus;
+      const deterministicRankingComposite = rankedCandidates.length - index;
 
       if (!adjustment) {
         return {
@@ -224,9 +223,24 @@ export function mergeAiAdjustments(
     .map(({ candidate }) => candidate);
 }
 
+function normalizeAiCurationProvider(
+  provider: string | undefined,
+): AiCurationProvider {
+  const normalized = provider?.trim().toLowerCase();
+
+  if (
+    normalized &&
+    AI_CURATION_PROVIDERS.has(normalized as AiCurationProvider)
+  ) {
+    return normalized as AiCurationProvider;
+  }
+
+  return DEFAULT_AI_CURATION_PROVIDER;
+}
+
 export function getAiCurationConfig(): AiCurationConfig {
   const enabled = process.env.AI_CURATION_ENABLED === "true";
-  const provider = process.env.AI_CURATION_PROVIDER?.trim() || "gemini";
+  const provider = normalizeAiCurationProvider(process.env.AI_CURATION_PROVIDER);
   const promptVersion =
     process.env.AI_CURATION_PROMPT_VERSION?.trim() || DEFAULT_PROMPT_VERSION;
 
@@ -312,12 +326,13 @@ function buildAiPromptPayload(
   preferences: readonly [Preference, Preference],
   round: number,
   midpoint: Location,
+  promptVersion: string,
 ) {
   const [a, b] = preferences;
 
   return {
     round,
-    promptVersion: getAiCurationConfig().promptVersion,
+    promptVersion,
     midpoint,
     preferences: {
       a: {
@@ -355,6 +370,7 @@ async function callGeminiForVenueAdjustments(
   preferences: readonly [Preference, Preference],
   round: number,
   midpoint: Location,
+  promptVersion: string,
   apiKey: string,
 ): Promise<AiProviderCallResult> {
   const controller = new AbortController();
@@ -387,7 +403,13 @@ async function callGeminiForVenueAdjustments(
             parts: [
               {
                 text: JSON.stringify(
-                  buildAiPromptPayload(finalists, preferences, round, midpoint),
+                  buildAiPromptPayload(
+                    finalists,
+                    preferences,
+                    round,
+                    midpoint,
+                    promptVersion,
+                  ),
                 ),
               },
             ],
@@ -467,6 +489,12 @@ export async function scoreAndCurate(
   }
 
   if (!getProviderApiKey(aiConfig.provider)) {
+    console.warn("[scoreAndCurate] Falling back to deterministic ranking", {
+      provider: aiConfig.provider,
+      promptVersion: aiConfig.promptVersion,
+      reason: "missing_api_key",
+      latencyMs: Date.now() - startedAt,
+    });
     return deterministicRanking;
   }
 
@@ -479,6 +507,7 @@ export async function scoreAndCurate(
         preferences,
         round,
         midpoint,
+        aiConfig.promptVersion,
         getProviderApiKey("gemini"),
       );
 

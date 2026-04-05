@@ -82,6 +82,7 @@ describe("scoreAndCurate", () => {
       makeCandidate("top-choice", { rating: 4.8, reviewCount: 700 }),
       makeCandidate("second-choice", { rating: 3.9, reviewCount: 90 }),
     ];
+    vi.stubEnv("AI_CURATION_ENABLED", "true");
 
     const result = await scoreAndCurate(candidates, preferences, 1, midpoint);
 
@@ -89,6 +90,13 @@ describe("scoreAndCurate", () => {
     expect(result[0].placeId).toBe("top-choice");
     expect(result[0].tags).toContain("unscored");
     expect(result[0].score.composite).toBeGreaterThan(result[1].score.composite);
+    expect(mockConsoleWarn).toHaveBeenCalledWith(
+      "[scoreAndCurate] Falling back to deterministic ranking",
+      expect.objectContaining({
+        provider: "gemini",
+        reason: "missing_api_key",
+      }),
+    );
   });
 
   it("boosts activity-style venues in round 2 fallback scoring", async () => {
@@ -150,7 +158,7 @@ describe("scoreAndCurate", () => {
     expect(last?.tags).toContain("unscored");
   });
 
-  it("keeps deterministic ranking when AI is disabled or the provider is unsupported", async () => {
+  it("keeps deterministic ranking when AI is disabled or the configured provider is unsupported", async () => {
     const candidates = [
       makeCandidate("top-choice", { rating: 4.8, reviewCount: 700 }),
       makeCandidate("second-choice", { rating: 3.9, reviewCount: 90 }),
@@ -162,7 +170,7 @@ describe("scoreAndCurate", () => {
     const disabledResult = await scoreAndCurate(candidates, preferences, 1, midpoint);
 
     vi.stubEnv("AI_CURATION_ENABLED", "true");
-    vi.stubEnv("AI_CURATION_PROVIDER", "openai");
+    vi.stubEnv("AI_CURATION_PROVIDER", "anthropic");
 
     const unsupportedProviderResult = await scoreAndCurate(
       candidates,
@@ -176,13 +184,13 @@ describe("scoreAndCurate", () => {
     expect(mockConsoleWarn).toHaveBeenCalledWith(
       "[scoreAndCurate] Falling back to deterministic ranking",
       expect.objectContaining({
-        provider: "openai",
+        provider: "anthropic",
         reason: "unsupported_provider",
       }),
     );
     expect(getAiCurationConfig()).toEqual({
       enabled: true,
-      provider: "openai",
+      provider: "anthropic",
       promptVersion: "v1",
     });
   });
@@ -339,9 +347,11 @@ describe("scoreAndCurate", () => {
       contents: Array<{ parts: Array<{ text: string }> }>;
     };
     const promptPayload = JSON.parse(parsedBody.contents[0]?.parts?.[0]?.text ?? "{}") as {
+      promptVersion: string;
       venues: Array<{ placeId: string }>;
     };
 
+    expect(promptPayload.promptVersion).toBe("v1");
     expect(promptPayload.venues).toHaveLength(10);
     expect(promptPayload.venues[0]?.placeId).toBe("candidate-1");
     expect(promoted?.score.firstDateSuitability).toBe(0.99);
