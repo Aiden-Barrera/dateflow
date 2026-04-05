@@ -1,15 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "./button";
 import { CategoryIcon } from "./category-icon";
 import { Logo } from "./logo";
+import { createSessionStatusSync } from "../lib/session-status-sync";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
 type CreatedSession = {
   readonly id: string;
   readonly shareUrl: string;
 };
+
+type InviteReadyStateProps = {
+  readonly sessionId: string;
+  readonly shareUrl: string;
+  readonly sessionStatus?: InviteReadySessionState;
+  readonly copyState: "idle" | "copied";
+  readonly errorMessage: string | null;
+  readonly onCopyInvite: () => void;
+};
+
+type InviteReadySessionState =
+  | "pending_b"
+  | "ready_to_swipe"
+  | "matched"
+  | "generation_failed"
+  | "expired";
 
 const CATEGORIES: { value: Category; label: string }[] = [
   { value: "RESTAURANT", label: "Food" },
@@ -34,6 +51,8 @@ export function PersonAFlow() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [createdSession, setCreatedSession] = useState<CreatedSession | null>(null);
+  const [createdSessionStatus, setCreatedSessionStatus] =
+    useState<InviteReadySessionState>("pending_b");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
 
   const canSubmit =
@@ -162,6 +181,28 @@ export function PersonAFlow() {
       setError("We couldn't copy the invite link. Please copy it manually.");
     }
   }
+
+  useEffect(() => {
+    const createdSessionId = createdSession?.id;
+
+    if (!createdSessionId) {
+      return;
+    }
+
+    let active = true;
+    const sync = createSessionStatusSync(createdSessionId, (snapshot) => {
+      if (!active) {
+        return;
+      }
+
+      setCreatedSessionStatus(getInviteReadySessionStatus(snapshot.status));
+    });
+
+    return () => {
+      active = false;
+      sync.stop();
+    };
+  }, [createdSession?.id]);
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
@@ -308,42 +349,103 @@ export function PersonAFlow() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-6">
-              <div className="rounded-[1.75rem] bg-[linear-gradient(135deg,var(--color-text),#473e37)] p-6 text-white shadow-[0_20px_50px_rgba(45,42,38,0.24)]">
-                <p className="text-caption font-semibold uppercase tracking-[0.22em] text-white/70">
-                  Session ready
-                </p>
-                <h2 className="mt-3 text-h1 font-semibold">
-                  Your invite is live. Person B can jump in now.
-                </h2>
-                <p className="mt-3 text-body text-white/80">
-                  Copy the real invite URL, or run the full demo yourself using the built-in Person B path.
-                </p>
-              </div>
-
-              <div className="rounded-[1.5rem] border border-muted bg-bg p-4">
-                <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                  Share URL
-                </p>
-                <p className="mt-3 break-all text-body font-medium">{createdSession.shareUrl}</p>
-              </div>
-
-              <div className="grid gap-3">
-                <Button onClick={handleCopyInvite}>
-                  {copyState === "copied" ? "Copied invite" : "Copy invite URL"}
-                </Button>
-                <a href={`${createdSession.shareUrl}?demo=1`} className="block">
-                  <Button variant="secondary">Run full demo as Person B</Button>
-                </a>
-              </div>
-
-              {error ? <p className="text-body text-error">{error}</p> : null}
-            </div>
+            <InviteReadyState
+              sessionId={createdSession.id}
+              shareUrl={createdSession.shareUrl}
+              sessionStatus={createdSessionStatus}
+              copyState={copyState}
+              errorMessage={error}
+              onCopyInvite={handleCopyInvite}
+            />
           )}
         </section>
       </div>
     </main>
   );
+}
+
+export function InviteReadyState({
+  sessionId,
+  shareUrl,
+  sessionStatus = "pending_b",
+  copyState,
+  errorMessage,
+  onCopyInvite,
+}: InviteReadyStateProps) {
+  const liveSessionLabel =
+    sessionStatus === "matched"
+      ? "View your result"
+      : sessionStatus === "ready_to_swipe"
+        ? "Continue to your swipe deck"
+        : sessionStatus === "expired"
+          ? "Start a new session"
+          : sessionStatus === "generation_failed"
+            ? "Open live session"
+        : "Open live session";
+  const liveSessionHref = sessionStatus === "expired" ? "/" : `/plan/${sessionId}`;
+  const statusMessage =
+    sessionStatus === "expired"
+      ? "This invite expired before the plan came together. Start a new session and send a fresh link."
+      : sessionStatus === "generation_failed"
+        ? "Venue generation hit a snag. Reopen the live session to retry or start over if the problem keeps happening."
+        : "Share this link with your date, then come back here once they join.";
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-[1.75rem] bg-[linear-gradient(140deg,#1f1a16,#57473c)] p-6 text-white shadow-[0_20px_50px_rgba(45,42,38,0.24)]">
+        <p className="text-caption font-semibold uppercase tracking-[0.22em] text-white/70">
+          Invite sent
+        </p>
+        <h2 className="mt-3 text-h1 font-semibold">
+          Your side is set. Now hand off the link.
+        </h2>
+        <p className="mt-3 max-w-xl text-body text-white/80">
+          {statusMessage}
+        </p>
+      </div>
+
+      <div className="rounded-[1.5rem] border border-muted bg-bg p-4">
+        <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
+          Share link
+        </p>
+        <p className="mt-3 break-all text-body font-medium">{shareUrl}</p>
+      </div>
+
+      <div className="grid gap-3">
+        <Button onClick={onCopyInvite}>
+          {copyState === "copied" ? "Copied invite link" : "Copy invite link"}
+        </Button>
+        <a
+          href={liveSessionHref}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border-[1.5px] border-muted bg-surface text-body font-semibold text-text transition-all duration-200 hover:border-text-secondary active:scale-[0.98] h-14 cursor-pointer"
+        >
+          {liveSessionLabel}
+        </a>
+      </div>
+
+      {errorMessage ? <p className="text-body text-error">{errorMessage}</p> : null}
+    </div>
+  );
+}
+
+export function getInviteReadySessionStatus(status: string): InviteReadySessionState {
+  if (status === "ready_to_swipe" || status === "fallback_pending") {
+    return "ready_to_swipe";
+  }
+
+  if (status === "matched") {
+    return "matched";
+  }
+
+  if (status === "generation_failed") {
+    return "generation_failed";
+  }
+
+  if (status === "expired") {
+    return "expired";
+  }
+
+  return "pending_b";
 }
 
 function StatCard({
