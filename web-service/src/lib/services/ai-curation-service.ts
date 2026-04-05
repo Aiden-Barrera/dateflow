@@ -12,9 +12,10 @@ import { scoreSafety } from "./safety-filter";
 const REVIEW_COUNT_CAP = 500;
 const DEFAULT_AI_FINALIST_COUNT = 10;
 const DEFAULT_PROMPT_VERSION = "v1";
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const ANTHROPIC_MODEL = "claude-3-5-haiku-latest";
-const ANTHROPIC_TIMEOUT_MS = 5_000;
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+const GEMINI_MODEL = "gemini-2.5-flash";
+const AI_PROVIDER_TIMEOUT_MS = 5_000;
 
 type AiVenueAdjustment = {
   readonly placeId: string;
@@ -23,7 +24,7 @@ type AiVenueAdjustment = {
   readonly rerankAdjustment: number;
 };
 
-type AiCurationProvider = "anthropic" | "gemini";
+type AiCurationProvider = "gemini" | "anthropic";
 
 type AiCurationConfig = {
   readonly enabled: boolean;
@@ -35,14 +36,17 @@ type AiResponsePayload = {
   readonly venues?: unknown;
 };
 
-type AnthropicMessageResponse = {
-  readonly content?: Array<{
-    readonly type?: string;
-    readonly text?: string;
+type GeminiGenerateContentResponse = {
+  readonly candidates?: Array<{
+    readonly content?: {
+      readonly parts?: Array<{
+        readonly text?: string;
+      }>;
+    };
   }>;
-  readonly usage?: {
-    readonly input_tokens?: number;
-    readonly output_tokens?: number;
+  readonly usageMetadata?: {
+    readonly promptTokenCount?: number;
+    readonly candidatesTokenCount?: number;
   };
 };
 
@@ -209,7 +213,7 @@ export function mergeAiAdjustments(
 
 export function getAiCurationConfig(): AiCurationConfig {
   const enabled = process.env.AI_CURATION_ENABLED === "true";
-  const provider = process.env.AI_CURATION_PROVIDER?.trim() || "anthropic";
+  const provider = process.env.AI_CURATION_PROVIDER?.trim() || "gemini";
   const promptVersion =
     process.env.AI_CURATION_PROMPT_VERSION?.trim() || DEFAULT_PROMPT_VERSION;
 
@@ -283,11 +287,11 @@ export function parseAiVenueAdjustments(
 }
 
 function getProviderApiKey(provider: AiCurationProvider): string {
-  if (provider === "anthropic") {
-    return process.env.ANTHROPIC_API_KEY ?? "";
+  if (provider === "gemini") {
+    return process.env.GEMINI_API_KEY ?? "";
   }
 
-  return process.env.GEMINI_API_KEY ?? "";
+  return process.env.ANTHROPIC_API_KEY ?? "";
 }
 
 function buildAiPromptPayload(
@@ -333,7 +337,7 @@ function buildAiPromptPayload(
   };
 }
 
-async function callAnthropicForVenueAdjustments(
+async function callGeminiForVenueAdjustments(
   finalists: readonly CuratedVenueCandidate[],
   preferences: readonly [Preference, Preference],
   round: number,
@@ -341,27 +345,39 @@ async function callAnthropicForVenueAdjustments(
   apiKey: string,
 ): Promise<AiProviderCallResult> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ANTHROPIC_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), AI_PROVIDER_TIMEOUT_MS);
 
   try {
-    const response = await fetch(ANTHROPIC_API_URL, {
+    const response = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "x-goog-api-key": apiKey,
       },
       body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 800,
-        system:
-          "Return strict JSON only. Rank first-date venue finalists using only provided fields.",
-        messages: [
+        system_instruction: {
+          parts: [
+            {
+              text:
+                "Return strict JSON only. Rank first-date venue finalists using only provided fields.",
+            },
+          ],
+        },
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 800,
+          responseMimeType: "application/json",
+        },
+        contents: [
           {
             role: "user",
-            content: JSON.stringify(
-              buildAiPromptPayload(finalists, preferences, round, midpoint),
-            ),
+            parts: [
+              {
+                text: JSON.stringify(
+                  buildAiPromptPayload(finalists, preferences, round, midpoint),
+                ),
+              },
+            ],
           },
         ],
       }),
@@ -369,22 +385,22 @@ async function callAnthropicForVenueAdjustments(
     });
 
     if (!response.ok) {
-      throw new Error(`Anthropic request failed with status ${response.status}`);
+      throw new Error(`Gemini request failed with status ${response.status}`);
     }
 
-    const body = (await response.json()) as AnthropicMessageResponse;
-    const textBlock = body.content?.find((block) => block.type === "text")?.text;
+    const body = (await response.json()) as GeminiGenerateContentResponse;
+    const textBlock = body.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!textBlock) {
-      throw new Error("Anthropic response did not include text content");
+      throw new Error("Gemini response did not include text content");
     }
 
     const parsedPayload = JSON.parse(textBlock) as AiResponsePayload;
     return {
       adjustments: parseAiVenueAdjustments(parsedPayload, finalists),
       usage: {
-        inputTokens: body.usage?.input_tokens ?? null,
-        outputTokens: body.usage?.output_tokens ?? null,
+        inputTokens: body.usageMetadata?.promptTokenCount ?? null,
+        outputTokens: body.usageMetadata?.candidatesTokenCount ?? null,
       },
     };
   } finally {
@@ -436,18 +452,18 @@ export async function scoreAndCurate(
   try {
     const finalists = trimFinalistsForAi(deterministicRanking);
 
-    if (aiConfig.provider === "anthropic") {
-      const result = await callAnthropicForVenueAdjustments(
+    if (aiConfig.provider === "gemini") {
+      const result = await callGeminiForVenueAdjustments(
         finalists,
         preferences,
         round,
         midpoint,
-        getProviderApiKey("anthropic"),
+        getProviderApiKey("gemini"),
       );
 
       console.info("[scoreAndCurate] AI curation completed", {
-        provider: "anthropic",
-        model: ANTHROPIC_MODEL,
+        provider: "gemini",
+        model: GEMINI_MODEL,
         promptVersion: aiConfig.promptVersion,
         latencyMs: Date.now() - startedAt,
         usage: result.usage,

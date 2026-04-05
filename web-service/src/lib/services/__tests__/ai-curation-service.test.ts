@@ -66,13 +66,13 @@ describe("scoreAndCurate", () => {
     vi.unstubAllEnvs();
     vi.stubEnv("AI_CURATION_ENABLED", "");
     vi.stubEnv("AI_CURATION_PROVIDER", "");
-    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("GEMINI_API_KEY", "");
     mockFetch.mockReset();
     mockConsoleInfo.mockClear();
     mockConsoleWarn.mockClear();
   });
 
-  it("falls back to deterministic ranking when Anthropic is unavailable", async () => {
+  it("falls back to deterministic ranking when Gemini is unavailable", async () => {
     const candidates = [
       makeCandidate("top-choice", { rating: 4.8, reviewCount: 700 }),
       makeCandidate("second-choice", { rating: 3.9, reviewCount: 90 }),
@@ -152,12 +152,12 @@ describe("scoreAndCurate", () => {
     ];
 
     vi.stubEnv("AI_CURATION_ENABLED", "false");
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
 
     const disabledResult = await scoreAndCurate(candidates, preferences, 1, midpoint);
 
     vi.stubEnv("AI_CURATION_ENABLED", "true");
-    vi.stubEnv("AI_CURATION_PROVIDER", "gemini");
+    vi.stubEnv("AI_CURATION_PROVIDER", "openai");
 
     const unsupportedProviderResult = await scoreAndCurate(
       candidates,
@@ -170,7 +170,7 @@ describe("scoreAndCurate", () => {
     expect(unsupportedProviderResult[0].tags).toContain("unscored");
     expect(getAiCurationConfig()).toEqual({
       enabled: true,
-      provider: "gemini",
+      provider: "openai",
       promptVersion: "v1",
     });
   });
@@ -277,7 +277,7 @@ describe("scoreAndCurate", () => {
     ).toThrow("rerankAdjustment");
   });
 
-  it("calls Anthropic only for finalists and merges valid AI adjustments", async () => {
+  it("calls Gemini only for finalists and merges valid AI adjustments", async () => {
     const candidates = Array.from({ length: 12 }, (_, index) =>
       makeCandidate(`candidate-${index + 1}`, {
         rating: 5 - index * 0.05,
@@ -286,29 +286,34 @@ describe("scoreAndCurate", () => {
     );
 
     vi.stubEnv("AI_CURATION_ENABLED", "true");
-    vi.stubEnv("AI_CURATION_PROVIDER", "anthropic");
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
+    vi.stubEnv("AI_CURATION_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        content: [
+        candidates: [
           {
-            type: "text",
-            text: JSON.stringify({
-              venues: [
+            content: {
+              parts: [
                 {
-                  placeId: "candidate-2",
-                  firstDateSuitability: 0.99,
-                  tags: ["cozy", "great conversation"],
-                  rerankAdjustment: 0.08,
+                  text: JSON.stringify({
+                    venues: [
+                      {
+                        placeId: "candidate-2",
+                        firstDateSuitability: 0.99,
+                        tags: ["cozy", "great conversation"],
+                        rerankAdjustment: 0.08,
+                      },
+                    ],
+                  }),
                 },
               ],
-            }),
+            },
           },
         ],
-        usage: {
-          input_tokens: 321,
-          output_tokens: 87,
+        usageMetadata: {
+          promptTokenCount: 321,
+          candidatesTokenCount: 87,
         },
       }),
     });
@@ -319,9 +324,9 @@ describe("scoreAndCurate", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [, requestInit] = mockFetch.mock.calls[0] as [string, RequestInit];
     const parsedBody = JSON.parse(String(requestInit.body)) as {
-      messages: Array<{ content: string }>;
+      contents: Array<{ parts: Array<{ text: string }> }>;
     };
-    const promptPayload = JSON.parse(parsedBody.messages[0]?.content ?? "{}") as {
+    const promptPayload = JSON.parse(parsedBody.contents[0]?.parts?.[0]?.text ?? "{}") as {
       venues: Array<{ placeId: string }>;
     };
 
@@ -331,19 +336,25 @@ describe("scoreAndCurate", () => {
     expect(promoted?.tags).toEqual(["cozy", "great conversation"]);
   });
 
-  it("falls back to deterministic ranking when the Anthropic response is malformed", async () => {
+  it("falls back to deterministic ranking when the Gemini response is malformed", async () => {
     const candidates = [
       makeCandidate("top-choice", { rating: 4.8, reviewCount: 700 }),
       makeCandidate("second-choice", { rating: 3.9, reviewCount: 90 }),
     ];
 
     vi.stubEnv("AI_CURATION_ENABLED", "true");
-    vi.stubEnv("AI_CURATION_PROVIDER", "anthropic");
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
+    vi.stubEnv("AI_CURATION_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        content: [{ type: "text", text: "{\"venues\":[{\"placeId\":\"missing-place\"}]}" }],
+        candidates: [
+          {
+            content: {
+              parts: [{ text: "{\"venues\":[{\"placeId\":\"missing-place\"}]}" }],
+            },
+          },
+        ],
       }),
     });
 
@@ -353,7 +364,7 @@ describe("scoreAndCurate", () => {
     expect(result[0].tags).toContain("unscored");
   });
 
-  it("logs provider usage metadata on successful Anthropic reranks", async () => {
+  it("logs provider usage metadata on successful Gemini reranks", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-04T22:00:00Z"));
 
@@ -363,32 +374,37 @@ describe("scoreAndCurate", () => {
     ];
 
     vi.stubEnv("AI_CURATION_ENABLED", "true");
-    vi.stubEnv("AI_CURATION_PROVIDER", "anthropic");
+    vi.stubEnv("AI_CURATION_PROVIDER", "gemini");
     vi.stubEnv("AI_CURATION_PROMPT_VERSION", "prompt-v2");
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
     mockFetch.mockImplementationOnce(async () => {
       vi.setSystemTime(new Date("2026-04-04T22:00:01Z"));
       return {
         ok: true,
         json: async () => ({
-          content: [
+          candidates: [
             {
-              type: "text",
-              text: JSON.stringify({
-                venues: [
+              content: {
+                parts: [
                   {
-                    placeId: "top-choice",
-                    firstDateSuitability: 0.95,
-                    tags: ["cozy"],
-                    rerankAdjustment: 0.02,
+                    text: JSON.stringify({
+                      venues: [
+                        {
+                          placeId: "top-choice",
+                          firstDateSuitability: 0.95,
+                          tags: ["cozy"],
+                          rerankAdjustment: 0.02,
+                        },
+                      ],
+                    }),
                   },
                 ],
-              }),
+              },
             },
           ],
-          usage: {
-            input_tokens: 321,
-            output_tokens: 87,
+          usageMetadata: {
+            promptTokenCount: 321,
+            candidatesTokenCount: 87,
           },
         }),
       };
@@ -399,8 +415,8 @@ describe("scoreAndCurate", () => {
     expect(mockConsoleInfo).toHaveBeenCalledWith(
       "[scoreAndCurate] AI curation completed",
       expect.objectContaining({
-        provider: "anthropic",
-        model: "claude-3-5-haiku-latest",
+        provider: "gemini",
+        model: "gemini-2.5-flash",
         promptVersion: "prompt-v2",
         latencyMs: 1000,
         usage: {
@@ -420,8 +436,8 @@ describe("scoreAndCurate", () => {
     ];
 
     vi.stubEnv("AI_CURATION_ENABLED", "true");
-    vi.stubEnv("AI_CURATION_PROVIDER", "anthropic");
-    vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
+    vi.stubEnv("AI_CURATION_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
     mockFetch.mockRejectedValueOnce(new Error("This operation was aborted"));
 
     const result = await scoreAndCurate(candidates, preferences, 1, midpoint);
@@ -431,7 +447,7 @@ describe("scoreAndCurate", () => {
     expect(mockConsoleWarn).toHaveBeenCalledWith(
       "[scoreAndCurate] Falling back to deterministic ranking",
       expect.objectContaining({
-        provider: "anthropic",
+        provider: "gemini",
         reason: "provider_timeout",
       }),
     );
