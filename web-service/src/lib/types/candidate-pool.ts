@@ -1,4 +1,5 @@
 import type { Category } from "./preference";
+import { normalizeProxiedPhotoUrl } from "../places-photo-url";
 
 export type CandidatePoolSource = "initial_generation" | "full_regeneration";
 export type GenerationStrategy =
@@ -24,6 +25,7 @@ export type SessionCandidatePoolItem = {
   readonly lng: number;
   readonly priceLevel: number;
   readonly rating: number;
+  readonly photoUrls: readonly string[];
   readonly photoUrl: string | null;
   readonly rawTypes: readonly string[];
   readonly rawTags: readonly string[];
@@ -58,6 +60,7 @@ export type SessionCandidatePoolItemRow = {
   readonly lng: number;
   readonly price_level: number;
   readonly rating: number;
+  readonly photo_urls?: string[] | null;
   readonly photo_url: string | null;
   readonly raw_types: string[];
   readonly raw_tags: string[];
@@ -85,9 +88,21 @@ export function toSessionCandidatePool(
   };
 }
 
+function resolvePhotoUrls(
+  row: Pick<SessionCandidatePoolItemRow, "photo_url" | "photo_urls">,
+): readonly string[] {
+  if (Array.isArray(row.photo_urls) && row.photo_urls.length > 0) {
+    return row.photo_urls.map(normalizeProxiedPhotoUrl);
+  }
+
+  return row.photo_url ? [normalizeProxiedPhotoUrl(row.photo_url)] : [];
+}
+
 export function toSessionCandidatePoolItem(
   row: SessionCandidatePoolItemRow,
 ): SessionCandidatePoolItem {
+  const photoUrls = resolvePhotoUrls(row);
+
   return {
     id: row.id,
     poolId: row.pool_id,
@@ -99,7 +114,8 @@ export function toSessionCandidatePoolItem(
     lng: row.lng,
     priceLevel: row.price_level,
     rating: row.rating,
-    photoUrl: row.photo_url,
+    photoUrls,
+    photoUrl: photoUrls[0] ?? null,
     rawTypes: row.raw_types,
     rawTags: row.raw_tags,
     sourceRank: row.source_rank,

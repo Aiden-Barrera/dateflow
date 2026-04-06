@@ -17,6 +17,10 @@ describe("result-serializer", () => {
         lng: -97.74,
         priceLevel: 2,
         rating: 4.6,
+        photoUrls: [
+          "https://example.com/photo.jpg",
+          "https://example.com/photo-2.jpg",
+        ],
         photoUrl: "https://example.com/photo.jpg",
         tags: ["cozy", "patio"],
         round: 3,
@@ -34,5 +38,9 @@ describe("result-serializer", () => {
 
     expect(result.matchedAt).toBe("2026-04-02T18:30:00.000Z");
     expect(result.venue.name).toBe("Cafe Blue");
+    expect(result.venue.photoUrls).toEqual([
+      "https://example.com/photo.jpg",
+      "https://example.com/photo-2.jpg",
+    ]);
   });
 });

@@ -7,6 +7,7 @@ describe("toSession", () => {
     id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     status: "pending_b",
     creator_display_name: "Alex",
+    invitee_display_name: null,
     created_at: "2026-03-27T12:00:00Z",
     expires_at: "2026-03-29T12:00:00Z",
     matched_venue_id: null,
@@ -19,6 +20,7 @@ describe("toSession", () => {
     expect(session.id).toBe(baseRow.id);
     expect(session.status).toBe(baseRow.status);
     expect(session.creatorDisplayName).toBe(baseRow.creator_display_name);
+    expect(session.inviteeDisplayName).toBeNull();
     expect(session.matchedVenueId).toBe(baseRow.matched_venue_id);
   });
 
@@ -47,5 +49,14 @@ describe("toSession", () => {
 
     expect(session.matchedVenueId).toBe("venue-abc-123");
     expect(session.matchedAt?.toISOString()).toBe("2026-03-28T13:00:00.000Z");
+  });
+
+  it("passes through a non-null invitee display name", () => {
+    const session = toSession({
+      ...baseRow,
+      invitee_display_name: "Jordan",
+    });
+
+    expect(session.inviteeDisplayName).toBe("Jordan");
   });
 });

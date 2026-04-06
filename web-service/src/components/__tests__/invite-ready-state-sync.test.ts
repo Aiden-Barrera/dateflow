@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getInviteReadySessionStatus } from "../person-a-flow";
+import {
+  getInviteReadyRedirectHref,
+  getInviteReadySessionStatus,
+} from "../person-a-flow";
 
 describe("getInviteReadySessionStatus", () => {
   it("keeps neutral waiting states on the invite-ready screen", () => {
@@ -20,5 +23,17 @@ describe("getInviteReadySessionStatus", () => {
     expect(getInviteReadySessionStatus("generation_failed")).toBe("generation_failed");
     expect(getInviteReadySessionStatus("expired")).toBe("expired");
     expect(getInviteReadySessionStatus("unknown_status")).toBe("pending_b");
+  });
+
+  it("only auto-redirects person a when the session is ready or matched", () => {
+    expect(getInviteReadyRedirectHref("session-1", "pending_b")).toBeNull();
+    expect(getInviteReadyRedirectHref("session-1", "generation_failed")).toBeNull();
+    expect(getInviteReadyRedirectHref("session-1", "expired")).toBeNull();
+    expect(getInviteReadyRedirectHref("session-1", "ready_to_swipe")).toBe(
+      "/plan/session-1",
+    );
+    expect(getInviteReadyRedirectHref("session-1", "matched")).toBe(
+      "/plan/session-1",
+    );
   });
 });

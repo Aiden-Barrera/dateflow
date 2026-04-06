@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "./button";
 import { CategoryIcon } from "./category-icon";
 import { Logo } from "./logo";
@@ -42,6 +43,7 @@ const BUDGETS: { value: BudgetLevel; label: string; symbol: string }[] = [
 ];
 
 export function PersonAFlow() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
   const [location, setLocation] = useState<Location | null>(null);
@@ -203,6 +205,23 @@ export function PersonAFlow() {
       sync.stop();
     };
   }, [createdSession?.id]);
+
+  useEffect(() => {
+    if (!createdSession) {
+      return;
+    }
+
+    const redirectHref = getInviteReadyRedirectHref(
+      createdSession.id,
+      createdSessionStatus,
+    );
+
+    if (!redirectHref) {
+      return;
+    }
+
+    router.push(redirectHref);
+  }, [createdSession, createdSessionStatus, router]);
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
@@ -446,6 +465,17 @@ export function getInviteReadySessionStatus(status: string): InviteReadySessionS
   }
 
   return "pending_b";
+}
+
+export function getInviteReadyRedirectHref(
+  sessionId: string,
+  sessionStatus: InviteReadySessionState,
+): string | null {
+  if (sessionStatus === "ready_to_swipe" || sessionStatus === "matched") {
+    return `/plan/${sessionId}`;
+  }
+
+  return null;
 }
 
 function StatCard({

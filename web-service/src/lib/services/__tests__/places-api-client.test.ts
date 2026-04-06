@@ -64,11 +64,11 @@ describe("places-api-client", () => {
   });
 
   describe("buildGooglePlacePhotoUrl", () => {
-    it("builds an internal proxied photo URL from a photo reference", () => {
+    it("builds a relative internal proxied photo URL from a photo reference", () => {
       expect(
         buildGooglePlacePhotoUrl("places/ChIJ_abc123/photos/ref123")
       ).toBe(
-        "https://dateflow.test/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200"
+        "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200"
       );
     });
 
@@ -76,7 +76,7 @@ describe("places-api-client", () => {
       expect(buildGooglePlacePhotoUrl(null)).toBeNull();
     });
 
-    it("falls back to a relative internal URL when app url is not configured", () => {
+    it("returns the same relative internal URL when app url is not configured", () => {
       vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
 
       expect(
@@ -126,8 +126,53 @@ describe("places-api-client", () => {
         priceLevel: 2,
         rating: 4.5,
         reviewCount: 1200,
+        photoReferences: [
+          "places/ChIJ_abc123/photos/ref123",
+        ],
+        photoUrls: [
+          "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200",
+        ],
         photoReference: "places/ChIJ_abc123/photos/ref123",
       });
+    });
+
+    it("keeps multiple Google photo references in order and maps them to proxied urls", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          places: [
+            {
+              id: "ChIJ_multi123",
+              displayName: { text: "Cafe Bloom" },
+              formattedAddress: "500 Congress Ave, Austin, TX",
+              location: { latitude: 30.2677, longitude: -97.7429 },
+              types: ["cafe", "restaurant"],
+              priceLevel: "PRICE_LEVEL_MODERATE",
+              rating: 4.7,
+              userRatingCount: 803,
+              photos: [
+                { name: "places/ChIJ_multi123/photos/ref-a" },
+                { name: "places/ChIJ_multi123/photos/ref-b" },
+                { name: "places/ChIJ_multi123/photos/ref-c" },
+              ],
+            },
+          ],
+        }),
+      });
+
+      const results = await searchNearby(location, 2000, ["cafe"], 3);
+
+      expect(results[0].photoReference).toBe("places/ChIJ_multi123/photos/ref-a");
+      expect(results[0].photoReferences).toEqual([
+        "places/ChIJ_multi123/photos/ref-a",
+        "places/ChIJ_multi123/photos/ref-b",
+        "places/ChIJ_multi123/photos/ref-c",
+      ]);
+      expect(results[0].photoUrls).toEqual([
+        "/api/places/photos?name=places%2FChIJ_multi123%2Fphotos%2Fref-a&maxHeightPx=1200",
+        "/api/places/photos?name=places%2FChIJ_multi123%2Fphotos%2Fref-b&maxHeightPx=1200",
+        "/api/places/photos?name=places%2FChIJ_multi123%2Fphotos%2Fref-c&maxHeightPx=1200",
+      ]);
     });
 
     it("maps Google price level strings to numeric values", async () => {
@@ -187,6 +232,8 @@ describe("places-api-client", () => {
       expect(results[0].priceLevel).toBe(0);
       expect(results[0].reviewCount).toBe(0);
       expect(results[0].photoReference).toBeNull();
+      expect(results[0].photoReferences).toEqual([]);
+      expect(results[0].photoUrls).toEqual([]);
     });
 
     it("returns empty array when no results", async () => {
@@ -216,21 +263,48 @@ describe("places-api-client", () => {
         ok: false,
         status: 403,
         statusText: "Forbidden",
-        text: async () => "API key invalid",
+        text: async () => '{"error":{"message":"API key invalid","status":"PERMISSION_DENIED"}}',
       });
 
       await expect(
         searchNearby(location, 2000, ["restaurant"], 3)
-      ).rejects.toThrow("Google Places API error: 403 Forbidden");
+      ).rejects.toThrow(
+        'Google Places API error: 403 Forbidden - {"error":{"message":"API key invalid","status":"PERMISSION_DENIED"}}',
+      );
     });
 
-    it("keeps type filtering consistent when maxPrice is applied", async () => {
+    it("keeps type filtering consistent when maxPrice is applied without sending unsupported request fields", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ places: [] }),
+        json: async () => ({
+          places: [
+            {
+              id: "budget-ok",
+              displayName: { text: "Budget Spot" },
+              formattedAddress: "1 Main St",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["restaurant"],
+              priceLevel: "PRICE_LEVEL_MODERATE",
+              rating: 4.0,
+              userRatingCount: 100,
+              photos: [],
+            },
+            {
+              id: "too-expensive",
+              displayName: { text: "Fancy Spot" },
+              formattedAddress: "2 Main St",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["restaurant"],
+              priceLevel: "PRICE_LEVEL_VERY_EXPENSIVE",
+              rating: 4.8,
+              userRatingCount: 500,
+              photos: [],
+            },
+          ],
+        }),
       });
 
-      await searchNearby(location, 2000, ["restaurant", "bar"], 3);
+      const results = await searchNearby(location, 2000, ["restaurant", "bar"], 3);
 
       const [, request] = mockFetch.mock.calls[0] as [
         string,
@@ -239,8 +313,9 @@ describe("places-api-client", () => {
       const body = JSON.parse(request.body);
 
       expect(body.includedTypes).toEqual(["restaurant", "bar"]);
-      expect(body.maxPriceLevel).toBe(3);
+      expect(body).not.toHaveProperty("maxPriceLevel");
       expect(body).not.toHaveProperty("includedPrimaryTypes");
+      expect(results.map((result) => result.placeId)).toEqual(["budget-ok"]);
     });
   });
 });

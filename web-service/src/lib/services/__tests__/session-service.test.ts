@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   createSession,
   getSession,
+  setInviteeDisplayName,
   validateSessionForJoin,
   expireStaleSessions,
 } from "../session-service";
@@ -32,12 +33,22 @@ const mockQuerySelect = vi.fn(() => ({ eq: mockEq }));
 const mockLte = vi.fn();
 const mockNeq = vi.fn(() => ({ neq: mockNeq, lte: mockLte }));
 const mockUpdate = vi.fn(() => ({ neq: mockNeq }));
+const mockUpdateInviteeIdEq = vi.fn();
+const mockUpdateWithEq = vi.fn(() => ({ eq: mockUpdateInviteeIdEq }));
 
 // from() returns all three chains
 const mockFrom = vi.fn(() => ({
   insert: mockInsert,
   select: mockQuerySelect,
-  update: mockUpdate,
+  update: (...args: unknown[]) => {
+    const payload = args[0] as Record<string, unknown>;
+
+    if ("invitee_display_name" in payload) {
+      return mockUpdateWithEq(...args);
+    }
+
+    return mockUpdate(...args);
+  },
 }));
 
 vi.mock("../../supabase-server", () => ({
@@ -49,6 +60,7 @@ const fakeRow: SessionRow = {
   id: "fake-uuid-1234",
   status: "pending_b",
   creator_display_name: "Alex",
+  invitee_display_name: null,
   created_at: "2026-03-27T12:00:00Z",
   expires_at: "2026-03-29T12:00:00Z",
   matched_venue_id: null,
@@ -119,6 +131,23 @@ describe("createSession", () => {
     });
 
     await expect(createSession("Alex")).rejects.toThrow("DB connection lost");
+  });
+});
+
+describe("setInviteeDisplayName", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUpdateInviteeIdEq.mockResolvedValue({ error: null });
+  });
+
+  it("stores a trimmed invitee display name on the session", async () => {
+    await setInviteeDisplayName("fake-uuid-1234", "  Jordan  ");
+
+    expect(mockFrom).toHaveBeenCalledWith("sessions");
+    expect(mockUpdateWithEq).toHaveBeenCalledWith({
+      invitee_display_name: "Jordan",
+    });
+    expect(mockUpdateInviteeIdEq).toHaveBeenCalledWith("id", "fake-uuid-1234");
   });
 });
 

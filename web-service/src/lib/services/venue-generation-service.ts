@@ -88,6 +88,7 @@ type InsertVenueRow = {
   readonly lng: number;
   readonly price_level: number;
   readonly rating: number;
+  readonly photo_urls: readonly string[];
   readonly photo_url: string | null;
   readonly tags: readonly string[];
   readonly round: number;
@@ -122,6 +123,7 @@ type InsertCandidatePoolItemRow = {
   readonly lng: number;
   readonly price_level: number;
   readonly rating: number;
+  readonly photo_urls: readonly string[];
   readonly photo_url: string | null;
   readonly raw_types: readonly string[];
   readonly raw_tags: readonly string[];
@@ -208,7 +210,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
       categories,
       maxPrice
     );
-    const safeCandidates = applySafetyFilter(candidates);
+    const safeCandidates = applySafetyFilter(candidates, categories);
     const poolId = await createCandidatePool(sessionId, "initial_generation");
 
     await insertCandidatePoolItems(
@@ -222,6 +224,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         lng: candidate.location.lng,
         price_level: candidate.priceLevel === 0 ? 1 : candidate.priceLevel,
         rating: candidate.rating,
+        photo_urls: candidate.photoUrls,
         photo_url: buildGooglePlacePhotoUrl(candidate.photoReference),
         raw_types: candidate.types,
         raw_tags: [],
@@ -254,6 +257,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           lng: venue.location.lng,
           price_level: venue.priceLevel === 0 ? 1 : venue.priceLevel,
           rating: venue.rating,
+          photo_urls: venue.photoUrls,
           photo_url: buildGooglePlacePhotoUrl(venue.photoReference),
           tags: venue.tags,
           round,

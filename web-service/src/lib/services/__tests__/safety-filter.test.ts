@@ -17,6 +17,8 @@ function makeCandidate(overrides: Partial<PlaceCandidate> = {}): PlaceCandidate 
     rating: 4.5,
     reviewCount: 200,
     photoReference: "photo_ref",
+    photoReferences: ["photo_ref"],
+    photoUrls: ["/api/places/photos?name=places%2Ftest%2Fphotos%2Fphoto_ref&maxHeightPx=1200"],
     ...overrides,
   };
 }
@@ -69,6 +71,20 @@ describe("safety-filter", () => {
       expect(result).toHaveLength(0);
     });
 
+    it("rejects grocery and supermarket venues even when they are highly rated", () => {
+      const groceryStore = makeCandidate({
+        placeId: "grocery_1",
+        name: "ShopRite",
+        types: ["grocery_store", "supermarket", "food", "store"],
+        rating: 4.7,
+        reviewCount: 1800,
+      });
+
+      const result = applySafetyFilter([groceryStore]);
+
+      expect(result).toHaveLength(0);
+    });
+
     it("keeps safe venues and removes unsafe ones from the same list", () => {
       const good = makeCandidate({ placeId: "good_1" });
       const bad = makeCandidate({ placeId: "bad_1", rating: 1.0 });
@@ -108,6 +124,17 @@ describe("safety-filter", () => {
       const score = scoreSafety(unsafe);
 
       expect(score).toBe(0);
+    });
+
+    it("returns 0 for grocery and supermarket venues", () => {
+      const groceryStore = makeCandidate({
+        name: "ShopRite",
+        types: ["grocery_store", "supermarket", "food", "store"],
+        rating: 4.7,
+        reviewCount: 1800,
+      });
+
+      expect(scoreSafety(groceryStore)).toBe(0);
     });
 
     it("returns a higher score for more reviews", () => {

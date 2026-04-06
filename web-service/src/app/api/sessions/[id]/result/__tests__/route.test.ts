@@ -31,6 +31,10 @@ describe("GET /api/sessions/[id]/result", () => {
         lng: -97.74,
         priceLevel: 2,
         rating: 4.6,
+        photoUrls: [
+          "https://example.com/photo.jpg",
+          "https://example.com/photo-2.jpg",
+        ],
         photoUrl: "https://example.com/photo.jpg",
         tags: ["cozy", "patio"],
         round: 3,
@@ -63,6 +67,10 @@ describe("GET /api/sessions/[id]/result", () => {
           id: "venue-12",
           placeId: "place-12",
           name: "Cafe Blue",
+          photoUrls: [
+            "https://example.com/photo.jpg",
+            "https://example.com/photo-2.jpg",
+          ],
         }),
       },
     });

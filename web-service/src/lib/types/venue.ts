@@ -1,4 +1,5 @@
 import type { Category, Location } from "./preference";
+import { normalizeProxiedPhotoUrl } from "../places-photo-url";
 
 /**
  * The five independent scoring dimensions that measure how well a venue
@@ -64,8 +65,10 @@ export function computeVenueComposite(
  * **position:** 1-4 within the round (the venue's rank in that round).
  * **tags:** AI-generated labels ("cozy", "live music", "romantic", etc.) that
  *   explain why this venue was chosen. Shown in the UI to build trust in the curation.
- * **photoUrl:** Direct URL to a venue photo, or null if not available.
- *   Always a static URL (proxied server-side) — never leaks Google Places API key.
+ * **photoUrls:** Ordered photo collection for the venue. The first item is the
+ *   primary photo used by older single-image surfaces.
+ * **photoUrl:** Backward-compatible primary photo, or null if not available.
+ *   Always a static URL (proxied server-side), never leaks Google Places API key.
  * **category:** The primary category (RESTAURANT, BAR, ACTIVITY, EVENT).
  *   Normalized from Google Places types.
  * **rating, priceLevel:** From Google Places. Rating is 0–5 (decimal).
@@ -82,6 +85,7 @@ export type Venue = {
   readonly lng: number;
   readonly priceLevel: number;
   readonly rating: number;
+  readonly photoUrls: readonly string[];
   readonly photoUrl: string | null;
   readonly tags: readonly string[];
   readonly round: number;
@@ -109,6 +113,7 @@ export type VenueRow = {
   readonly lng: number;
   readonly price_level: number;
   readonly rating: number;
+  readonly photo_urls?: string[] | null;
   readonly photo_url: string | null;
   readonly tags: string[];
   readonly round: number;
@@ -120,11 +125,21 @@ export type VenueRow = {
   readonly score_time_of_day_fit: number;
 };
 
+function resolvePhotoUrls(row: Pick<VenueRow, "photo_url" | "photo_urls">): readonly string[] {
+  if (Array.isArray(row.photo_urls) && row.photo_urls.length > 0) {
+    return row.photo_urls.map(normalizeProxiedPhotoUrl);
+  }
+
+  return row.photo_url ? [normalizeProxiedPhotoUrl(row.photo_url)] : [];
+}
+
 /**
  * Converts a raw Supabase row into an app-level Venue.
  * Groups the five score columns into a single VenueScore object.
  */
 export function toVenue(row: VenueRow): Venue {
+  const photoUrls = resolvePhotoUrls(row);
+
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -136,7 +151,8 @@ export function toVenue(row: VenueRow): Venue {
     lng: row.lng,
     priceLevel: row.price_level,
     rating: row.rating,
-    photoUrl: row.photo_url,
+    photoUrls,
+    photoUrl: photoUrls[0] ?? null,
     tags: row.tags,
     round: row.round,
     position: row.position,
@@ -165,9 +181,9 @@ export function toVenue(row: VenueRow): Venue {
  * A venue candidate returned by Google Places Nearby Search API.
  * These are raw results before any custom scoring or filtering.
  *
- * **photoReference:** A string reference that can be resolved to a URL server-side.
- *   We never pass Google API keys to the client, so we fetch photos on the server
- *   and serve them back — this is just the key to look it up later.
+ * **photoReferences:** Ordered Google photo references for this place.
+ * **photoReference:** Backward-compatible primary reference.
+ * **photoUrls:** Ordered proxied photo URLs derived from the references.
  *
  * **types:** Google Places types (e.g., "restaurant", "bar", "tourist_attraction").
  *   The VenueGenerationService normalizes these to our Category enum.
@@ -181,7 +197,9 @@ export type PlaceCandidate = {
   readonly priceLevel: number;
   readonly rating: number;
   readonly reviewCount: number;
+  readonly photoReferences: readonly string[];
   readonly photoReference: string | null;
+  readonly photoUrls: readonly string[];
 };
 
 /**

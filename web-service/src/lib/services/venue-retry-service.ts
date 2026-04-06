@@ -74,6 +74,7 @@ type InsertVenueRow = {
   readonly lng: number;
   readonly price_level: number;
   readonly rating: number;
+  readonly photo_urls: readonly string[];
   readonly photo_url: string | null;
   readonly tags: readonly string[];
   readonly round: number;
@@ -89,6 +90,7 @@ type InsertVenueRow = {
 
 type RetryVenueCandidate = PlaceCandidate &
   Partial<CuratedVenueCandidate> & {
+    readonly photoUrls: readonly string[];
     readonly photoUrl: string | null;
   };
 
@@ -283,11 +285,19 @@ async function buildSurfacedVenueRows(
       midpoint,
     );
     const roundPicks = curated.slice(0, 4);
-    const photoUrlsByPlaceId = new Map(
-      remaining.map((candidate) => [candidate.placeId, candidate.photoUrl]),
+    const venuePhotosByPlaceId = new Map(
+      remaining.map((candidate) => [
+        candidate.placeId,
+        {
+          primary: candidate.photoUrl,
+          all: candidate.photoUrls,
+        },
+      ]),
     );
 
     roundPicks.forEach((venue, index) => {
+      const venuePhotos = venuePhotosByPlaceId.get(venue.placeId);
+
       selectedRows.push({
         session_id: sessionId,
         place_id: venue.placeId,
@@ -298,7 +308,8 @@ async function buildSurfacedVenueRows(
         lng: venue.location.lng,
         price_level: venue.priceLevel === 0 ? 1 : venue.priceLevel,
         rating: venue.rating,
-        photo_url: photoUrlsByPlaceId.get(venue.placeId) ?? null,
+        photo_urls: venuePhotos?.all ?? [],
+        photo_url: venuePhotos?.primary ?? null,
         tags: venue.tags,
         round,
         position: index + 1,
@@ -335,7 +346,9 @@ function toPlaceCandidate(
     priceLevel: candidate.priceLevel,
     rating: candidate.rating,
     reviewCount: 250,
+    photoReferences: [],
     photoReference: null,
+    photoUrls: candidate.photoUrls,
     photoUrl: candidate.photoUrl,
     category: candidate.category,
     tags: candidate.rawTags,

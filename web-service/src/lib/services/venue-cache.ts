@@ -16,6 +16,18 @@ import type { Location } from "../types/preference";
 export class VenueCache {
   private redis = getRedisClient();
 
+  private getValuePreview(value: unknown): string {
+    if (typeof value === "string") {
+      return value.slice(0, 160);
+    }
+
+    try {
+      return JSON.stringify(value).slice(0, 160);
+    } catch {
+      return String(value).slice(0, 160);
+    }
+  }
+
   /**
    * Builds a cache key from search parameters.
    *
@@ -57,12 +69,36 @@ export class VenueCache {
         return null;
       }
 
-      // Redis returns a string; parse it back to PlaceCandidate[]
-      return JSON.parse(cached as string) as readonly PlaceCandidate[];
+      if (typeof cached === "string") {
+        return JSON.parse(cached) as readonly PlaceCandidate[];
+      }
+
+      if (Array.isArray(cached)) {
+        console.warn(`[VenueCache.get] Returning non-string cached value for key "${key}"`, {
+          valueType: typeof cached,
+          preview: this.getValuePreview(cached),
+        });
+        return cached as readonly PlaceCandidate[];
+      }
+
+      console.warn(`[VenueCache.get] Unexpected cached value shape for key "${key}"`, {
+        valueType: typeof cached,
+        preview: this.getValuePreview(cached),
+      });
+      return null;
     } catch (err) {
       // Log errors but don't crash — cache misses are acceptable.
       // If Redis is down, we'll just call Google Places directly.
-      console.error(`[VenueCache.get] Failed to retrieve key "${key}":`, err);
+      const cachedValue =
+        err instanceof SyntaxError
+          ? await this.redis.get(key).catch(() => null)
+          : null;
+
+      console.error(`[VenueCache.get] Failed to retrieve key "${key}":`, err, {
+        cachedValueType: cachedValue === null ? "null" : typeof cachedValue,
+        cachedValuePreview:
+          cachedValue === null ? null : this.getValuePreview(cachedValue),
+      });
       return null;
     }
   }

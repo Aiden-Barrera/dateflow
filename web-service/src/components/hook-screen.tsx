@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "./button";
 import { Logo } from "./logo";
 
 type HookScreenProps = {
   readonly creatorName: string;
-  readonly onContinue: () => void;
+  readonly initialDisplayName?: string;
+  readonly onContinue: (displayName: string) => void;
 };
 
 /**
@@ -18,7 +20,27 @@ type HookScreenProps = {
  * that FigmaMake couldn't generate. They sit behind the text at low
  * opacity, making the screen feel warm and designed rather than empty.
  */
-export function HookScreen({ creatorName, onContinue }: HookScreenProps) {
+export function HookScreen({
+  creatorName,
+  initialDisplayName = "",
+  onContinue,
+}: HookScreenProps) {
+  const [displayName, setDisplayName] = useState(initialDisplayName);
+  const [showError, setShowError] = useState(false);
+  const errorId = "invitee-display-name-error";
+
+  function handleContinue() {
+    const trimmed = displayName.trim();
+
+    if (!trimmed) {
+      setShowError(true);
+      return;
+    }
+
+    setShowError(false);
+    onContinue(trimmed);
+  }
+
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-bg px-6 pb-10 pt-8">
       <div
@@ -42,18 +64,52 @@ export function HookScreen({ creatorName, onContinue }: HookScreenProps) {
 
         <div className="flex flex-1 flex-col justify-center lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
           <section className="max-w-2xl">
-            <p className="text-caption font-semibold uppercase tracking-[0.28em] text-secondary">
-              Person B entry
-            </p>
-            <h1 className="mt-4 text-[clamp(3.25rem,10vw,6rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-text">
+            <h1 className="text-[clamp(3.25rem,10vw,6rem)] font-semibold leading-[0.92] tracking-[-0.06em] text-text">
               <span className="text-primary">{creatorName}</span> wants to plan your first date.
             </h1>
             <p className="mt-5 max-w-xl text-body text-text-secondary">
               This stays lightweight on purpose. Three quick choices, no account wall, and then Dateflow builds the shortlist for both of you.
             </p>
 
-            <div className="mt-8 w-full max-w-sm">
-              <Button onClick={onContinue}>Start in 60 seconds</Button>
+            <div className="mt-8 w-full max-w-sm space-y-3">
+              <div className="space-y-2">
+                <label
+                  htmlFor="invitee-display-name"
+                  className="text-caption font-semibold uppercase tracking-[0.18em] text-secondary"
+                >
+                  Your name
+                </label>
+                <input
+                  id="invitee-display-name"
+                  name="invitee-display-name"
+                  type="text"
+                  autoComplete="given-name"
+                  aria-invalid={showError}
+                  aria-describedby={showError ? errorId : undefined}
+                  value={displayName}
+                  onChange={(event) => {
+                    setDisplayName(event.target.value);
+                    if (showError) {
+                      setShowError(false);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      handleContinue();
+                    }
+                  }}
+                  placeholder="What should Dateflow call you?"
+                  className="w-full rounded-[1.2rem] border border-muted bg-white/90 px-4 py-3 text-body text-text shadow-sm outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/20"
+                />
+                {showError ? (
+                  <p id={errorId} className="text-caption text-error">
+                    Add your name so the shared result feels like both of you.
+                  </p>
+                ) : null}
+              </div>
+
+              <Button onClick={handleContinue}>Start in 60 seconds</Button>
             </div>
 
             <p className="mt-4 flex items-center gap-1.5 text-caption text-text-secondary">

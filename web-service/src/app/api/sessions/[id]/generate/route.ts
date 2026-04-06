@@ -25,6 +25,10 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const isAuthorized = await verifyQstashRequest(request.clone());
     if (!isAuthorized) {
+      console.warn(`[POST /api/sessions/${id}/generate] QStash authorization failed`, {
+        hasUpstashSignature: Boolean(request.headers.get("Upstash-Signature")),
+        upstashRegion: request.headers.get("Upstash-Region"),
+      });
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

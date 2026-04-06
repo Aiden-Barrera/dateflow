@@ -84,6 +84,26 @@ export function SwipeFlow({
   const nextVenue = venues[index + 1] ?? null;
   const progressLabel = useMemo(() => `Round ${round} of 3`, [round]);
 
+  const logVenuePhotoSnapshot = useCallback(
+    (source: "round" | "fallback", nextRound: number | null, nextVenues: readonly Venue[]) => {
+      const firstVenue = nextVenues[0] ?? null;
+
+      console.info("[SwipeFlow] Venue photo snapshot", {
+        source,
+        sessionId,
+        role,
+        round: nextRound,
+        venueCount: nextVenues.length,
+        firstVenueId: firstVenue?.id ?? null,
+        firstVenueName: firstVenue?.name ?? null,
+        photoUrl: firstVenue?.photoUrl ?? null,
+        photoUrlsCount: firstVenue?.photoUrls.length ?? 0,
+        firstPhotoUrl: firstVenue?.photoUrls[0] ?? null,
+      });
+    },
+    [role, sessionId],
+  );
+
   const fetchStatus = useCallback(async (): Promise<SessionStatusPayload> => {
     const response = await fetch(`/api/sessions/${sessionId}/status`);
 
@@ -112,10 +132,11 @@ export function SwipeFlow({
     }
 
     setVenues(body.venues);
+    logVenuePhotoSnapshot("fallback", null, body.venues);
     setFallbackVenue(resolvedVenue);
     setStatus("fallback");
     setStatusMessage("");
-  }, [sessionId]);
+  }, [logVenuePhotoSnapshot, sessionId]);
 
   const loadRound = useCallback(async (nextRound: number) => {
     if (
@@ -141,6 +162,7 @@ export function SwipeFlow({
       roundSwipesRef.current[nextRound] = [];
       setRound(nextRound);
       setVenues(body.venues);
+      logVenuePhotoSnapshot("round", nextRound, body.venues);
       setIndex(0);
       setStatus("ready");
       setStatusMessage("");
@@ -149,7 +171,7 @@ export function SwipeFlow({
         loadingRoundRef.current = null;
       }
     }
-  }, [sessionId]);
+  }, [logVenuePhotoSnapshot, sessionId]);
 
   const bootstrap = useCallback(async () => {
     setStatus("loading");

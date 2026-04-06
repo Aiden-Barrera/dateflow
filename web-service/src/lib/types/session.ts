@@ -29,6 +29,7 @@ export type Session = {
   readonly id: string;
   readonly status: SessionStatus;
   readonly creatorDisplayName: string;
+  readonly inviteeDisplayName: string | null;
   readonly createdAt: Date;
   readonly expiresAt: Date;
   readonly matchedVenueId: string | null;
@@ -60,6 +61,7 @@ export type SessionRow = {
   readonly id: string;
   readonly status: SessionStatus;
   readonly creator_display_name: string;
+  readonly invitee_display_name: string | null;
   readonly created_at: string;
   readonly expires_at: string;
   readonly matched_venue_id: string | null;
@@ -77,6 +79,7 @@ export function toSession(row: SessionRow): Session {
     id: row.id,
     status: row.status,
     creatorDisplayName: row.creator_display_name,
+    inviteeDisplayName: row.invitee_display_name,
     createdAt: new Date(row.created_at),
     expiresAt: new Date(row.expires_at),
     matchedVenueId: row.matched_venue_id,

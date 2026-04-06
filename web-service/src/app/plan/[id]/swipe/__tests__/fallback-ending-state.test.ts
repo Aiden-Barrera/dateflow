@@ -18,7 +18,7 @@ const venues: readonly Venue[] = [
     lng: -97.74,
     priceLevel: 2,
     rating: 4.7,
-    photoUrl: "https://dateflow.test/api/places/photos?name=places%2Fabc%2Fphotos%2Fref",
+    photoUrl: "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref",
     tags: ["cozy patio"],
     round: 2,
     position: 3,

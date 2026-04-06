@@ -117,6 +117,20 @@ function makeCuratedVenue(index: number): CuratedVenueCandidate {
     reviewCount: 200 + index,
     photoReference:
       index % 2 === 0 ? `places/place-${index}/photos/photo-${index}` : null,
+    photoReferences:
+      index % 2 === 0
+        ? [
+            `places/place-${index}/photos/photo-${index}`,
+            `places/place-${index}/photos/photo-${index}-b`,
+          ]
+        : [],
+    photoUrls:
+      index % 2 === 0
+        ? [
+            `/api/places/photos?name=places%2Fplace-${index}%2Fphotos%2Fphoto-${index}&maxHeightPx=1200`,
+            `/api/places/photos?name=places%2Fplace-${index}%2Fphotos%2Fphoto-${index}-b&maxHeightPx=1200`,
+          ]
+        : [],
     tags: ["unscored"],
     score: {
       categoryOverlap: 1,
@@ -144,6 +158,7 @@ function makeVenueRow(index: number): VenueRow {
     lng: -97.74,
     price_level: 1,
     rating: 4.5,
+    photo_urls: null,
     photo_url: null,
     tags: ["unscored"],
     round,
@@ -234,9 +249,14 @@ describe("generateVenues", () => {
     expect(candidatePoolRows[0].pool_id).toBe("pool-1");
     expect(candidatePoolRows[0].source_rank).toBe(1);
     expect(candidatePoolRows[0].photo_url).toBeNull();
+    expect(candidatePoolRows[0].photo_urls).toEqual([]);
     expect(candidatePoolRows[1].photo_url).toBe(
-      "https://dateflow.test/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
     );
+    expect(candidatePoolRows[1].photo_urls).toEqual([
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200",
+    ]);
 
     const insertedRows = mockUpsert.mock.calls[1][0];
     expect(insertedRows).toHaveLength(12);
@@ -245,9 +265,14 @@ describe("generateVenues", () => {
     expect(insertedRows[0].generation_batch_id).toBe("batch-1");
     expect(insertedRows[0].surfaced_cycle).toBe(1);
     expect(insertedRows[0].photo_url).toBeNull();
+    expect(insertedRows[0].photo_urls).toEqual([]);
     expect(insertedRows[1].photo_url).toBe(
-      "https://dateflow.test/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
     );
+    expect(insertedRows[1].photo_urls).toEqual([
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200",
+    ]);
     expect(insertedRows[4].round).toBe(2);
     expect(insertedRows[8].round).toBe(3);
 

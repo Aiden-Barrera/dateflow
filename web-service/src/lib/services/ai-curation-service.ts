@@ -63,6 +63,29 @@ type AiProviderCallResult = {
   };
 };
 
+function summarizeAiAdjustments(
+  finalists: readonly CuratedVenueCandidate[],
+  adjustments: readonly AiVenueAdjustment[],
+) {
+  const finalistByPlaceId = new Map(
+    finalists.map((candidate) => [candidate.placeId, candidate]),
+  );
+
+  return adjustments.map((adjustment) => {
+    const finalist = finalistByPlaceId.get(adjustment.placeId);
+
+    return {
+      placeId: adjustment.placeId,
+      name: finalist?.name ?? null,
+      firstDateSuitabilityBefore:
+        finalist?.score.firstDateSuitability ?? null,
+      firstDateSuitabilityAfter: adjustment.firstDateSuitability,
+      rerankAdjustment: adjustment.rerankAdjustment,
+      tags: adjustment.tags,
+    };
+  });
+}
+
 function roundBonus(category: Category, round: number): number {
   if (round === 2 && (category === "ACTIVITY" || category === "EVENT")) {
     return 0.15;
@@ -516,7 +539,9 @@ export async function scoreAndCurate(
         model: GEMINI_MODEL,
         promptVersion: aiConfig.promptVersion,
         latencyMs: Date.now() - startedAt,
+        finalistCount: finalists.length,
         usage: result.usage,
+        adjustments: summarizeAiAdjustments(finalists, result.adjustments),
       });
 
       return mergeAiAdjustments(deterministicRanking, result.adjustments);

@@ -14,6 +14,23 @@ describe("VenueCache", () => {
   let cache: VenueCache;
   let mockRedisClient: { get: ReturnType<typeof vi.fn>; set: ReturnType<typeof vi.fn> };
 
+  function makeCandidate(overrides: Partial<PlaceCandidate> = {}): PlaceCandidate {
+    return {
+      placeId: "place1",
+      name: "Cafe",
+      address: "456 Oak Ave",
+      location: { lat: 30.2672, lng: -97.7431, label: "Austin" },
+      types: ["cafe"],
+      priceLevel: 1,
+      rating: 4.0,
+      reviewCount: 50,
+      photoReference: null,
+      photoReferences: [],
+      photoUrls: [],
+      ...overrides,
+    };
+  }
+
   beforeEach(() => {
     // Reset mocks before each test
     vi.clearAllMocks();
@@ -86,17 +103,16 @@ describe("VenueCache", () => {
     it("stores candidates and retrieves them", async () => {
       const key = "test:venue:cache:key";
       const candidates: PlaceCandidate[] = [
-        {
-          placeId: "place1",
+        makeCandidate({
           name: "Restaurant A",
           address: "123 Main St",
-          location: { lat: 30.2672, lng: -97.7431, label: "Austin" },
           types: ["restaurant"],
           priceLevel: 2,
           rating: 4.5,
           reviewCount: 150,
           photoReference: "photo123",
-        },
+          photoReferences: ["photo123"],
+        }),
       ];
       const ttl = 3600;
 
@@ -126,21 +142,20 @@ describe("VenueCache", () => {
 
     it("parses JSON candidates from Redis", async () => {
       const key = "test:key";
-      const candidates: PlaceCandidate[] = [
-        {
-          placeId: "place1",
-          name: "Cafe",
-          address: "456 Oak Ave",
-          location: { lat: 30.2672, lng: -97.7431, label: "Austin" },
-          types: ["cafe"],
-          priceLevel: 1,
-          rating: 4.0,
-          reviewCount: 50,
-          photoReference: null,
-        },
-      ];
+      const candidates: PlaceCandidate[] = [makeCandidate()];
 
       mockRedisClient.get.mockResolvedValue(JSON.stringify(candidates));
+
+      const retrieved = await cache.get(key);
+
+      expect(retrieved).toEqual(candidates);
+    });
+
+    it("returns already-materialized cached arrays without reparsing", async () => {
+      const key = "test:key";
+      const candidates: PlaceCandidate[] = [makeCandidate()];
+
+      mockRedisClient.get.mockResolvedValue(candidates);
 
       const retrieved = await cache.get(key);
 

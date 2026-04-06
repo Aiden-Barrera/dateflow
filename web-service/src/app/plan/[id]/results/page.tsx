@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMatchResult } from "../../../../../lib/services/result-service";
-import { getSession } from "../../../../../lib/services/session-service";
+import { getMatchResult } from "../../../../lib/services/result-service";
+import { getSession } from "../../../../lib/services/session-service";
+import {
+  getBoundSessionRole,
+  getSessionRoleCookieName,
+} from "../../../../lib/session-role-access";
 import { ResultScreen } from "./result-screen";
 
 type PageProps = {
@@ -24,6 +29,14 @@ export async function generateMetadata({
     };
   }
 
+  const galleryImages =
+    matchResult.venue.photoUrls.length > 0
+      ? matchResult.venue.photoUrls
+      : matchResult.venue.photoUrl
+        ? [matchResult.venue.photoUrl]
+        : [];
+  const socialImages = galleryImages.slice(0, 3);
+
   return {
     title: `${session.creatorDisplayName} matched on ${matchResult.venue.name}`,
     description: "See your matched venue, Get directions, and add it to your calendar.",
@@ -33,21 +46,20 @@ export async function generateMetadata({
         "See your matched venue, Get directions, and add it to your calendar.",
       siteName: "Dateflow",
       type: "website",
-      images: matchResult.venue.photoUrl
-        ? [
-            {
-              url: matchResult.venue.photoUrl,
+      images:
+        socialImages.length > 0
+          ? socialImages.map((url) => ({
+              url,
               alt: matchResult.venue.name,
-            },
-          ]
-        : undefined,
+            }))
+          : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title: `${session.creatorDisplayName} matched on ${matchResult.venue.name}`,
       description:
         "See your matched venue, Get directions, and add it to your calendar.",
-      images: matchResult.venue.photoUrl ? [matchResult.venue.photoUrl] : undefined,
+      images: socialImages.length > 0 ? [...socialImages] : undefined,
     },
   };
 }
@@ -63,9 +75,19 @@ export default async function ResultPage({ params }: PageProps) {
     notFound();
   }
 
+  const cookieStore = await cookies();
+  const viewerRole = getBoundSessionRole(
+    id,
+    cookieStore.get(getSessionRoleCookieName(id))?.value,
+  );
+  const matchedWithName =
+    viewerRole === "a"
+      ? session.inviteeDisplayName
+      : session.creatorDisplayName;
+
   return (
     <ResultScreen
-      creatorName={session.creatorDisplayName}
+      matchedWithName={matchedWithName}
       matchResult={matchResult}
     />
   );

@@ -7,7 +7,22 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+function getMetadataBase(): URL | undefined {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (!appUrl) {
+    return undefined;
+  }
+
+  try {
+    return new URL(appUrl);
+  } catch {
+    return undefined;
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
   title: "Dateflow",
   description:
     "AI-powered first date planning. From 'we should hang out' to 'we have a plan' in under 2 minutes.",
