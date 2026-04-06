@@ -69,15 +69,23 @@ export class VenueCache {
         return null;
       }
 
-      if (typeof cached !== "string") {
-        console.warn(`[VenueCache.get] Non-string cached value for key "${key}"`, {
+      if (typeof cached === "string") {
+        return JSON.parse(cached) as readonly PlaceCandidate[];
+      }
+
+      if (Array.isArray(cached)) {
+        console.warn(`[VenueCache.get] Returning non-string cached value for key "${key}"`, {
           valueType: typeof cached,
           preview: this.getValuePreview(cached),
         });
+        return cached as readonly PlaceCandidate[];
       }
 
-      // Redis returns a string; parse it back to PlaceCandidate[]
-      return JSON.parse(cached as string) as readonly PlaceCandidate[];
+      console.warn(`[VenueCache.get] Unexpected cached value shape for key "${key}"`, {
+        valueType: typeof cached,
+        preview: this.getValuePreview(cached),
+      });
+      return null;
     } catch (err) {
       // Log errors but don't crash — cache misses are acceptable.
       // If Redis is down, we'll just call Google Places directly.

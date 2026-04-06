@@ -48,8 +48,24 @@ export async function searchNearbyWithCache(
     try {
       const cached = await cache.get(cacheKey);
       if (cached) {
+        console.info("[searchNearbyWithCache] cache hit", {
+          cacheKey,
+          candidateCount: cached.length,
+          locationLabel: location.label,
+          radius,
+          categories,
+          maxPrice,
+        });
         return cached;
       }
+
+      console.info("[searchNearbyWithCache] cache miss", {
+        cacheKey,
+        locationLabel: location.label,
+        radius,
+        categories,
+        maxPrice,
+      });
     } catch (err) {
       // Cache read failed — log and fall through to API call
       console.error("[searchNearbyWithCache] Cache read failed, calling API:", err);
@@ -60,12 +76,30 @@ export async function searchNearbyWithCache(
   const googleTypes = categoriesToGoogleTypes(categories);
 
   // Cache miss or error — call Google Places
+  console.info("[searchNearbyWithCache] fetching from Google Places", {
+    cacheKey,
+    googleTypes,
+    radius,
+    maxPrice,
+    locationLabel: location.label,
+  });
   const candidates = await searchNearby(location, radius, googleTypes, maxPrice);
+
+  console.info("[searchNearbyWithCache] Google Places returned candidates", {
+    cacheKey,
+    candidateCount: candidates.length,
+  });
 
   // Write to cache (fire-and-forget — don't block on this)
   if (cache && cacheKey) {
     cache.set(cacheKey, candidates, CACHE_TTL_SECONDS).catch((err) => {
       console.error("[searchNearbyWithCache] Cache write failed:", err);
+    });
+
+    console.info("[searchNearbyWithCache] scheduled cache write", {
+      cacheKey,
+      candidateCount: candidates.length,
+      ttlSeconds: CACHE_TTL_SECONDS,
     });
   }
 

@@ -210,7 +210,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
       categories,
       maxPrice
     );
-    const safeCandidates = applySafetyFilter(candidates);
+    const safeCandidates = applySafetyFilter(candidates, categories);
     const poolId = await createCandidatePool(sessionId, "initial_generation");
 
     await insertCandidatePoolItems(

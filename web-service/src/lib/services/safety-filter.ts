@@ -1,4 +1,6 @@
+import type { Category } from "../types/preference";
 import type { PlaceCandidate } from "../types/venue";
+import { mapGoogleTypeToCategory } from "./places-api-client";
 
 // ---------------------------------------------------------------------------
 // Hard rules — any venue with these types is immediately rejected
@@ -36,6 +38,28 @@ const UNSAFE_TYPES = new Set([
   "plumber",
   "hardware_store",
   "convenience_store",
+  "grocery_store",
+  "supermarket",
+]);
+
+const DATE_WORTHY_TYPES = new Set([
+  "restaurant",
+  "cafe",
+  "bakery",
+  "bar",
+  "night_club",
+  "movie_theater",
+  "performing_arts_theater",
+  "stadium",
+  "bowling_alley",
+  "amusement_park",
+  "aquarium",
+  "art_gallery",
+  "museum",
+  "park",
+  "spa",
+  "tourist_attraction",
+  "zoo",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -66,6 +90,10 @@ function hasUnsafeType(types: readonly string[]): boolean {
   return types.some((type) => UNSAFE_TYPES.has(type));
 }
 
+function hasDateWorthyType(types: readonly string[]): boolean {
+  return types.some((type) => DATE_WORTHY_TYPES.has(type));
+}
+
 /**
  * Returns true if the venue passes ALL hard safety rules.
  * A venue must clear every gate to be considered safe:
@@ -73,8 +101,24 @@ function hasUnsafeType(types: readonly string[]): boolean {
  *   2. Rating ≥ 3.5
  *   3. At least 50 reviews (social proof that it's a real, visited place)
  */
-function passesHardRules(candidate: PlaceCandidate): boolean {
+function matchesRequestedCategories(
+  candidate: PlaceCandidate,
+  requestedCategories?: readonly Category[],
+): boolean {
+  if (!requestedCategories || requestedCategories.length === 0) {
+    return true;
+  }
+
+  return requestedCategories.includes(mapGoogleTypeToCategory(candidate.types));
+}
+
+function passesHardRules(
+  candidate: PlaceCandidate,
+  requestedCategories?: readonly Category[],
+): boolean {
   if (hasUnsafeType(candidate.types)) return false;
+  if (!hasDateWorthyType(candidate.types)) return false;
+  if (!matchesRequestedCategories(candidate, requestedCategories)) return false;
   if (candidate.rating < MIN_RATING) return false;
   if (candidate.reviewCount < MIN_REVIEW_COUNT) return false;
   return true;
@@ -96,9 +140,12 @@ function passesHardRules(candidate: PlaceCandidate): boolean {
  * @returns           Only the candidates that pass all safety rules
  */
 export function applySafetyFilter(
-  candidates: readonly PlaceCandidate[]
+  candidates: readonly PlaceCandidate[],
+  requestedCategories?: readonly Category[],
 ): readonly PlaceCandidate[] {
-  return candidates.filter(passesHardRules);
+  return candidates.filter((candidate) =>
+    passesHardRules(candidate, requestedCategories),
+  );
 }
 
 /**
