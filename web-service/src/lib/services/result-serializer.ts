@@ -12,6 +12,7 @@ export type SerializedVenue = {
   readonly lng: number;
   readonly priceLevel: number;
   readonly rating: number;
+  readonly photoUrls: readonly string[];
   readonly photoUrl: string | null;
   readonly tags: readonly string[];
   readonly round: number;
@@ -28,9 +29,28 @@ export type SerializedMatchResult = {
 export function serializeMatchResult(
   matchResult: MatchResult,
 ): SerializedMatchResult {
+  const { venue } = matchResult;
+
   return {
     sessionId: matchResult.sessionId,
-    venue: matchResult.venue,
+    venue: {
+      id: venue.id,
+      sessionId: venue.sessionId,
+      placeId: venue.placeId,
+      name: venue.name,
+      category: venue.category,
+      address: venue.address,
+      lat: venue.lat,
+      lng: venue.lng,
+      priceLevel: venue.priceLevel,
+      rating: venue.rating,
+      photoUrls: [...venue.photoUrls],
+      photoUrl: venue.photoUrl,
+      tags: [...venue.tags],
+      round: venue.round,
+      position: venue.position,
+      score: venue.score,
+    },
     matchedAt: matchResult.matchedAt.toISOString(),
   };
 }

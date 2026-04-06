@@ -27,6 +27,7 @@ export function HookScreen({
 }: HookScreenProps) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [showError, setShowError] = useState(false);
+  const errorId = "invitee-display-name-error";
 
   function handleContinue() {
     const trimmed = displayName.trim();
@@ -83,6 +84,8 @@ export function HookScreen({
                   name="invitee-display-name"
                   type="text"
                   autoComplete="given-name"
+                  aria-invalid={showError}
+                  aria-describedby={showError ? errorId : undefined}
                   value={displayName}
                   onChange={(event) => {
                     setDisplayName(event.target.value);
@@ -100,7 +103,7 @@ export function HookScreen({
                   className="w-full rounded-[1.2rem] border border-muted bg-white/90 px-4 py-3 text-body text-text shadow-sm outline-none transition focus:border-secondary focus:ring-2 focus:ring-secondary/20"
                 />
                 {showError ? (
-                  <p className="text-caption text-error">
+                  <p id={errorId} className="text-caption text-error">
                     Add your name so the shared result feels like both of you.
                   </p>
                 ) : null}

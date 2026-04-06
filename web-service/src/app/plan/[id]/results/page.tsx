@@ -35,6 +35,7 @@ export async function generateMetadata({
       : matchResult.venue.photoUrl
         ? [matchResult.venue.photoUrl]
         : [];
+  const socialImages = galleryImages.slice(0, 3);
 
   return {
     title: `${session.creatorDisplayName} matched on ${matchResult.venue.name}`,
@@ -46,8 +47,8 @@ export async function generateMetadata({
       siteName: "Dateflow",
       type: "website",
       images:
-        galleryImages.length > 0
-          ? galleryImages.map((url) => ({
+        socialImages.length > 0
+          ? socialImages.map((url) => ({
               url,
               alt: matchResult.venue.name,
             }))
@@ -58,7 +59,7 @@ export async function generateMetadata({
       title: `${session.creatorDisplayName} matched on ${matchResult.venue.name}`,
       description:
         "See your matched venue, Get directions, and add it to your calendar.",
-      images: galleryImages.length > 0 ? [...galleryImages] : undefined,
+      images: socialImages.length > 0 ? [...socialImages] : undefined,
     },
   };
 }

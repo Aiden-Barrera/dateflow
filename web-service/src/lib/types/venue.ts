@@ -1,4 +1,5 @@
 import type { Category, Location } from "./preference";
+import { normalizeProxiedPhotoUrl } from "../places-photo-url";
 
 /**
  * The five independent scoring dimensions that measure how well a venue
@@ -124,30 +125,12 @@ export type VenueRow = {
   readonly score_time_of_day_fit: number;
 };
 
-function normalizePhotoUrl(photoUrl: string): string {
-  if (photoUrl.startsWith("/")) {
-    return photoUrl;
-  }
-
-  try {
-    const parsed = new URL(photoUrl);
-
-    if (parsed.pathname === "/api/places/photos") {
-      return `${parsed.pathname}${parsed.search}`;
-    }
-  } catch {
-    return photoUrl;
-  }
-
-  return photoUrl;
-}
-
 function resolvePhotoUrls(row: Pick<VenueRow, "photo_url" | "photo_urls">): readonly string[] {
   if (Array.isArray(row.photo_urls) && row.photo_urls.length > 0) {
-    return row.photo_urls.map(normalizePhotoUrl);
+    return row.photo_urls.map(normalizeProxiedPhotoUrl);
   }
 
-  return row.photo_url ? [normalizePhotoUrl(row.photo_url)] : [];
+  return row.photo_url ? [normalizeProxiedPhotoUrl(row.photo_url)] : [];
 }
 
 /**
