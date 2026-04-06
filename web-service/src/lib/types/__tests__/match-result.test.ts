@@ -44,4 +44,44 @@ describe("match result type mappers", () => {
     ]);
     expect(result.venue.tags).toEqual(["cozy", "patio"]);
   });
+
+  it("normalizes persisted absolute proxy photo urls back to relative paths", () => {
+    const row: MatchResultRow = {
+      session_id: "session-2",
+      matched_at: "2026-04-02T19:30:00Z",
+      id: "venue-22",
+      place_id: "place-22",
+      name: "Branch Brook",
+      category: "ACTIVITY",
+      address: "22 Main St",
+      lat: 40.75,
+      lng: -74.18,
+      price_level: 2,
+      rating: 4.7,
+      photo_url:
+        "https://dateflow.test/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+      photo_urls: [
+        "https://dateflow.test/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+        "https://dateflow.test/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-b&maxHeightPx=1200",
+      ],
+      tags: ["playful"],
+      round: 1,
+      position: 1,
+      score_category_overlap: 0.9,
+      score_distance_to_midpoint: 0.8,
+      score_first_date_suitability: 0.9,
+      score_quality_signal: 0.85,
+      score_time_of_day_fit: 0.7,
+    };
+
+    const result = toMatchResult(row);
+
+    expect(result.venue.photoUrl).toBe(
+      "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+    );
+    expect(result.venue.photoUrls).toEqual([
+      "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-b&maxHeightPx=1200",
+    ]);
+  });
 });

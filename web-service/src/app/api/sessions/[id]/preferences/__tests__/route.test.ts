@@ -12,8 +12,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // without touching a database.
 
 const mockGetSession = vi.fn();
+const mockSetInviteeDisplayName = vi.fn();
 vi.mock("../../../../../../lib/services/session-service", () => ({
   getSession: (...args: unknown[]) => mockGetSession(...args),
+  sanitizeDisplayName: (value: string) => value.trim(),
+  setInviteeDisplayName: (...args: unknown[]) => mockSetInviteeDisplayName(...args),
 }));
 
 const mockGetPreferences = vi.fn();
@@ -62,6 +65,7 @@ function makeParams(id = SESSION_ID) {
 /** A valid preference payload — the baseline for tests that modify one field */
 const validBody = {
   role: "b",
+  displayName: "Jordan",
   location: { lat: 30.2672, lng: -97.7431, label: "Downtown Austin" },
   budget: "MODERATE",
   categories: ["RESTAURANT", "BAR"],
@@ -72,6 +76,7 @@ const fakeSession = {
   id: SESSION_ID,
   status: "pending_b",
   creatorDisplayName: "Alex",
+  inviteeDisplayName: null,
   createdAt: new Date("2026-03-27T12:00:00Z"),
   expiresAt: new Date("2026-03-29T12:00:00Z"),
   matchedVenueId: null,
@@ -104,6 +109,7 @@ describe("POST /api/sessions/[id]/preferences", () => {
     mockGetSession.mockResolvedValue(fakeSession);
     mockGetPreferences.mockResolvedValue([]);
     mockSubmitPreference.mockResolvedValue(fakePreference);
+    mockSetInviteeDisplayName.mockResolvedValue(undefined);
     mockEnqueueVenueGeneration.mockResolvedValue(undefined);
     mockGenerateVenues.mockResolvedValue(undefined);
     mockGenerateDemoVenues.mockResolvedValue(undefined);
@@ -132,7 +138,18 @@ describe("POST /api/sessions/[id]/preferences", () => {
       budget: "MODERATE",
       categories: ["RESTAURANT", "BAR"],
     });
+    expect(mockSetInviteeDisplayName).toHaveBeenCalledWith(SESSION_ID, "Jordan");
     expect(mockEnqueueVenueGeneration).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when role b does not provide a display name", async () => {
+    const { displayName, ...bodyWithoutName } = validBody;
+
+    const response = await POST(makePostRequest(bodyWithoutName), makeParams());
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("displayName is required");
   });
 
   it("binds the submitted role to the browser with a session cookie", async () => {

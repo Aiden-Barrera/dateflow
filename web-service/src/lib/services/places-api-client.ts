@@ -50,13 +50,7 @@ export function buildGooglePlacePhotoUrl(
     ? photoReference
     : `places/${photoReference}`;
   const photoQuery = `name=${encodeURIComponent(photoPath)}&maxHeightPx=${DEFAULT_PHOTO_MAX_HEIGHT_PX}`;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-
-  if (!appUrl) {
-    return `${PLACES_PHOTO_ROUTE}?${photoQuery}`;
-  }
-
-  return `${appUrl}${PLACES_PHOTO_ROUTE}?${photoQuery}`;
+  return `${PLACES_PHOTO_ROUTE}?${photoQuery}`;
 }
 
 export function buildGooglePlacePhotoUrls(
@@ -232,9 +226,6 @@ export async function searchNearby(
         radius,
       },
     },
-    ...(maxPrice > 0 && {
-      maxPriceLevel: maxPrice,
-    }),
   };
 
   const response = await fetch(PLACES_API_URL, {
@@ -249,14 +240,30 @@ export async function searchNearby(
 
   if (!response.ok) {
     const statusText = response.statusText;
-    throw new Error(`Google Places API error: ${response.status} ${statusText}`);
+    const errorBody = await response.text();
+    const trimmedErrorBody = errorBody.trim();
+
+    if (trimmedErrorBody) {
+      console.error("[Google Places] searchNearby failed", {
+        status: response.status,
+        statusText,
+        body: trimmedErrorBody,
+      });
+    }
+
+    throw new Error(
+      trimmedErrorBody
+        ? `Google Places API error: ${response.status} ${statusText} - ${trimmedErrorBody}`
+        : `Google Places API error: ${response.status} ${statusText}`,
+    );
   }
 
   const data = await response.json();
   const places: readonly GooglePlace[] = data.places ?? [];
 
-  return places.map((place) => {
+  const candidates = places.map((place) => {
     const photoReferences = (place.photos ?? []).map((photo) => photo.name);
+    const priceLevel = parsePriceLevel(place.priceLevel);
 
     return {
       placeId: place.id,
@@ -268,7 +275,7 @@ export async function searchNearby(
         label: place.displayName.text,
       },
       types: place.types,
-      priceLevel: parsePriceLevel(place.priceLevel),
+      priceLevel,
       rating: place.rating ?? 0,
       reviewCount: place.userRatingCount ?? 0,
       photoReferences,
@@ -276,4 +283,13 @@ export async function searchNearby(
       photoUrls: buildGooglePlacePhotoUrls(photoReferences),
     };
   });
+
+  if (maxPrice <= 0) {
+    return candidates;
+  }
+
+  return candidates.filter(
+    (candidate) =>
+      candidate.priceLevel === 0 || candidate.priceLevel <= maxPrice,
+  );
 }

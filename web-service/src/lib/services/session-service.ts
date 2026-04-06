@@ -32,6 +32,10 @@ function validateDisplayName(raw: string): string {
   return trimmed;
 }
 
+export function sanitizeDisplayName(raw: string): string {
+  return validateDisplayName(raw);
+}
+
 /**
  * Creates a new planning session.
  *
@@ -56,6 +60,23 @@ export async function createSession(
   }
 
   return toSession(data);
+}
+
+export async function setInviteeDisplayName(
+  sessionId: string,
+  inviteeDisplayName: string,
+): Promise<void> {
+  const name = validateDisplayName(inviteeDisplayName);
+  const supabase = getSupabaseServerClient();
+
+  const { error } = await supabase
+    .from("sessions")
+    .update({ invitee_display_name: name })
+    .eq("id", sessionId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 /**

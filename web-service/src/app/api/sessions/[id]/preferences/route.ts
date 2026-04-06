@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { enqueueVenueGeneration } from "../../../../../lib/qstash";
-import { getSession } from "../../../../../lib/services/session-service";
+import {
+  getSession,
+  sanitizeDisplayName,
+  setInviteeDisplayName,
+} from "../../../../../lib/services/session-service";
 import {
   getPreferences,
   submitPreference,
@@ -42,7 +46,15 @@ const SESSION_ID_PATTERN =
 // ---------------------------------------------------------------------------
 
 type ValidationResult =
-  | { valid: true; role: Role; location: { lat: number; lng: number; label: string }; budget: BudgetLevel; categories: Category[]; demo: boolean }
+  | {
+      valid: true;
+      role: Role;
+      displayName: string | null;
+      location: { lat: number; lng: number; label: string };
+      budget: BudgetLevel;
+      categories: Category[];
+      demo: boolean;
+    }
   | { valid: false; error: string };
 
 function validateBody(body: unknown): ValidationResult {
@@ -50,11 +62,27 @@ function validateBody(body: unknown): ValidationResult {
     return { valid: false, error: "Request body must be a JSON object" };
   }
 
-  const { role, location, budget, categories, demo } = body as Record<string, unknown>;
+  const { role, displayName, location, budget, categories, demo } = body as Record<string, unknown>;
 
   // Role
   if (!role || !VALID_ROLES.includes(role as Role)) {
     return { valid: false, error: "role must be 'a' or 'b'" };
+  }
+
+  let validatedDisplayName: string | null = null;
+  if (role === "b") {
+    if (typeof displayName !== "string") {
+      return { valid: false, error: "displayName is required" };
+    }
+
+    try {
+      validatedDisplayName = sanitizeDisplayName(displayName);
+    } catch (error) {
+      return {
+        valid: false,
+        error: error instanceof Error ? error.message : "displayName is invalid",
+      };
+    }
   }
 
   // Location
@@ -100,6 +128,7 @@ function validateBody(body: unknown): ValidationResult {
   return {
     valid: true,
     role: role as Role,
+    displayName: validatedDisplayName,
     location: { lat: lat as number, lng: lng as number, label: (label as string).trim() },
     budget: budget as BudgetLevel,
     categories: categories as Category[],
@@ -155,7 +184,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const { role, location, budget, categories, demo } = validation;
+  const { role, displayName, location, budget, categories, demo } = validation;
 
   try {
     // 3. Check session exists
@@ -203,6 +232,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       budget,
       categories,
     });
+
+    if (role === "b" && displayName) {
+      await setInviteeDisplayName(id, displayName);
+    }
 
     const response = NextResponse.json(
       { preference: serializePreference(preference) },

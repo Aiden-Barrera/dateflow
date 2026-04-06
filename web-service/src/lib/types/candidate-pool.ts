@@ -76,6 +76,24 @@ export type GenerationBatchRow = {
   readonly created_at: string;
 };
 
+function normalizePhotoUrl(photoUrl: string): string {
+  if (photoUrl.startsWith("/")) {
+    return photoUrl;
+  }
+
+  try {
+    const parsed = new URL(photoUrl);
+
+    if (parsed.pathname === "/api/places/photos") {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    return photoUrl;
+  }
+
+  return photoUrl;
+}
+
 export function toSessionCandidatePool(
   row: SessionCandidatePoolRow,
 ): SessionCandidatePool {
@@ -91,10 +109,10 @@ function resolvePhotoUrls(
   row: Pick<SessionCandidatePoolItemRow, "photo_url" | "photo_urls">,
 ): readonly string[] {
   if (Array.isArray(row.photo_urls) && row.photo_urls.length > 0) {
-    return row.photo_urls;
+    return row.photo_urls.map(normalizePhotoUrl);
   }
 
-  return row.photo_url ? [row.photo_url] : [];
+  return row.photo_url ? [normalizePhotoUrl(row.photo_url)] : [];
 }
 
 export function toSessionCandidatePoolItem(

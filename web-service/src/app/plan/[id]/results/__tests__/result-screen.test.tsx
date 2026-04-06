@@ -13,7 +13,7 @@ describe("ResultScreen", () => {
   it("renders a multi-photo filmstrip when the matched venue has more than one image", () => {
     const html = renderToStaticMarkup(
       <ResultScreen
-        creatorName="Alex"
+        matchedWithName="Alex"
         matchResult={{
           sessionId: "session-1",
           matchedAt: new Date("2026-04-02T18:30:00Z"),
@@ -52,5 +52,44 @@ describe("ResultScreen", () => {
 
     expect(html).toContain("Photo gallery");
     expect(html).toContain("3 photos");
+  });
+
+  it("falls back to neutral shared-like copy when the counterpart name is unknown", () => {
+    const html = renderToStaticMarkup(
+      <ResultScreen
+        matchedWithName={null}
+        matchResult={{
+          sessionId: "session-1",
+          matchedAt: new Date("2026-04-02T18:30:00Z"),
+          venue: {
+            id: "venue-12",
+            sessionId: "session-1",
+            placeId: "place-12",
+            name: "Cafe Blue",
+            category: "RESTAURANT",
+            address: "12 Main St, Austin, TX",
+            lat: 30.26,
+            lng: -97.74,
+            priceLevel: 2,
+            rating: 4.6,
+            photoUrls: [],
+            photoUrl: null,
+            tags: ["cozy patio"],
+            round: 1,
+            position: 1,
+            score: {
+              categoryOverlap: 0.9,
+              distanceToMidpoint: 0.8,
+              firstDateSuitability: 0.95,
+              qualitySignal: 0.85,
+              timeOfDayFit: 0.75,
+              composite: 0.875,
+            },
+          },
+        }}
+      />,
+    );
+
+    expect(html).toContain("You both liked this spot.");
   });
 });

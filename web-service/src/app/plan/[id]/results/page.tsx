@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { getMatchResult } from "../../../../../lib/services/result-service";
-import { getSession } from "../../../../../lib/services/session-service";
+import { getMatchResult } from "../../../../lib/services/result-service";
+import { getSession } from "../../../../lib/services/session-service";
+import {
+  getBoundSessionRole,
+  getSessionRoleCookieName,
+} from "../../../../lib/session-role-access";
 import { ResultScreen } from "./result-screen";
 
 type PageProps = {
@@ -69,9 +74,19 @@ export default async function ResultPage({ params }: PageProps) {
     notFound();
   }
 
+  const cookieStore = await cookies();
+  const viewerRole = getBoundSessionRole(
+    id,
+    cookieStore.get(getSessionRoleCookieName(id))?.value,
+  );
+  const matchedWithName =
+    viewerRole === "a"
+      ? session.inviteeDisplayName
+      : session.creatorDisplayName;
+
   return (
     <ResultScreen
-      creatorName={session.creatorDisplayName}
+      matchedWithName={matchedWithName}
       matchResult={matchResult}
     />
   );

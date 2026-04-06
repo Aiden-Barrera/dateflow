@@ -124,12 +124,30 @@ export type VenueRow = {
   readonly score_time_of_day_fit: number;
 };
 
-function resolvePhotoUrls(row: Pick<VenueRow, "photo_url" | "photo_urls">): readonly string[] {
-  if (Array.isArray(row.photo_urls) && row.photo_urls.length > 0) {
-    return row.photo_urls;
+function normalizePhotoUrl(photoUrl: string): string {
+  if (photoUrl.startsWith("/")) {
+    return photoUrl;
   }
 
-  return row.photo_url ? [row.photo_url] : [];
+  try {
+    const parsed = new URL(photoUrl);
+
+    if (parsed.pathname === "/api/places/photos") {
+      return `${parsed.pathname}${parsed.search}`;
+    }
+  } catch {
+    return photoUrl;
+  }
+
+  return photoUrl;
+}
+
+function resolvePhotoUrls(row: Pick<VenueRow, "photo_url" | "photo_urls">): readonly string[] {
+  if (Array.isArray(row.photo_urls) && row.photo_urls.length > 0) {
+    return row.photo_urls.map(normalizePhotoUrl);
+  }
+
+  return row.photo_url ? [normalizePhotoUrl(row.photo_url)] : [];
 }
 
 /**

@@ -8,6 +8,22 @@ function isUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
 
+function hasWrappedQuotes(value: string | undefined): boolean {
+  return Boolean(value && value.length >= 2 && value.startsWith("\"") && value.endsWith("\""));
+}
+
+function getQstashVerificationUrl(request: Request): string {
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedHost = request.headers.get("x-forwarded-host");
+
+  if (forwardedProto && forwardedHost) {
+    const requestUrl = new URL(request.url);
+    return `${forwardedProto}://${forwardedHost}${requestUrl.pathname}${requestUrl.search}`;
+  }
+
+  return request.url;
+}
+
 export function getQstashReadiness(): {
   readonly ready: boolean;
   readonly missing: readonly string[];
@@ -48,8 +64,17 @@ export async function verifyQstashRequest(request: Request): Promise<boolean> {
   const signature = request.headers.get("Upstash-Signature");
   const currentSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
   const nextSigningKey = process.env.QSTASH_NEXT_SIGNING_KEY;
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const forwardedHost = request.headers.get("x-forwarded-host");
 
   if (!signature || !currentSigningKey || !nextSigningKey) {
+    console.warn("[QStash verify] Missing verification inputs", {
+      hasSignature: Boolean(signature),
+      hasCurrentSigningKey: Boolean(currentSigningKey),
+      hasNextSigningKey: Boolean(nextSigningKey),
+      currentSigningKeyWrappedInQuotes: hasWrappedQuotes(currentSigningKey),
+      nextSigningKeyWrappedInQuotes: hasWrappedQuotes(nextSigningKey),
+    });
     return false;
   }
 
@@ -59,16 +84,30 @@ export async function verifyQstashRequest(request: Request): Promise<boolean> {
   });
 
   const body = await request.text();
+  const verificationUrl =
+    forwardedProto && forwardedHost
+      ? `${forwardedProto}://${forwardedHost}${new URL(request.url).pathname}${new URL(request.url).search}`
+      : getQstashVerificationUrl(request);
 
   try {
     return await receiver.verify({
       signature,
       body,
-      url: request.url,
+      url: verificationUrl,
       upstashRegion: request.headers.get("Upstash-Region") ?? undefined,
     });
   } catch (err) {
     if (err instanceof SignatureError) {
+      console.warn("[QStash verify] Signature verification failed", {
+        url: verificationUrl,
+        requestUrl: request.url,
+        forwardedProto,
+        forwardedHost,
+        upstashRegion: request.headers.get("Upstash-Region"),
+        signaturePrefix: signature.slice(0, 16),
+        currentSigningKeyWrappedInQuotes: hasWrappedQuotes(currentSigningKey),
+        nextSigningKeyWrappedInQuotes: hasWrappedQuotes(nextSigningKey),
+      });
       return false;
     }
 

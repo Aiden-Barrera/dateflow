@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Venue } from "../../../../../../lib/types/venue";
-import { getVenueSlides } from "../swipe-deck-card";
+import { clampSlideIndex, getVenueSlides } from "../swipe-deck-card";
 
 function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
@@ -58,5 +58,12 @@ describe("getVenueSlides", () => {
     expect(getVenueSlides(venue)).toEqual([
       "https://example.com/legacy-photo.jpg",
     ]);
+  });
+
+  it("wraps gallery indexes across the available photo count", () => {
+    expect(clampSlideIndex(-1, 3)).toBe(2);
+    expect(clampSlideIndex(3, 3)).toBe(0);
+    expect(clampSlideIndex(1, 3)).toBe(1);
+    expect(clampSlideIndex(0, 0)).toBe(0);
   });
 });

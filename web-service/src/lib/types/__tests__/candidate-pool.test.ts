@@ -93,6 +93,41 @@ describe("candidate pool type mappers", () => {
     expect(item.photoUrls).toEqual(["https://example.com/legacy-photo.jpg"]);
   });
 
+  it("normalizes persisted absolute proxy photo urls back to relative paths", () => {
+    const row: SessionCandidatePoolItemRow = {
+      id: "item-3",
+      pool_id: "pool-1",
+      place_id: "place-3",
+      name: "Skate Night",
+      category: "ACTIVITY",
+      address: "3 Main St",
+      lat: 30.28,
+      lng: -97.76,
+      price_level: 2,
+      rating: 4.5,
+      photo_url:
+        "https://dateflow.test/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+      photo_urls: [
+        "https://dateflow.test/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+        "https://dateflow.test/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-b&maxHeightPx=1200",
+      ],
+      raw_types: ["roller_skating_rink"],
+      raw_tags: ["playful"],
+      source_rank: 2,
+      created_at: "2026-04-02T10:09:00Z",
+    };
+
+    const item = toSessionCandidatePoolItem(row);
+
+    expect(item.photoUrl).toBe(
+      "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+    );
+    expect(item.photoUrls).toEqual([
+      "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-a&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref-b&maxHeightPx=1200",
+    ]);
+  });
+
   it("maps a generation batch row to the app-level shape", () => {
     const row: GenerationBatchRow = {
       id: "batch-1",

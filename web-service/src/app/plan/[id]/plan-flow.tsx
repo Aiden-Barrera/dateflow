@@ -38,6 +38,7 @@ export function PlanFlow({
   const router = useRouter();
   const [step, setStep] = useState<FlowStep>(initialStep);
   const [location, setLocation] = useState<Location | null>(null);
+  const [inviteeDisplayName, setInviteeDisplayName] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function submitPreferences(
@@ -53,6 +54,7 @@ export function PlanFlow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             role: "b",
+            displayName: inviteeDisplayName,
             location: { lat: loc.lat, lng: loc.lng, label: loc.label },
             budget: vibeBudget,
             categories: vibeCategories,
@@ -95,9 +97,13 @@ export function PlanFlow({
 
   if (step === "hook") {
     return (
-      <HookScreen
-        creatorName={creatorName}
-        onContinue={() => setStep("location")}
+        <HookScreen
+          creatorName={creatorName}
+          initialDisplayName={inviteeDisplayName}
+          onContinue={(displayName) => {
+            setInviteeDisplayName(displayName);
+            setStep("location");
+          }}
       />
     );
   }

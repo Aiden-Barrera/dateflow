@@ -16,7 +16,7 @@ import {
 } from "./result-screen-state";
 
 type ResultScreenProps = {
-  readonly creatorName: string;
+  readonly matchedWithName: string | null;
   readonly matchResult: MatchResult;
 };
 
@@ -28,7 +28,7 @@ const CATEGORY_LABELS: Record<Category, string> = {
 };
 
 export function ResultScreen({
-  creatorName,
+  matchedWithName,
   matchResult,
 }: ResultScreenProps) {
   const { venue } = matchResult;
@@ -50,6 +50,10 @@ export function ResultScreen({
 
     return () => window.cancelAnimationFrame(frame);
   }, [venue]);
+
+  const sharedLikeCopy = matchedWithName
+    ? `You and ${matchedWithName} both liked this spot.`
+    : "You both liked this spot.";
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
@@ -82,7 +86,7 @@ export function ResultScreen({
               It’s a match
             </h1>
             <p className="mt-5 max-w-xl text-[1.05rem] leading-7 text-text-secondary">
-              You and {creatorName} both liked this spot. The hard part is over.
+              {sharedLikeCopy} The hard part is over.
               Now you just need the plan.
             </p>
 
@@ -190,7 +194,9 @@ export function ResultScreen({
                   </div>
                   <div className="inline-flex items-center gap-2 rounded-full bg-primary-muted px-3 py-1.5 text-primary">
                     <HeartIcon />
-                    You and {creatorName} both liked this spot
+                    {matchedWithName
+                      ? `You and ${matchedWithName} both liked this spot`
+                      : "You both liked this spot"}
                   </div>
                 </div>
               </div>

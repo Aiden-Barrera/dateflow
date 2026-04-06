@@ -63,6 +63,7 @@ export function SwipeDeckCard({
   const [animatingSwipe, setAnimatingSwipe] = useState<SwipeAnimation | null>(null);
   const [isSettled, setIsSettled] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
 
   useEffect(() => {
     let secondFrame: number | null = null;
@@ -93,8 +94,13 @@ export function SwipeDeckCard({
     return () => media.removeEventListener("change", updatePreference);
   }, []);
 
+  useEffect(() => {
+    setActiveSlideIndex(0);
+  }, [venue.id]);
+
   const currentSlides = getVenueSlides(venue);
   const nextSlides = nextVenue ? getVenueSlides(nextVenue) : [];
+  const activeSlide = currentSlides[activeSlideIndex] ?? currentSlides[0] ?? null;
   const dragOffsetX = dragState?.offsetX ?? 0;
   const dragOffsetY = dragState?.offsetY ?? 0;
   const dragRatio = clamp(dragOffsetX / SWIPE_TRIGGER_PX, -1.3, 1.3);
@@ -250,6 +256,14 @@ export function SwipeDeckCard({
     }
   }
 
+  function moveToSlide(nextIndex: number) {
+    if (currentSlides.length <= 1) {
+      return;
+    }
+
+    setActiveSlideIndex(clampSlideIndex(nextIndex, currentSlides.length));
+  }
+
   return (
     <div className="relative min-h-[640px]">
       <div
@@ -367,12 +381,13 @@ export function SwipeDeckCard({
         </div>
 
         <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
-          {currentSlides.length > 0 ? (
+          {activeSlide ? (
             <Image
-              src={currentSlides[0]}
+              src={activeSlide}
               alt={venue.name}
               fill
               sizes="(max-width: 768px) 100vw, 480px"
+              loading="eager"
               className="object-cover"
               unoptimized
               style={{
@@ -395,7 +410,7 @@ export function SwipeDeckCard({
             </div>
           )}
 
-          <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,transparent,rgba(28,25,23,0.56))]" />
+          <div className="absolute inset-x-0 bottom-0 h-18 bg-[linear-gradient(180deg,transparent,rgba(28,25,23,0.26))]" />
           <div
             className="absolute inset-0"
             style={{
@@ -411,60 +426,38 @@ export function SwipeDeckCard({
             {CATEGORY_LABELS[venue.category]}
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 z-20 flex items-end justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-caption font-semibold uppercase tracking-[0.18em] text-white/74">
-                Venue {cardIndex} of {totalCards}
-              </p>
-              <h2 className="mt-2 text-[clamp(2rem,5vw,2.7rem)] font-semibold leading-[0.97] tracking-[-0.04em] text-white">
-                {venue.name}
-              </h2>
-            </div>
-            <div className="hidden sm:block">
-              <PriceBadge priceLevel={venue.priceLevel} />
-            </div>
-          </div>
-
           {currentSlides.length > 1 ? (
-            <div className="absolute right-4 top-16 z-20 flex items-center gap-2 rounded-[1.15rem] border border-white/24 bg-black/22 px-2.5 py-2 text-white backdrop-blur-md">
-              <div className="flex -space-x-3">
-                {currentSlides.slice(0, 3).map((slide, slideIndex) => (
-                  <div
-                    key={`${slide}-${slideIndex}`}
-                    className="relative h-11 w-11 overflow-hidden rounded-[0.95rem] border border-white/45 shadow-[0_8px_18px_rgba(15,23,42,0.28)]"
-                  >
-                    <Image
-                      src={slide}
-                      alt=""
-                      fill
-                      sizes="44px"
-                      className="object-cover"
-                      unoptimized
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-white/68">
-                  Gallery
-                </p>
-                <p className="text-caption font-medium text-white">
-                  {currentSlides.length} photos
-                </p>
-              </div>
-            </div>
+            <>
+              <button
+                type="button"
+                aria-label="Show previous venue photo"
+                className="absolute left-6 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/20 text-white shadow-[0_10px_24px_rgba(15,23,42,0.24)] backdrop-blur-md transition-colors hover:bg-black/32"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  moveToSlide(activeSlideIndex - 1);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                <ChevronIcon direction="left" />
+              </button>
+              <button
+                type="button"
+                aria-label="Show next venue photo"
+                className="absolute right-6 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/20 text-white shadow-[0_10px_24px_rgba(15,23,42,0.24)] backdrop-blur-md transition-colors hover:bg-black/32"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  moveToSlide(activeSlideIndex + 1);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                <ChevronIcon direction="right" />
+              </button>
+            </>
           ) : null}
 
           {currentSlides.length > 1 ? (
-            <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/20 px-2 py-1 backdrop-blur-sm">
-              {currentSlides.map((slide, slideIndex) => (
-                <span
-                  key={`${slide}-${slideIndex}`}
-                  className={`rounded-full transition-all duration-200 ${
-                    slideIndex === 0 ? "h-1.5 w-5 bg-white" : "h-1.5 w-1.5 bg-white/45"
-                  }`}
-                />
-              ))}
+            <div className="absolute right-4 top-4 z-20 rounded-full border border-white/28 bg-black/20 px-3 py-1.5 text-caption font-medium text-white shadow-[0_10px_24px_rgba(15,23,42,0.22)] backdrop-blur-md">
+              {activeSlideIndex + 1} / {currentSlides.length}
             </div>
           ) : null}
         </div>
@@ -472,8 +465,16 @@ export function SwipeDeckCard({
         <div className="space-y-4 p-6">
           <div className="rounded-[1.5rem] border border-muted bg-bg/72 p-4">
             <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-body text-text-secondary">{venue.address}</p>
+              <div className="min-w-0 space-y-3">
+                <div>
+                  <p className="text-caption font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                    Venue {cardIndex} of {totalCards}
+                  </p>
+                  <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-text">
+                    {venue.name}
+                  </h2>
+                  <p className="mt-2 text-body text-text-secondary">{venue.address}</p>
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <InfoPill>
                     <StarIcon />
@@ -491,6 +492,55 @@ export function SwipeDeckCard({
               </div>
             </div>
           </div>
+
+          {currentSlides.length > 1 ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-caption font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                  Venue photos
+                </p>
+                <div className="flex items-center gap-1.5">
+                  {currentSlides.map((slide, slideIndex) => (
+                    <button
+                      type="button"
+                      key={`${slide}-${slideIndex}`}
+                      aria-label={`Show photo ${slideIndex + 1} of ${currentSlides.length}`}
+                      className={`rounded-full transition-all duration-200 ${
+                        slideIndex === activeSlideIndex
+                          ? "h-1.5 w-5 bg-primary"
+                          : "h-1.5 w-1.5 bg-muted"
+                      }`}
+                      onClick={() => moveToSlide(slideIndex)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {currentSlides.map((slide, slideIndex) => (
+                  <button
+                    type="button"
+                    key={`${slide}-thumb-${slideIndex}`}
+                    aria-label={`Show photo ${slideIndex + 1} of ${currentSlides.length}`}
+                    className={`relative h-20 min-w-24 overflow-hidden rounded-[1.1rem] border bg-bg shadow-[0_10px_24px_rgba(45,42,38,0.08)] ${
+                      slideIndex === activeSlideIndex
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-muted"
+                    }`}
+                    onClick={() => moveToSlide(slideIndex)}
+                  >
+                    <Image
+                      src={slide}
+                      alt={`${venue.name} photo ${slideIndex + 1}`}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             {venue.tags.slice(0, 3).map((tag) => (
@@ -673,12 +723,49 @@ function HeartIcon() {
   );
 }
 
+function ChevronIcon({ direction }: { readonly direction: "left" | "right" }) {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {direction === "left" ? (
+        <path d="m15 18-6-6 6-6" />
+      ) : (
+        <path d="m9 18 6-6-6-6" />
+      )}
+    </svg>
+  );
+}
+
 export function getVenueSlides(venue: Venue): readonly string[] {
   if (venue.photoUrls.length > 0) {
     return venue.photoUrls;
   }
 
   return venue.photoUrl ? [venue.photoUrl] : [];
+}
+
+export function clampSlideIndex(index: number, totalSlides: number): number {
+  if (totalSlides <= 0) {
+    return 0;
+  }
+
+  if (index < 0) {
+    return totalSlides - 1;
+  }
+
+  if (index >= totalSlides) {
+    return 0;
+  }
+
+  return index;
 }
 
 function getCardTransform(
