@@ -94,10 +94,6 @@ export function SwipeDeckCard({
     return () => media.removeEventListener("change", updatePreference);
   }, []);
 
-  useEffect(() => {
-    setActiveSlideIndex(0);
-  }, [venue.id]);
-
   const currentSlides = getVenueSlides(venue);
   const nextSlides = nextVenue ? getVenueSlides(nextVenue) : [];
   const activeSlide = currentSlides[activeSlideIndex] ?? currentSlides[0] ?? null;
