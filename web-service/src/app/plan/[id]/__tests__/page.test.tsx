@@ -41,8 +41,8 @@ describe("/plan/[id] page", () => {
       id: "session-1",
       status: "matched",
       creatorDisplayName: "Alex",
-      createdAt: new Date("2026-04-02T18:30:00Z"),
-      expiresAt: new Date("2026-04-06T18:30:00Z"),
+      createdAt: new Date("2030-04-02T18:30:00Z"),
+      expiresAt: new Date("2030-04-06T18:30:00Z"),
       matchedVenueId: "venue-12",
     });
 
@@ -59,8 +59,8 @@ describe("/plan/[id] page", () => {
       id: "session-1",
       status: "ready_to_swipe",
       creatorDisplayName: "Alex",
-      createdAt: new Date("2026-04-02T18:30:00Z"),
-      expiresAt: new Date("2026-04-06T18:30:00Z"),
+      createdAt: new Date("2030-04-02T18:30:00Z"),
+      expiresAt: new Date("2030-04-06T18:30:00Z"),
       matchedVenueId: null,
     });
 
@@ -80,8 +80,8 @@ describe("/plan/[id] page", () => {
       id: "session-1",
       status: "ready_to_swipe",
       creatorDisplayName: "Alex",
-      createdAt: new Date("2026-04-02T18:30:00Z"),
-      expiresAt: new Date("2026-04-06T18:30:00Z"),
+      createdAt: new Date("2030-04-02T18:30:00Z"),
+      expiresAt: new Date("2030-04-06T18:30:00Z"),
       matchedVenueId: null,
     });
 
