@@ -61,7 +61,6 @@ classDiagram
         +sessionId: string
         +venue: Venue
         +matchedAt: Date
-        +directionsUrl: string
     }
 
     class DirectionsService {
@@ -84,19 +83,19 @@ classDiagram
 ### MatchResult
 **Type:** Entity
 **Purpose:** Represents the finalized result of a matched session. Combines the matched venue's full details with session metadata. This is the data structure that the result page renders.
-**Key fields:** `sessionId` (string), `venue` (Venue from DS-03), `matchedAt` (Date — when the match was detected), `directionsUrl` (string — pre-generated deep link to maps)
+**Key fields:** `sessionId` (string), `venue` (Venue from DS-03), `matchedAt` (Date — when the match was detected)
 
 ### DirectionsService
 **Type:** Service
-**Purpose:** Generates platform-appropriate deep links to map applications. On iOS, generates an Apple Maps link. On Android and desktop, generates a Google Maps link. Uses the venue's address for the destination.
+**Purpose:** Generates platform-appropriate deep links to map applications. On iOS, generates an Apple Maps link. On Android and desktop, generates a Google Maps link. Uses the venue's coordinates for the destination.
 **Key methods:**
-- `generateUrl(venue, platform)` — returns a URL string. Google Maps format: `https://www.google.com/maps/dir/?api=1&destination={encoded_address}`. Apple Maps format: `https://maps.apple.com/?daddr={encoded_address}`.
-- `detectPlatform(userAgent)` — parses the User-Agent header to determine if the client is iOS, Android, or desktop.
+- `generateUrl(venue, platform)` — returns a URL string. Google Maps format: `https://www.google.com/maps/dir/?api=1&destination={lat},{lng}`. Apple Maps format: `https://maps.apple.com/?daddr={lat},{lng}`.
+- `detectPlatform(userAgent)` — parses the User-Agent string to determine if the client is iOS, Android, or desktop. In the current implementation this is run on the client so the actual device opens the correct deep link.
 
 ### CalendarExportService
 **Type:** Service
 **Purpose:** Generates an ICS (iCalendar) file for the matched date. The file contains the venue name, address, and date/time. When downloaded, it triggers the device's native calendar add flow (Google Calendar, Apple Calendar, Outlook, etc.).
-**Key methods:** `generateICS(matchResult, dateTime)` — returns a string in ICS format. The `dateTime` parameter is the user's selected date/time from their availability preferences (DS-02). If no specific time was set, defaults to 7:00 PM on the next available day.
+**Key methods:** `generateICS(matchResult, dateTime)` — returns a string in ICS format. If `dateTime` is omitted, defaults to 7:00 PM UTC on the next day because the current product does not yet persist a richer availability-driven scheduling choice.
 
 ---
 
@@ -125,13 +124,13 @@ flowchart TD
     A["Both clients redirected to /plan/[id]/results<br/>(from DS-04 match detection)"]
     A --> B["Client sends GET /api/sessions/[id]/result"]
     B --> C["Server reads session + matched venue from DB"]
-    C --> D["DirectionsService.detectPlatform(userAgent)"]
-    D --> E["DirectionsService.generateUrl(venue, platform)"]
-    E --> F["Return MatchResult to client"]
+    C --> D["Return MatchResult to client"]
+    D --> E["Client detects platform from the real browser user agent"]
+    E --> F["DirectionsService.generateUrl(venue coordinates, platform)"]
     F --> G["Client renders match reveal page:<br/>venue name, photo, address, rating, tags"]
 
     G --> H{"User action"}
-    H -- "Taps 'Get Directions'" --> I["Open directionsUrl in new tab<br/>(deep links to native maps app)"]
+    H -- "Taps 'Get Directions'" --> I["Open client-generated directions URL in new tab<br/>(deep links to native maps app)"]
     H -- "Taps 'Add to Calendar'" --> J["Client sends GET /api/sessions/[id]/calendar"]
     J --> K["CalendarExportService.generateICS(matchResult, dateTime)"]
     K --> L["Return .ics file with Content-Disposition: attachment"]
@@ -146,7 +145,7 @@ flowchart TD
 | Risk | Impact | Mitigation |
 |---|---|---|
 | iOS Safari blocks the ICS download as a popup | Calendar export fails silently on the most common mobile browser | Serve the ICS file as a direct download with correct `Content-Type: text/calendar` and `Content-Disposition: attachment`. Test on iOS Safari specifically before launch. |
-| Google Maps deep link opens in browser instead of the native app | Worse UX on Android, user must manually switch to app | Use the `comgooglemaps://` scheme as primary with `https://www.google.com/maps/` as fallback. Test on Android Chrome. |
+| Google Maps deep link opens in browser instead of the native app | Worse UX on Android, user must manually switch to app | Use the web Google Maps directions URL for broad compatibility first. If native-app preference becomes important, add a separate Android-specific deep-link enhancement later. |
 | Venue data has changed since generation (closed, moved, etc.) | User shows up to a closed venue | Add a "last verified" note with the generation timestamp. Phase 2: re-verify venue status via Places API when the result page is loaded. |
 | User wants to share the result with their match | No built-in sharing mechanism for the result | Both users see the same result page at `/plan/[id]/results`. The URL is already shareable. Add "Share this plan" button that copies the URL. |
 
@@ -158,7 +157,7 @@ flowchart TD
 |---|---|---|
 | Result page | React Server Component (Next.js) | SSR for fast load, good link preview (Open Graph) |
 | ICS generation | ical.js (npm package) | Mature library for generating valid ICS files |
-| Platform detection | User-Agent parsing (server-side) | Determines Google Maps vs Apple Maps deep link |
+| Platform detection | User-Agent parsing (client-side) | Determines Google Maps vs Apple Maps deep link on the actual device opening the result page |
 | File download | Next.js API route with stream response | Serves ICS as downloadable file |
 
 ---
@@ -166,7 +165,7 @@ flowchart TD
 ## APIs
 
 ### GET /api/sessions/[id]/result
-**Purpose:** Retrieve the match result with full venue details and directions URL.
+**Purpose:** Retrieve the match result with full venue details.
 **Auth:** None.
 **Rate limit:** 30 per IP per minute.
 **Response (200):**
@@ -185,8 +184,7 @@ flowchart TD
       "photoUrl": "https://maps.googleapis.com/...",
       "tags": ["conversation-friendly", "outdoor-patio", "walkable"]
     },
-    "matchedAt": "2026-03-27T12:15:00Z",
-    "directionsUrl": "https://www.google.com/maps/dir/?api=1&destination=1816+E+6th+St+Austin+TX"
+    "matchedAt": "2026-03-27T12:15:00Z"
   }
 }
 ```
@@ -235,7 +233,6 @@ type MatchResult = {
   readonly sessionId: string;
   readonly venue: Venue;
   readonly matchedAt: Date;
-  readonly directionsUrl: string;
 };
 ```
 

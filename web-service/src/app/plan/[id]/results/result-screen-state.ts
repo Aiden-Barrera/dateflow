@@ -6,7 +6,7 @@ import {
 export type ResultRevealMode = "confetti" | "fade";
 
 export function getResultDirectionsHref(
-  venue: { readonly address: string },
+  venue: { readonly lat: number; readonly lng: number },
   userAgent: string,
 ): string {
   return generateDirectionsUrl(venue, detectPlatform(userAgent));

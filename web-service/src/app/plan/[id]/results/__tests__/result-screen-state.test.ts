@@ -6,6 +6,8 @@ import {
 
 const venue = {
   address: "12 Main St, Austin, TX",
+  lat: 30.26,
+  lng: -97.74,
 };
 
 describe("result-screen-state", () => {
@@ -15,7 +17,7 @@ describe("result-screen-state", () => {
         venue,
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)",
       ),
-    ).toBe("https://maps.apple.com/?daddr=12%20Main%20St%2C%20Austin%2C%20TX");
+    ).toBe("https://maps.apple.com/?daddr=30.26,-97.74");
   });
 
   it("falls back to a simple reveal when reduced motion is preferred", () => {

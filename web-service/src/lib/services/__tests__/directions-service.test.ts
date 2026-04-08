@@ -67,16 +67,16 @@ describe("directions-service", () => {
     const url = generateDirectionsUrl(venue, "ios");
 
     expect(url).toBe(
-      "https://maps.apple.com/?daddr=12%20Main%20St%2C%20Austin%2C%20TX"
+      "https://maps.apple.com/?daddr=30.26,-97.74"
     );
   });
 
   it("generates a Google Maps URL for android and desktop", () => {
     expect(generateDirectionsUrl(venue, "android")).toBe(
-      "https://www.google.com/maps/dir/?api=1&destination=12%20Main%20St%2C%20Austin%2C%20TX"
+      "https://www.google.com/maps/dir/?api=1&destination=30.26,-97.74"
     );
     expect(generateDirectionsUrl(venue, "desktop")).toBe(
-      "https://www.google.com/maps/dir/?api=1&destination=12%20Main%20St%2C%20Austin%2C%20TX"
+      "https://www.google.com/maps/dir/?api=1&destination=30.26,-97.74"
     );
   });
 });

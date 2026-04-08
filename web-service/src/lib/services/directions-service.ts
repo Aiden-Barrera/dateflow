@@ -19,10 +19,10 @@ export function detectPlatform(userAgent: string): Platform {
 }
 
 export function generateDirectionsUrl(
-  venue: Pick<Venue, "address">,
+  venue: Pick<Venue, "lat" | "lng">,
   platform: Platform,
 ): string {
-  const destination = encodeURIComponent(venue.address);
+  const destination = `${venue.lat},${venue.lng}`;
 
   if (platform === "ios") {
     return `https://maps.apple.com/?daddr=${destination}`;
