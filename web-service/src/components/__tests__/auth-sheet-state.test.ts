@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAuthRequest,
+  getAuthSheetSubmitLabel,
+  getAuthSheetSubtitle,
   getAuthSheetTitle,
   validateAuthSubmission,
 } from "../auth-sheet-state";
@@ -81,5 +83,12 @@ describe("auth-sheet-state", () => {
   it("uses the correct sheet title for each auth mode", () => {
     expect(getAuthSheetTitle("register")).toBe("Save this date");
     expect(getAuthSheetTitle("login")).toBe("Welcome back");
+  });
+
+  it("returns mode-specific support copy and email CTA labels", () => {
+    expect(getAuthSheetSubtitle("register")).toContain("keep your match");
+    expect(getAuthSheetSubtitle("login")).toContain("Pick up where you left off");
+    expect(getAuthSheetSubmitLabel("register")).toBe("Create account with email");
+    expect(getAuthSheetSubmitLabel("login")).toBe("Log in with email");
   });
 });

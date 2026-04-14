@@ -16,12 +16,17 @@ describe("AuthSheet", () => {
         onModeChange={() => undefined}
         onSubmit={() => undefined}
         onGoogle={() => undefined}
+        onApple={() => undefined}
       />,
     );
 
     expect(html).toContain("Save this date");
-    expect(html).toContain("Continue with Google");
-    expect(html).toContain("Create account");
+    expect(html).toContain("Google");
+    expect(html).toContain("Apple");
+    expect(html).toContain("Create account with email");
+    expect(html).toContain("or email");
+    expect(html).toContain("overflow-y-auto");
+    expect(html).toContain("max-h-[calc(100dvh-2rem)]");
     expect(html).toContain('type="email"');
     expect(html).toContain('type="password"');
   });
@@ -39,11 +44,12 @@ describe("AuthSheet", () => {
         onModeChange={() => undefined}
         onSubmit={() => undefined}
         onGoogle={() => undefined}
+        onApple={() => undefined}
       />,
     );
 
     expect(html).toContain("Welcome back");
-    expect(html).toContain("Log in");
+    expect(html).toContain("Log in with email");
     expect(html).toContain("Invalid credentials");
   });
 });

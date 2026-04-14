@@ -22,7 +22,7 @@ import {
   getStoredAccountSummary,
   setStoredAccountSummary,
 } from "../../../../lib/auth-token-storage";
-import { beginGoogleLogin, submitAuthRequest } from "../../../../lib/auth-client";
+import { beginAppleLogin, beginGoogleLogin, submitAuthRequest } from "../../../../lib/auth-client";
 import {
   getResultDirectionsHref,
   getResultRevealMode,
@@ -176,6 +176,30 @@ export function ResultScreen({
     }
   }
 
+  async function handleApple(): Promise<void> {
+    setAuthSubmitting(true);
+    setAuthError(null);
+
+    try {
+      const redirectTo =
+        typeof window === "undefined"
+          ? "/history"
+          : `${window.location.origin}/history`;
+      const url = await beginAppleLogin(redirectTo);
+
+      if (typeof window !== "undefined") {
+        window.location.href = url;
+      }
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
+      );
+      setAuthSubmitting(false);
+    }
+  }
+
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
       <AuthSheet
@@ -193,6 +217,7 @@ export function ResultScreen({
         }}
         onSubmit={() => void handleAuthSubmit()}
         onGoogle={() => void handleGoogle()}
+        onApple={() => void handleApple()}
       />
       {revealMode === "confetti" ? <CelebrationConfetti /> : null}
       <div

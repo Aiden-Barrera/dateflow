@@ -18,6 +18,16 @@ export function getAuthSheetTitle(mode: AuthMode): string {
   return mode === "register" ? "Save this date" : "Welcome back";
 }
 
+export function getAuthSheetSubtitle(mode: AuthMode): string {
+  return mode === "register"
+    ? "Create an account to keep your match, directions, and future plans in one place."
+    : "Pick up where you left off and get back to your saved dates in a few seconds.";
+}
+
+export function getAuthSheetSubmitLabel(mode: AuthMode): string {
+  return mode === "register" ? "Create account with email" : "Log in with email";
+}
+
 export function validateAuthSubmission(draft: AuthDraft): ValidationResult {
   if (!EMAIL_PATTERN.test(draft.email.trim())) {
     return {

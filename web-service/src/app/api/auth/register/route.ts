@@ -100,6 +100,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: message }, { status: 409 });
     }
 
+    if (message === "Check your email to confirm your account") {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     console.error("[POST /api/auth/register] Failed:", err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },

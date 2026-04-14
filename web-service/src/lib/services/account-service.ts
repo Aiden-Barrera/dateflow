@@ -23,6 +23,28 @@ function mapLoginError(message: string): string {
   return message;
 }
 
+async function resolveSessionToken(
+  email: string,
+  password: string,
+  accessToken: string | undefined,
+): Promise<string> {
+  if (accessToken) {
+    return accessToken;
+  }
+
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error || !data.session?.access_token) {
+    throw new Error("Check your email to confirm your account");
+  }
+
+  return data.session.access_token;
+}
+
 export async function register(
   email: string,
   password: string,
@@ -39,9 +61,15 @@ export async function register(
     throw new Error(mapRegisterError(error.message));
   }
 
-  if (!data.user || !data.session?.access_token) {
+  if (!data.user) {
     throw new Error("Unable to create account");
   }
+
+  const token = await resolveSessionToken(
+    email,
+    password,
+    data.session?.access_token,
+  );
 
   const { data: accountRow, error: accountError } = await serverSupabase
     .from("accounts")
@@ -57,7 +85,7 @@ export async function register(
   }
 
   return {
-    token: data.session.access_token,
+    token,
     account: toAccount(accountRow),
   };
 }
@@ -112,6 +140,26 @@ export async function beginGoogleOAuth(
 
   if (!data.url) {
     throw new Error("Unable to start Google OAuth");
+  }
+
+  return data.url;
+}
+
+export async function beginAppleOAuth(
+  redirectTo?: string,
+): Promise<string> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "apple",
+    options: redirectTo ? { redirectTo } : undefined,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data.url) {
+    throw new Error("Unable to start Apple OAuth");
   }
 
   return data.url;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  beginAppleOAuth,
   beginGoogleOAuth,
   login,
 } from "../../../../../src/lib/services/account-service";
@@ -52,6 +53,13 @@ export async function POST(request: Request) {
 
     if (typedBody.provider === "google") {
       const url = await beginGoogleOAuth(
+        typeof typedBody.redirectTo === "string" ? typedBody.redirectTo : undefined,
+      );
+      return NextResponse.json({ url });
+    }
+
+    if (typedBody.provider === "apple") {
+      const url = await beginAppleOAuth(
         typeof typedBody.redirectTo === "string" ? typedBody.redirectTo : undefined,
       );
       return NextResponse.json({ url });

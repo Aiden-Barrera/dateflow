@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  beginAppleOAuth,
   beginGoogleOAuth,
   getAccountByAccessToken,
   login,
@@ -91,6 +92,56 @@ describe("account-service register", () => {
       "Email already registered",
     );
   });
+
+  it("falls back to password sign-in when sign-up returns a user without a session", async () => {
+    mockAuthSignUp.mockResolvedValue({
+      data: {
+        user: { id: "account-1", email: "alex@example.com" },
+        session: null,
+      },
+      error: null,
+    });
+    mockAuthSignInWithPassword.mockResolvedValue({
+      data: {
+        user: { id: "account-1", email: "alex@example.com" },
+        session: { access_token: "token-789" },
+      },
+      error: null,
+    });
+
+    const result = await register("alex@example.com", "supersecret");
+
+    expect(mockAuthSignInWithPassword).toHaveBeenCalledWith({
+      email: "alex@example.com",
+      password: "supersecret",
+    });
+    expect(result).toEqual({
+      token: "token-789",
+      account: {
+        id: "account-1",
+        email: "alex@example.com",
+        createdAt: new Date("2026-04-13T20:00:00.000Z"),
+      },
+    });
+  });
+
+  it("surfaces a confirmation-required message when sign-up creates a user without a session and fallback sign-in is blocked", async () => {
+    mockAuthSignUp.mockResolvedValue({
+      data: {
+        user: { id: "account-1", email: "alex@example.com" },
+        session: null,
+      },
+      error: null,
+    });
+    mockAuthSignInWithPassword.mockResolvedValue({
+      data: { user: null, session: null },
+      error: { message: "Email not confirmed" },
+    });
+
+    await expect(register("alex@example.com", "supersecret")).rejects.toThrow(
+      "Check your email to confirm your account",
+    );
+  });
 });
 
 describe("account-service login", () => {
@@ -163,6 +214,28 @@ describe("account-service beginGoogleOAuth", () => {
       },
     });
     expect(url).toBe("https://supabase.test/auth/v1/authorize?provider=google");
+  });
+});
+
+describe("account-service beginAppleOAuth", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthSignInWithOAuth.mockResolvedValue({
+      data: { url: "https://supabase.test/auth/v1/authorize?provider=apple" },
+      error: null,
+    });
+  });
+
+  it("starts the Apple OAuth flow and returns the redirect url", async () => {
+    const url = await beginAppleOAuth("http://localhost:3000/history");
+
+    expect(mockAuthSignInWithOAuth).toHaveBeenCalledWith({
+      provider: "apple",
+      options: {
+        redirectTo: "http://localhost:3000/history",
+      },
+    });
+    expect(url).toBe("https://supabase.test/auth/v1/authorize?provider=apple");
   });
 });
 

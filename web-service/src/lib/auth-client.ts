@@ -36,6 +36,19 @@ export async function beginGoogleLogin(redirectTo: string): Promise<string> {
   return payload.url;
 }
 
+export async function beginAppleLogin(redirectTo: string): Promise<string> {
+  const payload = await submitAuthRequest("/api/auth/login", {
+    provider: "apple",
+    redirectTo,
+  });
+
+  if (typeof payload.url !== "string") {
+    throw new Error("Apple sign-in did not return a redirect URL");
+  }
+
+  return payload.url;
+}
+
 export async function fetchCurrentAccount(
   token: string,
 ): Promise<Record<string, unknown>> {

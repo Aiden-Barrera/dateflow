@@ -102,6 +102,23 @@ describe("POST /api/auth/register", () => {
     expect(body.error).toBe("Email already registered");
   });
 
+  it("returns 400 when email confirmation is required before sign-in", async () => {
+    mockRegister.mockRejectedValue(
+      new Error("Check your email to confirm your account"),
+    );
+
+    const response = await POST(
+      makeRequest({
+        email: "alex@example.com",
+        password: "supersecret",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("Check your email to confirm your account");
+  });
+
   it("links a finished anonymous session when linkSessionId and linkRole are provided", async () => {
     const response = await POST(
       makeRequest({

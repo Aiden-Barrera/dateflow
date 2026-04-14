@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockLogin = vi.fn();
 const mockBeginGoogleOAuth = vi.fn();
+const mockBeginAppleOAuth = vi.fn();
 
 vi.mock("../../../../../../src/lib/services/account-service", () => ({
   login: (...args: unknown[]) => mockLogin(...args),
   beginGoogleOAuth: (...args: unknown[]) => mockBeginGoogleOAuth(...args),
+  beginAppleOAuth: (...args: unknown[]) => mockBeginAppleOAuth(...args),
 }));
 
 import { POST } from "../route";
@@ -31,6 +33,9 @@ describe("POST /api/auth/login", () => {
     });
     mockBeginGoogleOAuth.mockResolvedValue(
       "https://supabase.test/auth/v1/authorize?provider=google",
+    );
+    mockBeginAppleOAuth.mockResolvedValue(
+      "https://supabase.test/auth/v1/authorize?provider=apple",
     );
   });
 
@@ -101,6 +106,25 @@ describe("POST /api/auth/login", () => {
     );
     expect(body).toEqual({
       url: "https://supabase.test/auth/v1/authorize?provider=google",
+    });
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("returns a redirect url when provider apple is requested", async () => {
+    const response = await POST(
+      makeRequest({
+        provider: "apple",
+        redirectTo: "http://localhost:3000/history",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(mockBeginAppleOAuth).toHaveBeenCalledWith(
+      "http://localhost:3000/history",
+    );
+    expect(body).toEqual({
+      url: "https://supabase.test/auth/v1/authorize?provider=apple",
     });
     expect(mockLogin).not.toHaveBeenCalled();
   });
