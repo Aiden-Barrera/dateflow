@@ -12,7 +12,7 @@ type ButtonProps = {
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">;
 
 const baseStyles =
-  "flex w-full items-center justify-center gap-2 rounded-2xl text-body font-semibold transition-all duration-200 h-14 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-safe:-translate-y-0.5";
+  "flex w-full items-center justify-center gap-2 rounded-2xl text-body font-semibold transition-all duration-200 h-14 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAccountByAccessToken } from "../../../../../src/lib/services/account-service";
+import { getAccountByAccessToken } from "../../../../lib/services/account-service";
 
 function getBearerToken(header: string | null): string {
   if (!header) {

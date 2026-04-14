@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockGetUser = vi.fn();
 const mockGetHistory = vi.fn();
 
-vi.mock("../../../../../../src/lib/supabase", () => ({
+vi.mock("../../../../../lib/supabase", () => ({
   getSupabaseClient: () => ({
     auth: {
       getUser: (...args: unknown[]) => mockGetUser(...args),
@@ -11,7 +11,7 @@ vi.mock("../../../../../../src/lib/supabase", () => ({
   }),
 }));
 
-vi.mock("../../../../../../src/lib/services/session-history-service", () => ({
+vi.mock("../../../../../lib/services/session-history-service", () => ({
   getHistory: (...args: unknown[]) => mockGetHistory(...args),
 }));
 

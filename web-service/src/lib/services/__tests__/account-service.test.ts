@@ -19,7 +19,13 @@ const mockAnonFrom = vi.fn(() => ({ select: mockAnonFromSelect }));
 const mockServerInsertSingle = vi.fn();
 const mockServerInsertSelect = vi.fn(() => ({ single: mockServerInsertSingle }));
 const mockServerInsert = vi.fn(() => ({ select: mockServerInsertSelect }));
-const mockServerFrom = vi.fn(() => ({ insert: mockServerInsert }));
+const mockServerSelectSingle = vi.fn();
+const mockServerSelectEq = vi.fn(() => ({ single: mockServerSelectSingle }));
+const mockServerSelect = vi.fn(() => ({ eq: mockServerSelectEq }));
+const mockServerFrom = vi.fn(() => ({
+  insert: mockServerInsert,
+  select: mockServerSelect,
+}));
 
 vi.mock("../../supabase", () => ({
   getSupabaseClient: () => ({
@@ -154,7 +160,7 @@ describe("account-service login", () => {
       },
       error: null,
     });
-    mockAnonFromSingle.mockResolvedValue({
+    mockServerSelectSingle.mockResolvedValue({
       data: {
         id: "account-1",
         email: "alex@example.com",
@@ -171,8 +177,7 @@ describe("account-service login", () => {
       email: "alex@example.com",
       password: "supersecret",
     });
-    expect(mockAnonFrom).toHaveBeenCalledWith("accounts");
-    expect(mockAnonFromEq).toHaveBeenCalledWith("id", "account-1");
+    expect(mockServerFrom).toHaveBeenCalledWith("accounts");
     expect(result).toEqual({
       token: "token-456",
       account: {
@@ -246,7 +251,7 @@ describe("account-service getAccountByAccessToken", () => {
       data: { user: { id: "account-1" } },
       error: null,
     });
-    mockAnonFromSingle.mockResolvedValue({
+    mockServerSelectSingle.mockResolvedValue({
       data: {
         id: "account-1",
         email: "alex@example.com",
@@ -260,8 +265,7 @@ describe("account-service getAccountByAccessToken", () => {
     const account = await getAccountByAccessToken("token-789");
 
     expect(mockAuthGetUser).toHaveBeenCalledWith("token-789");
-    expect(mockAnonFrom).toHaveBeenCalledWith("accounts");
-    expect(mockAnonFromEq).toHaveBeenCalledWith("id", "account-1");
+    expect(mockServerFrom).toHaveBeenCalledWith("accounts");
     expect(account).toEqual({
       id: "account-1",
       email: "alex@example.com",

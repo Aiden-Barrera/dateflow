@@ -3,7 +3,7 @@ import {
   beginAppleOAuth,
   beginGoogleOAuth,
   login,
-} from "../../../../../src/lib/services/account-service";
+} from "../../../../lib/services/account-service";
 
 type LoginBody = {
   email?: unknown;

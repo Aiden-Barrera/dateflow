@@ -4,8 +4,13 @@ import { getHistory } from "../session-history-service";
 const mockSessionAccountsEq = vi.fn();
 const mockSessionAccountsSelect = vi.fn(() => ({ eq: mockSessionAccountsEq }));
 
-const mockSessionsOrder = vi.fn();
-const mockSessionsIn = vi.fn(() => ({ order: mockSessionsOrder }));
+const mockSessionsRange = vi.fn();
+const mockSessionsOrder = vi.fn(() => ({ range: mockSessionsRange }));
+const mockSessionsEq = vi.fn(() => ({ order: mockSessionsOrder }));
+const mockSessionsIn = vi.fn(() => ({
+  eq: mockSessionsEq,
+  order: mockSessionsOrder,
+}));
 const mockSessionsSelect = vi.fn(() => ({ in: mockSessionsIn }));
 
 const mockVenuesIn = vi.fn();
@@ -38,12 +43,12 @@ describe("session-history-service getHistory", () => {
     vi.clearAllMocks();
     mockSessionAccountsEq.mockResolvedValue({
       data: [
-        { session_id: "session-1", account_id: "account-1", role: "a", linked_at: "2026-04-13T20:00:00Z" },
-        { session_id: "session-2", account_id: "account-1", role: "b", linked_at: "2026-04-12T20:00:00Z" },
+        { session_id: "session-1", role: "a" },
+        { session_id: "session-2", role: "b" },
       ],
       error: null,
     });
-    mockSessionsOrder.mockResolvedValue({
+    mockSessionsRange.mockResolvedValue({
       data: [
         {
           id: "session-1",
@@ -55,17 +60,8 @@ describe("session-history-service getHistory", () => {
           matched_venue_id: "venue-1",
           matched_at: "2026-04-13T20:00:00Z",
         },
-        {
-          id: "session-2",
-          status: "expired",
-          creator_display_name: "Sam",
-          invitee_display_name: "Taylor",
-          created_at: "2026-04-12T18:00:00Z",
-          expires_at: "2026-04-14T18:00:00Z",
-          matched_venue_id: null,
-          matched_at: null,
-        },
       ],
+      count: 1,
       error: null,
     });
     mockVenuesIn.mockResolvedValue({
@@ -104,6 +100,8 @@ describe("session-history-service getHistory", () => {
     expect(mockSessionAccountsEq).toHaveBeenCalledWith("account_id", "account-1");
     expect(mockFrom).toHaveBeenCalledWith("sessions");
     expect(mockSessionsIn).toHaveBeenCalledWith("id", ["session-1", "session-2"]);
+    expect(mockSessionsEq).toHaveBeenCalledWith("status", "matched");
+    expect(mockSessionsRange).toHaveBeenCalledWith(0, 9);
     expect(result).toEqual({
       sessions: [
         {
@@ -127,27 +125,7 @@ describe("session-history-service getHistory", () => {
   });
 
   it("supports includeAll to keep non-matched sessions in history", async () => {
-    const result = await getHistory("account-1", 1, 10, true);
-
-    expect(result.sessions).toHaveLength(2);
-    expect(result.sessions[1]).toEqual({
-      sessionId: "session-2",
-      status: "expired",
-      createdAt: "2026-04-12T18:00:00.000Z",
-      role: "b",
-      matchedVenue: null,
-    });
-  });
-
-  it("paginates after filtering", async () => {
-    mockSessionAccountsEq.mockResolvedValue({
-      data: [
-        { session_id: "session-1", account_id: "account-1", role: "a", linked_at: "2026-04-13T20:00:00Z" },
-        { session_id: "session-2", account_id: "account-1", role: "b", linked_at: "2026-04-12T20:00:00Z" },
-      ],
-      error: null,
-    });
-    mockSessionsOrder.mockResolvedValue({
+    mockSessionsRange.mockResolvedValue({
       data: [
         {
           id: "session-1",
@@ -161,6 +139,44 @@ describe("session-history-service getHistory", () => {
         },
         {
           id: "session-2",
+          status: "expired",
+          creator_display_name: "Sam",
+          invitee_display_name: "Taylor",
+          created_at: "2026-04-12T18:00:00Z",
+          expires_at: "2026-04-14T18:00:00Z",
+          matched_venue_id: null,
+          matched_at: null,
+        },
+      ],
+      count: 2,
+      error: null,
+    });
+
+    const result = await getHistory("account-1", 1, 10, true);
+
+    expect(mockSessionsEq).not.toHaveBeenCalled();
+    expect(result.sessions).toHaveLength(2);
+    expect(result.sessions[1]).toEqual({
+      sessionId: "session-2",
+      status: "expired",
+      createdAt: "2026-04-12T18:00:00.000Z",
+      role: "b",
+      matchedVenue: null,
+    });
+  });
+
+  it("paginates in the sessions query", async () => {
+    mockSessionAccountsEq.mockResolvedValue({
+      data: [
+        { session_id: "session-1", role: "a" },
+        { session_id: "session-2", role: "b" },
+      ],
+      error: null,
+    });
+    mockSessionsRange.mockResolvedValue({
+      data: [
+        {
+          id: "session-2",
           status: "matched",
           creator_display_name: "Sam",
           invitee_display_name: "Taylor",
@@ -170,11 +186,13 @@ describe("session-history-service getHistory", () => {
           matched_at: "2026-04-12T20:00:00Z",
         },
       ],
+      count: 2,
       error: null,
     });
 
     const result = await getHistory("account-1", 2, 1);
 
+    expect(mockSessionsRange).toHaveBeenCalledWith(1, 1);
     expect(result.page).toBe(2);
     expect(result.pageSize).toBe(1);
     expect(result.totalCount).toBe(2);

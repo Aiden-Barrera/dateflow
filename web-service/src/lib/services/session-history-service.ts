@@ -23,9 +23,7 @@ export async function linkSessionToAccount(
 
 type SessionAccountLinkRow = {
   readonly session_id: string;
-  readonly account_id: string;
   readonly role: SessionAccountRole;
-  readonly linked_at: string;
 };
 
 export type HistorySession = {
@@ -58,7 +56,7 @@ export async function getHistory(
   const supabase = getSupabaseServerClient();
   const { data: linkRows, error: linksError } = await supabase
     .from("session_accounts")
-    .select()
+    .select("session_id, role")
     .eq("account_id", accountId);
 
   if (linksError) {
@@ -78,22 +76,31 @@ export async function getHistory(
     };
   }
 
-  const { data: sessionRows, error: sessionsError } = await supabase
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize - 1;
+  let sessionQuery = supabase
     .from("sessions")
-    .select()
-    .in("id", sessionIds)
-    .order("created_at", { ascending: false });
+    .select("*", { count: "exact" })
+    .in("id", sessionIds);
+
+  if (!includeAll) {
+    sessionQuery = sessionQuery.eq("status", "matched");
+  }
+
+  const {
+    data: sessionRows,
+    error: sessionsError,
+    count,
+  } = await sessionQuery
+    .order("created_at", { ascending: false })
+    .range(startIndex, endIndex);
 
   if (sessionsError) {
     throw new Error(sessionsError.message);
   }
 
-  const sessions = (sessionRows ?? []) as SessionRow[];
-  const visibleSessions = includeAll
-    ? sessions
-    : sessions.filter((session) => session.status === "matched");
-
-  const matchedVenueIds = visibleSessions
+  const pagedSessions = (sessionRows ?? []) as SessionRow[];
+  const matchedVenueIds = pagedSessions
     .map((session) => session.matched_venue_id)
     .filter((value): value is string => typeof value === "string");
 
@@ -118,10 +125,8 @@ export async function getHistory(
     links.map((row) => [row.session_id, row.role] as const),
   );
 
-  const totalCount = visibleSessions.length;
+  const totalCount = count ?? 0;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / pageSize);
-  const startIndex = (page - 1) * pageSize;
-  const pagedSessions = visibleSessions.slice(startIndex, startIndex + pageSize);
 
   return {
     sessions: pagedSessions.map((session) => {

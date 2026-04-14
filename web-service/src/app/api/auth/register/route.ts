@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { register } from "../../../../../src/lib/services/account-service";
-import { linkSessionToAccount } from "../../../../../src/lib/services/session-history-service";
+import { register } from "../../../../lib/services/account-service";
+import { linkSessionToAccount } from "../../../../lib/services/session-history-service";
 
 type RegisterBody = {
   email?: unknown;

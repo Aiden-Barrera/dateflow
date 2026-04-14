@@ -20,6 +20,7 @@ import {
 } from "../../../../lib/session-link-storage";
 import {
   getStoredAccountSummary,
+  setStoredAuthToken,
   setStoredAccountSummary,
 } from "../../../../lib/auth-token-storage";
 import { beginAppleLogin, beginGoogleLogin, submitAuthRequest } from "../../../../lib/auth-client";
@@ -120,7 +121,7 @@ export function ResultScreen({
       const payload = await submitAuthRequest(request.endpoint, request.body);
 
       if (typeof window !== "undefined" && typeof payload.token === "string") {
-        window.localStorage.setItem("dateflow:auth-token", payload.token);
+        setStoredAuthToken(window.localStorage, payload.token);
         const account =
           payload.account && typeof payload.account === "object"
             ? payload.account

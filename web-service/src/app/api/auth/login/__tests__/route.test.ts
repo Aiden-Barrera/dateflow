@@ -4,7 +4,7 @@ const mockLogin = vi.fn();
 const mockBeginGoogleOAuth = vi.fn();
 const mockBeginAppleOAuth = vi.fn();
 
-vi.mock("../../../../../../src/lib/services/account-service", () => ({
+vi.mock("../../../../../lib/services/account-service", () => ({
   login: (...args: unknown[]) => mockLogin(...args),
   beginGoogleOAuth: (...args: unknown[]) => mockBeginGoogleOAuth(...args),
   beginAppleOAuth: (...args: unknown[]) => mockBeginAppleOAuth(...args),

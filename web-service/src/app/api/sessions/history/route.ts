@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getSupabaseClient } from "../../../../../src/lib/supabase";
-import { getHistory } from "../../../../../src/lib/services/session-history-service";
+import { getSupabaseClient } from "../../../../lib/supabase";
+import { getHistory } from "../../../../lib/services/session-history-service";
 
 function parsePositiveInteger(
   value: string | null,

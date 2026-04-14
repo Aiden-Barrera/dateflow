@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetAccountByAccessToken = vi.fn();
 
-vi.mock("../../../../../../src/lib/services/account-service", () => ({
+vi.mock("../../../../../lib/services/account-service", () => ({
   getAccountByAccessToken: (...args: unknown[]) =>
     mockGetAccountByAccessToken(...args),
 }));

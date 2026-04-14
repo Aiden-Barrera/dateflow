@@ -95,6 +95,7 @@ export async function login(
   password: string,
 ): Promise<AuthResult> {
   const supabase = getSupabaseClient();
+  const serverSupabase = getSupabaseServerClient();
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -109,7 +110,7 @@ export async function login(
     throw new Error("Invalid credentials");
   }
 
-  const { data: accountRow, error: accountError } = await supabase
+  const { data: accountRow, error: accountError } = await serverSupabase
     .from("accounts")
     .select()
     .eq("id", data.user.id)
@@ -169,6 +170,7 @@ export async function getAccountByAccessToken(
   token: string,
 ): Promise<Account> {
   const supabase = getSupabaseClient();
+  const serverSupabase = getSupabaseServerClient();
   const {
     data: { user },
     error: authError,
@@ -178,7 +180,7 @@ export async function getAccountByAccessToken(
     throw new Error("Invalid token");
   }
 
-  const { data: accountRow, error: accountError } = await supabase
+  const { data: accountRow, error: accountError } = await serverSupabase
     .from("accounts")
     .select()
     .eq("id", user.id)

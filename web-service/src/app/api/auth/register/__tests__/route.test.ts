@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockRegister = vi.fn();
 const mockLinkSessionToAccount = vi.fn();
 
-vi.mock("../../../../../../src/lib/services/account-service", () => ({
+vi.mock("../../../../../lib/services/account-service", () => ({
   register: (...args: unknown[]) => mockRegister(...args),
 }));
 
-vi.mock("../../../../../../src/lib/services/session-history-service", () => ({
+vi.mock("../../../../../lib/services/session-history-service", () => ({
   linkSessionToAccount: (...args: unknown[]) => mockLinkSessionToAccount(...args),
 }));
 
