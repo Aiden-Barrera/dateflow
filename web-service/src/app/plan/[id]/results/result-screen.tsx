@@ -3,6 +3,11 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
+import { AuthSheet } from "../../../../components/auth-sheet";
+import {
+  buildAuthRequest,
+  validateAuthSubmission,
+} from "../../../../components/auth-sheet-state";
 import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
 import { Logo } from "../../../../components/logo";
@@ -10,14 +15,26 @@ import { PriceBadge } from "../../../../components/price-badge";
 import type { MatchResult } from "../../../../lib/types/match-result";
 import type { Category } from "../../../../lib/types/preference";
 import {
+  clearStoredSessionLink,
+  loadStoredSessionLink,
+} from "../../../../lib/session-link-storage";
+import {
+  getStoredAccountSummary,
+  setStoredAccountSummary,
+} from "../../../../lib/auth-token-storage";
+import { beginGoogleLogin, submitAuthRequest } from "../../../../lib/auth-client";
+import {
   getResultDirectionsHref,
   getResultRevealMode,
   type ResultRevealMode,
 } from "./result-screen-state";
+import type { AuthDraft, AuthMode } from "../../../../components/auth-sheet-state";
 
 type ResultScreenProps = {
   readonly matchedWithName: string | null;
   readonly matchResult: MatchResult;
+  readonly initialAuthStatus?: "idle" | "saved";
+  readonly initialAccountEmail?: string | null;
 };
 
 const CATEGORY_LABELS: Record<Category, string> = {
@@ -30,6 +47,8 @@ const CATEGORY_LABELS: Record<Category, string> = {
 export function ResultScreen({
   matchedWithName,
   matchResult,
+  initialAuthStatus = "idle",
+  initialAccountEmail = null,
 }: ResultScreenProps) {
   const { venue } = matchResult;
   const galleryImages = getVenueGalleryImages(venue);
@@ -37,6 +56,19 @@ export function ResultScreen({
     getResultDirectionsHref(venue, ""),
   );
   const [revealMode, setRevealMode] = useState<ResultRevealMode>("fade");
+  const [authMode, setAuthMode] = useState<AuthMode>("register");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authStatus, setAuthStatus] = useState<"idle" | "saved">(
+    initialAccountEmail ? "saved" : initialAuthStatus,
+  );
+  const [accountEmail, setAccountEmail] = useState<string | null>(initialAccountEmail);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authDraft, setAuthDraft] = useState<AuthDraft>({
+    mode: "register",
+    email: "",
+    password: "",
+  });
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -51,12 +83,112 @@ export function ResultScreen({
     return () => window.cancelAnimationFrame(frame);
   }, [venue]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const summary = getStoredAccountSummary(window.localStorage);
+
+    if (summary?.email) {
+      setAccountEmail(summary.email);
+      setAuthStatus("saved");
+    }
+  }, []);
+
   const sharedLikeCopy = matchedWithName
     ? `You and ${matchedWithName} both liked this spot.`
     : "You both liked this spot.";
 
+  async function handleAuthSubmit(): Promise<void> {
+    const validation = validateAuthSubmission(authDraft);
+
+    if (!validation.valid) {
+      setAuthError(validation.error);
+      return;
+    }
+
+    setAuthSubmitting(true);
+    setAuthError(null);
+
+    try {
+      const sessionLink =
+        typeof window === "undefined"
+          ? null
+          : loadStoredSessionLink(window.localStorage);
+      const request = buildAuthRequest(authDraft, sessionLink);
+      const payload = await submitAuthRequest(request.endpoint, request.body);
+
+      if (typeof window !== "undefined" && typeof payload.token === "string") {
+        window.localStorage.setItem("dateflow:auth-token", payload.token);
+        if (
+          payload.account &&
+          typeof payload.account === "object" &&
+          typeof payload.account.email === "string"
+        ) {
+          setStoredAccountSummary(window.localStorage, {
+            email: payload.account.email,
+          });
+          setAccountEmail(payload.account.email);
+        }
+        clearStoredSessionLink(window.localStorage);
+      }
+
+      setAuthStatus("saved");
+      setAuthOpen(false);
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  async function handleGoogle(): Promise<void> {
+    setAuthSubmitting(true);
+    setAuthError(null);
+
+    try {
+      const redirectTo =
+        typeof window === "undefined"
+          ? "/history"
+          : `${window.location.origin}/history`;
+      const url = await beginGoogleLogin(redirectTo);
+
+      if (typeof window !== "undefined") {
+        window.location.href = url;
+      }
+    } catch (error) {
+      setAuthError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please try again.",
+      );
+      setAuthSubmitting(false);
+    }
+  }
+
   return (
     <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
+      <AuthSheet
+        open={authOpen}
+        mode={authMode}
+        draft={authDraft}
+        errorMessage={authError}
+        submitting={authSubmitting}
+        onClose={() => setAuthOpen(false)}
+        onDraftChange={setAuthDraft}
+        onModeChange={(mode) => {
+          setAuthMode(mode);
+          setAuthDraft((current) => ({ ...current, mode }));
+          setAuthError(null);
+        }}
+        onSubmit={() => void handleAuthSubmit()}
+        onGoogle={() => void handleGoogle()}
+      />
       {revealMode === "confetti" ? <CelebrationConfetti /> : null}
       <div
         className="pointer-events-none absolute -left-20 top-14 h-64 w-64 rounded-full opacity-70 blur-3xl"
@@ -106,6 +238,89 @@ export function ResultScreen({
                 <Button variant="secondary">Add to calendar</Button>
               </a>
             </div>
+
+            {authStatus === "saved" ? (
+              <section
+                className="mt-8 rounded-[1.75rem] border border-success/20 bg-white/88 p-5 shadow-[0_18px_50px_rgba(45,42,38,0.08)] backdrop-blur-sm"
+                style={{
+                  animation:
+                    "savePromptReveal var(--motion-base) var(--ease-enter) both",
+                }}
+              >
+                <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
+                  Saved to your history
+                </p>
+                <h2 className="mt-3 text-h2 font-semibold text-text">
+                  This match is now tied to your account
+                </h2>
+                <p className="mt-2 max-w-xl text-body text-text-secondary">
+                  You can come back to this plan later and save future matches in one place.
+                </p>
+                {accountEmail ? (
+                  <p className="mt-3 text-caption font-medium text-text-secondary">
+                    Signed in as {accountEmail}
+                  </p>
+                ) : null}
+              </section>
+            ) : (
+              <section
+                className="mt-8 rounded-[1.75rem] border border-white/70 bg-white/88 p-5 shadow-[0_18px_50px_rgba(45,42,38,0.08)] backdrop-blur-sm"
+                style={{
+                  animation:
+                    "savePromptReveal var(--motion-base) var(--ease-enter) 120ms both",
+                }}
+              >
+                <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
+                  Save this date
+                </p>
+                <h2 className="mt-3 text-h2 font-semibold text-text">
+                  Keep this match in your history
+                </h2>
+                <p className="mt-2 max-w-xl text-body text-text-secondary">
+                  Create an account to revisit this plan, save future matches, and pick up where you left off.
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <div className="w-full max-w-sm">
+                    <Button
+                      onClick={() => {
+                        setAuthMode("register");
+                        setAuthDraft((current) => ({ ...current, mode: "register" }));
+                        setAuthError(null);
+                        setAuthOpen(true);
+                      }}
+                    >
+                      Create account
+                    </Button>
+                  </div>
+                  <div className="w-full max-w-sm">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setAuthMode("login");
+                        setAuthDraft((current) => ({ ...current, mode: "login" }));
+                        setAuthError(null);
+                        setAuthOpen(true);
+                      }}
+                    >
+                      Log in
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-caption text-text-secondary">
+                  <span className="rounded-full border border-muted bg-bg px-3 py-1.5">
+                    No effect on this match
+                  </span>
+                  <span className="rounded-full border border-muted bg-bg px-3 py-1.5">
+                    Google or email
+                  </span>
+                  <span className="rounded-full border border-muted bg-bg px-3 py-1.5">
+                    Continue without account
+                  </span>
+                </div>
+              </section>
+            )}
           </div>
 
           <section
