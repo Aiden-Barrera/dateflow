@@ -121,15 +121,20 @@ export function ResultScreen({
 
       if (typeof window !== "undefined" && typeof payload.token === "string") {
         window.localStorage.setItem("dateflow:auth-token", payload.token);
+        const account =
+          payload.account && typeof payload.account === "object"
+            ? payload.account
+            : null;
+
         if (
-          payload.account &&
-          typeof payload.account === "object" &&
-          typeof payload.account.email === "string"
+          account &&
+          "email" in account &&
+          typeof account.email === "string"
         ) {
           setStoredAccountSummary(window.localStorage, {
-            email: payload.account.email,
+            email: account.email,
           });
-          setAccountEmail(payload.account.email);
+          setAccountEmail(account.email);
         }
         clearStoredSessionLink(window.localStorage);
       }
