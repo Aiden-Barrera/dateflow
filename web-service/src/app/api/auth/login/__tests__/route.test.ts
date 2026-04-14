@@ -128,4 +128,18 @@ describe("POST /api/auth/login", () => {
     });
     expect(mockLogin).not.toHaveBeenCalled();
   });
+
+  it("returns 400 when provider redirectTo is not a same-origin /history URL", async () => {
+    const response = await POST(
+      makeRequest({
+        provider: "google",
+        redirectTo: "https://evil.example/steal",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("redirectTo must be a same-origin /history URL");
+    expect(mockBeginGoogleOAuth).not.toHaveBeenCalled();
+  });
 });

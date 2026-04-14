@@ -24,6 +24,7 @@ export async function linkSessionToAccount(
 type SessionAccountLinkRow = {
   readonly session_id: string;
   readonly role: SessionAccountRole;
+  readonly sessions: SessionRow | SessionRow[] | null;
 };
 
 export type HistorySession = {
@@ -54,19 +55,46 @@ export async function getHistory(
   includeAll = false,
 ): Promise<SessionHistoryPage> {
   const supabase = getSupabaseServerClient();
-  const { data: linkRows, error: linksError } = await supabase
+  const startIndex = (page - 1) * pageSize;
+  const endIndex = startIndex + pageSize - 1;
+  let historyQuery = supabase
     .from("session_accounts")
-    .select("session_id, role")
+    .select("session_id, role, sessions!inner(*)", { count: "exact" })
     .eq("account_id", accountId);
+
+  if (!includeAll) {
+    historyQuery = historyQuery.eq("sessions.status", "matched");
+  }
+
+  const {
+    data: linkRows,
+    error: linksError,
+    count,
+  } = await historyQuery
+    .order("created_at", { ascending: false, referencedTable: "sessions" })
+    .range(startIndex, endIndex);
 
   if (linksError) {
     throw new Error(linksError.message);
   }
 
-  const links = (linkRows ?? []) as SessionAccountLinkRow[];
-  const sessionIds = links.map((row) => row.session_id);
+  const links = ((linkRows ?? []) as SessionAccountLinkRow[])
+    .map((row) => ({
+      sessionId: row.session_id,
+      role: row.role,
+      session: Array.isArray(row.sessions) ? (row.sessions[0] ?? null) : row.sessions,
+    }))
+    .filter(
+      (
+        row,
+      ): row is {
+        readonly sessionId: string;
+        readonly role: SessionAccountRole;
+        readonly session: SessionRow;
+      } => row.session !== null,
+    );
 
-  if (sessionIds.length === 0) {
+  if (links.length === 0) {
     return {
       sessions: [],
       page,
@@ -76,31 +104,8 @@ export async function getHistory(
     };
   }
 
-  const startIndex = (page - 1) * pageSize;
-  const endIndex = startIndex + pageSize - 1;
-  let sessionQuery = supabase
-    .from("sessions")
-    .select("*", { count: "exact" })
-    .in("id", sessionIds);
-
-  if (!includeAll) {
-    sessionQuery = sessionQuery.eq("status", "matched");
-  }
-
-  const {
-    data: sessionRows,
-    error: sessionsError,
-    count,
-  } = await sessionQuery
-    .order("created_at", { ascending: false })
-    .range(startIndex, endIndex);
-
-  if (sessionsError) {
-    throw new Error(sessionsError.message);
-  }
-
-  const pagedSessions = (sessionRows ?? []) as SessionRow[];
-  const matchedVenueIds = pagedSessions
+  const matchedVenueIds = links
+    .map((row) => row.session)
     .map((session) => session.matched_venue_id)
     .filter((value): value is string => typeof value === "string");
 
@@ -121,25 +126,21 @@ export async function getHistory(
     }
   }
 
-  const roleBySessionId = new Map(
-    links.map((row) => [row.session_id, row.role] as const),
-  );
-
   const totalCount = count ?? 0;
   const totalPages = totalCount === 0 ? 0 : Math.ceil(totalCount / pageSize);
 
   return {
-    sessions: pagedSessions.map((session) => {
+    sessions: links.map(({ sessionId, role, session }) => {
       const matchedVenue =
         session.matched_venue_id === null
           ? null
           : venueMap.get(session.matched_venue_id) ?? null;
 
       return {
-        sessionId: session.id,
+        sessionId,
         status: session.status,
         createdAt: new Date(session.created_at).toISOString(),
-        role: roleBySessionId.get(session.id) ?? "a",
+        role,
         matchedVenue: matchedVenue
           ? {
               name: matchedVenue.name,

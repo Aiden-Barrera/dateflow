@@ -137,6 +137,31 @@ describe("POST /api/auth/register", () => {
     );
   });
 
+  it("returns 201 with a warning when registration succeeds but session linking fails", async () => {
+    mockLinkSessionToAccount.mockRejectedValue(new Error("duplicate key"));
+
+    const response = await POST(
+      makeRequest({
+        email: "alex@example.com",
+        password: "supersecret",
+        linkSessionId: "session-1",
+        linkRole: "b",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body).toEqual({
+      account: {
+        id: "account-1",
+        email: "alex@example.com",
+        createdAt: "2026-04-13T20:00:00.000Z",
+      },
+      token: "token-123",
+      warning: "Account created, but we could not link the provided session.",
+    });
+  });
+
   it("returns 400 when linkSessionId is present without linkRole", async () => {
     const response = await POST(
       makeRequest({

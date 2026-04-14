@@ -69,22 +69,34 @@ export async function POST(request: Request) {
       body as RegisterBody,
     );
     const result = await register(email, password);
+    const responseBody = {
+      account: {
+        id: result.account.id,
+        email: result.account.email,
+        createdAt: result.account.createdAt.toISOString(),
+      },
+      token: result.token,
+    };
 
     if (linkSessionId && linkRole) {
-      await linkSessionToAccount(linkSessionId, result.account.id, linkRole);
+      try {
+        await linkSessionToAccount(linkSessionId, result.account.id, linkRole);
+      } catch (linkErr) {
+        console.error(
+          "[POST /api/auth/register] Session link failed after successful registration:",
+          linkErr,
+        );
+        return NextResponse.json(
+          {
+            ...responseBody,
+            warning: "Account created, but we could not link the provided session.",
+          },
+          { status: 201 },
+        );
+      }
     }
 
-    return NextResponse.json(
-      {
-        account: {
-          id: result.account.id,
-          email: result.account.email,
-          createdAt: result.account.createdAt.toISOString(),
-        },
-        token: result.token,
-      },
-      { status: 201 },
-    );
+    return NextResponse.json(responseBody, { status: 201 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
 

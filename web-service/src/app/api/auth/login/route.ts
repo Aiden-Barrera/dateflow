@@ -13,6 +13,7 @@ type LoginBody = {
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const HISTORY_PATH = "/history";
 
 function validate(body: LoginBody): { email: string; password: string } {
   if (typeof body.email !== "string" || !EMAIL_PATTERN.test(body.email)) {
@@ -27,6 +28,22 @@ function validate(body: LoginBody): { email: string; password: string } {
     email: body.email,
     password: body.password,
   };
+}
+
+function sanitizeRedirectTo(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return undefined;
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appOrigin = new URL(appUrl).origin;
+  const redirectUrl = new URL(value, appOrigin);
+
+  if (redirectUrl.origin !== appOrigin || redirectUrl.pathname !== HISTORY_PATH) {
+    throw new Error("redirectTo must be a same-origin /history URL");
+  }
+
+  return redirectUrl.toString();
 }
 
 export async function POST(request: Request) {
@@ -52,16 +69,12 @@ export async function POST(request: Request) {
     const typedBody = body as LoginBody;
 
     if (typedBody.provider === "google") {
-      const url = await beginGoogleOAuth(
-        typeof typedBody.redirectTo === "string" ? typedBody.redirectTo : undefined,
-      );
+      const url = await beginGoogleOAuth(sanitizeRedirectTo(typedBody.redirectTo));
       return NextResponse.json({ url });
     }
 
     if (typedBody.provider === "apple") {
-      const url = await beginAppleOAuth(
-        typeof typedBody.redirectTo === "string" ? typedBody.redirectTo : undefined,
-      );
+      const url = await beginAppleOAuth(sanitizeRedirectTo(typedBody.redirectTo));
       return NextResponse.json({ url });
     }
 
@@ -81,7 +94,8 @@ export async function POST(request: Request) {
 
     if (
       message === "email must be a valid email address" ||
-      message === "password is required and must be a string"
+      message === "password is required and must be a string" ||
+      message === "redirectTo must be a same-origin /history URL"
     ) {
       return NextResponse.json({ error: message }, { status: 400 });
     }
