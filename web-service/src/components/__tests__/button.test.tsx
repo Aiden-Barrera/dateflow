@@ -7,7 +7,7 @@ describe("Button", () => {
     const html = renderToStaticMarkup(<Button>Press me</Button>);
 
     expect(html).toContain("focus-visible:outline-primary");
-    expect(html).toContain("motion-safe:-translate-y-0.5");
+    expect(html).toContain("motion-safe:hover:-translate-y-0.5");
     expect(html).not.toContain("active:scale-[0.98]");
   });
 });
