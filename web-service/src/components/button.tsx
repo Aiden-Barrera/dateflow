@@ -12,20 +12,20 @@ type ButtonProps = {
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children">;
 
 const baseStyles =
-  "flex w-full items-center justify-center gap-2 rounded-2xl text-body font-semibold transition-all duration-200 h-14 cursor-pointer";
+  "flex w-full items-center justify-center gap-2 rounded-2xl text-body font-semibold transition-all duration-200 h-14 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 const variantStyles: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary text-white shadow-sm hover:bg-primary-hover active:scale-[0.98]",
+    "bg-primary text-white shadow-sm hover:bg-primary-hover hover:shadow-[0_14px_26px_rgba(224,116,104,0.24)] motion-safe:hover:-translate-y-0.5",
   secondary:
-    "bg-surface text-text border-[1.5px] border-muted hover:border-text-secondary active:scale-[0.98]",
+    "bg-surface text-text border-[1.5px] border-muted hover:border-text-secondary hover:shadow-[0_12px_20px_rgba(45,42,38,0.08)] motion-safe:hover:-translate-y-0.5",
 };
 
 const disabledStyles =
-  "bg-muted text-text-secondary cursor-not-allowed shadow-none hover:bg-muted active:scale-100";
+  "bg-muted text-text-secondary cursor-not-allowed shadow-none hover:bg-muted";
 
 const loadingStyles =
-  "bg-primary/70 text-white/90 cursor-wait shadow-none hover:bg-primary/70 active:scale-100";
+  "bg-primary/70 text-white/90 cursor-wait shadow-none hover:bg-primary/70";
 
 /**
  * Shared button component with primary/secondary variants and

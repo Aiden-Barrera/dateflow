@@ -8,6 +8,7 @@ import {
   getSessionRoleCookieName,
 } from "../../../../lib/session-role-access";
 import { ResultScreen } from "./result-screen";
+import { SessionLinkPlanter } from "./session-link-planter";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -86,9 +87,12 @@ export default async function ResultPage({ params }: PageProps) {
       : session.creatorDisplayName;
 
   return (
-    <ResultScreen
-      matchedWithName={matchedWithName}
-      matchResult={matchResult}
-    />
+    <>
+      <SessionLinkPlanter sessionId={id} role={viewerRole} />
+      <ResultScreen
+        matchedWithName={matchedWithName}
+        matchResult={matchResult}
+      />
+    </>
   );
 }
