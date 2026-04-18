@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { AuthSheet } from "../../../../components/auth-sheet";
 import {
@@ -9,7 +9,6 @@ import {
   validateAuthSubmission,
 } from "../../../../components/auth-sheet-state";
 import { Button } from "../../../../components/button";
-import { CategoryIcon } from "../../../../components/category-icon";
 import { Logo } from "../../../../components/logo";
 import { PriceBadge } from "../../../../components/price-badge";
 import type { MatchResult } from "../../../../lib/types/match-result";
@@ -53,6 +52,19 @@ export function ResultScreen({
 }: ResultScreenProps) {
   const { venue } = matchResult;
   const galleryImages = getVenueGalleryImages(venue);
+  const heroImage = galleryImages[0] ?? null;
+  const sharedLikeCopy = matchedWithName
+    ? `You and ${matchedWithName} both liked this spot.`
+    : "You both liked this spot.";
+  const matchedDateLabel = matchResult.matchedAt.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+  });
+  const venueSummary = getVenueSummary({
+    sharedLikeCopy,
+    venue,
+    matchedDateLabel,
+  });
   const [directionsUrl, setDirectionsUrl] = useState(() =>
     getResultDirectionsHref(venue, ""),
   );
@@ -96,10 +108,6 @@ export function ResultScreen({
       setAuthStatus("saved");
     }
   }, []);
-
-  const sharedLikeCopy = matchedWithName
-    ? `You and ${matchedWithName} both liked this spot.`
-    : "You both liked this spot.";
 
   async function handleAuthSubmit(): Promise<void> {
     const validation = validateAuthSubmission(authDraft);
@@ -232,130 +240,17 @@ export function ResultScreen({
         aria-hidden="true"
       />
 
-      <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-6 pb-12 pt-8 sm:px-8">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[54rem] flex-col px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
         <header className="flex items-center justify-between">
           <Logo />
-          <span className="rounded-full border border-white/60 bg-white/80 px-3 py-1 text-caption text-text-secondary shadow-sm backdrop-blur">
+          <span className="rounded-full border border-white/70 bg-white/85 px-3 py-1 text-caption text-text-secondary shadow-sm backdrop-blur">
             Shared result
           </span>
         </header>
 
-        <section className="mt-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-          <div className="max-w-2xl">
-            <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
-              Match reveal
-            </p>
-            <h1 className="mt-4 text-[clamp(3rem,10vw,5.5rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-text">
-              It’s a match
-            </h1>
-            <p className="mt-5 max-w-xl text-[1.05rem] leading-7 text-text-secondary">
-              {sharedLikeCopy} The hard part is over.
-              Now you just need the plan.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href={directionsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full max-w-sm"
-              >
-                <Button>Get directions</Button>
-              </a>
-              <a
-                href={`/api/sessions/${matchResult.sessionId}/calendar`}
-                className="w-full max-w-sm"
-              >
-                <Button variant="secondary">Add to calendar</Button>
-              </a>
-            </div>
-
-            {authStatus === "saved" ? (
-              <section
-                className="mt-8 rounded-[1.75rem] border border-success/20 bg-white/88 p-5 shadow-[0_18px_50px_rgba(45,42,38,0.08)] backdrop-blur-sm"
-                style={{
-                  animation:
-                    "savePromptReveal var(--motion-base) var(--ease-enter) both",
-                }}
-              >
-                <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
-                  Saved to your history
-                </p>
-                <h2 className="mt-3 text-h2 font-semibold text-text">
-                  This match is now tied to your account
-                </h2>
-                <p className="mt-2 max-w-xl text-body text-text-secondary">
-                  You can come back to this plan later and save future matches in one place.
-                </p>
-                {accountEmail ? (
-                  <p className="mt-3 text-caption font-medium text-text-secondary">
-                    Signed in as {accountEmail}
-                  </p>
-                ) : null}
-              </section>
-            ) : (
-              <section
-                className="mt-8 rounded-[1.75rem] border border-white/70 bg-white/88 p-5 shadow-[0_18px_50px_rgba(45,42,38,0.08)] backdrop-blur-sm"
-                style={{
-                  animation:
-                    "savePromptReveal var(--motion-base) var(--ease-enter) 120ms both",
-                }}
-              >
-                <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
-                  Save this date
-                </p>
-                <h2 className="mt-3 text-h2 font-semibold text-text">
-                  Keep this match in your history
-                </h2>
-                <p className="mt-2 max-w-xl text-body text-text-secondary">
-                  Create an account to revisit this plan, save future matches, and pick up where you left off.
-                </p>
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <div className="w-full max-w-sm">
-                    <Button
-                      onClick={() => {
-                        setAuthMode("register");
-                        setAuthDraft((current) => ({ ...current, mode: "register" }));
-                        setAuthError(null);
-                        setAuthOpen(true);
-                      }}
-                    >
-                      Create account
-                    </Button>
-                  </div>
-                  <div className="w-full max-w-sm">
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        setAuthMode("login");
-                        setAuthDraft((current) => ({ ...current, mode: "login" }));
-                        setAuthError(null);
-                        setAuthOpen(true);
-                      }}
-                    >
-                      Log in
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap items-center gap-3 text-caption text-text-secondary">
-                  <span className="rounded-full border border-muted bg-bg px-3 py-1.5">
-                    No effect on this match
-                  </span>
-                  <span className="rounded-full border border-muted bg-bg px-3 py-1.5">
-                    Google or email
-                  </span>
-                  <span className="rounded-full border border-muted bg-bg px-3 py-1.5">
-                    Continue without account
-                  </span>
-                </div>
-              </section>
-            )}
-          </div>
-
+        <div className="mx-auto mt-6 w-full max-w-[41.5rem]">
           <section
-            className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm"
+            className="relative overflow-hidden rounded-[2.25rem] border border-white/60 shadow-[0_24px_72px_rgba(45,42,38,0.16)]"
             style={{
               animation:
                 revealMode === "confetti"
@@ -363,13 +258,14 @@ export function ResultScreen({
                   : "resultReveal 520ms cubic-bezier(0.2, 1, 0.22, 1) both",
             }}
           >
-            <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
-              {galleryImages.length > 0 ? (
+            <div className="relative aspect-[4/5] min-h-[28rem] bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))] sm:aspect-[3/4]">
+              {heroImage ? (
                 <Image
-                  src={galleryImages[0]}
+                  src={heroImage}
                   alt={venue.name}
                   fill
-                  sizes="(max-width: 1024px) 100vw, 520px"
+                  sizes="(max-width: 768px) 100vw, 664px"
+                  loading="eager"
                   className="object-cover"
                   unoptimized
                 />
@@ -381,40 +277,172 @@ export function ResultScreen({
                 </div>
               )}
 
-              <div className="absolute left-5 top-5 z-10 flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption font-medium text-text shadow-sm">
-                <CategoryIcon category={venue.category} />
-                {CATEGORY_LABELS[venue.category]}
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(250,248,245,0.16),rgba(250,248,245,0.14)_34%,rgba(250,248,245,0.45)_68%,rgba(250,248,245,0.88)_100%)]" />
+              <div
+                className="absolute inset-x-0 bottom-0 top-0"
+                style={{
+                  background:
+                    "radial-gradient(circle at 50% 52%, rgba(250,248,245,0.08), rgba(250,248,245,0) 34%)",
+                }}
+                aria-hidden="true"
+              />
+
+              <div className="relative z-10 flex h-full flex-col justify-end px-5 pb-20 pt-12 text-center sm:px-8 sm:pb-24">
+                <div className="mx-auto w-full max-w-[30rem]">
+                  <p className="text-[clamp(3.2rem,10vw,5.8rem)] leading-[0.84] tracking-[-0.06em] text-[#2B211D] [font-family:Georgia,'Times_New_Roman',serif] [font-variant-ligatures:common-ligatures]">
+                    It&apos;s a match
+                  </p>
+                  <p className="mt-5 text-[0.95rem] font-medium text-white/92 sm:text-[1.05rem]">
+                    {matchedWithName
+                      ? `${matchedWithName} & you both chose`
+                      : "You both chose"}
+                  </p>
+                  <h1 className="mt-4 text-[clamp(2.8rem,8vw,4.6rem)] leading-[0.92] tracking-[-0.05em] text-white [font-family:Georgia,'Times_New_Roman',serif]">
+                    {venue.name}
+                  </h1>
+                  <p className="mt-2 text-[1.05rem] italic text-white/88 [font-family:Georgia,'Times_New_Roman',serif]">
+                    {CATEGORY_LABELS[venue.category]}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pointer-events-none absolute left-1/2 top-[43%] z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-black/14 bg-white/72 shadow-[0_10px_24px_rgba(45,42,38,0.12)] backdrop-blur-sm">
+                <HeartIcon />
+              </div>
+            </div>
+          </section>
+
+          <section
+            className="-mt-14 rounded-[1.85rem] border border-white/80 bg-white/96 p-4 shadow-[0_20px_64px_rgba(45,42,38,0.14)] backdrop-blur sm:p-5"
+            style={{
+              animation: "savePromptReveal var(--motion-base) var(--ease-enter) 120ms both",
+            }}
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <a
+                href={directionsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full"
+              >
+                <Button icon={<DirectionsIcon />} className="rounded-full">
+                  Get directions
+                </Button>
+              </a>
+              <a
+                href={`/api/sessions/${matchResult.sessionId}/calendar`}
+                className="w-full"
+              >
+                <Button
+                  variant="secondary"
+                  icon={<CalendarIcon />}
+                  className="rounded-full border-0 bg-secondary text-white hover:bg-[#4e897b] hover:border-0"
+                >
+                  Add to calendar
+                </Button>
+              </a>
+            </div>
+
+            <div className="mt-4 border-t border-[#E7DDD2] pt-4">
+              <div className="flex items-center justify-center gap-3 text-caption text-text-secondary">
+                <button
+                  type="button"
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 transition-colors duration-200 hover:bg-bg"
+                >
+                  <ShareIcon />
+                  Share
+                </button>
+                <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-success">
+                  <CheckIcon />
+                  Saved
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-[2rem] border border-white/75 bg-white/94 p-5 shadow-[0_18px_56px_rgba(45,42,38,0.12)] sm:p-7">
+            <div className="grid gap-5 sm:grid-cols-[1.15fr_0.9fr_1.15fr] sm:items-start">
+              <InfoBlock
+                icon={<LocationPinIcon />}
+                label="Location"
+                value={venue.address}
+              />
+              <InfoBlock
+                icon={<StarIcon />}
+                label="Rating"
+                value={`${venue.rating.toFixed(1)} / 5.0`}
+              />
+              <div className="flex items-start justify-between gap-4">
+                <InfoBlock
+                  icon={<PriceTagIcon />}
+                  label="Price Range"
+                  value={`${toPriceLabel(venue.priceLevel)} • ${CATEGORY_LABELS[venue.category]}`}
+                />
+                <PriceBadge priceLevel={venue.priceLevel} />
               </div>
             </div>
 
-            <div className="space-y-5 p-6">
-              {galleryImages.length > 1 ? (
-                <section className="space-y-3" aria-label="Photo gallery">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-caption font-semibold uppercase tracking-[0.18em] text-secondary">
-                        Photo gallery
-                      </p>
-                      <p className="mt-1 text-body text-text-secondary">
-                        {galleryImages.length} photos
-                      </p>
-                    </div>
-                    <div className="hidden rounded-full border border-muted bg-bg px-3 py-1.5 text-caption font-medium text-text-secondary sm:inline-flex">
-                      Swipe-worthy details
-                    </div>
-                  </div>
+            <div className="mt-6 border-t border-[#E7DDD2] pt-7">
+              <h2 className="text-[clamp(2rem,5vw,3.1rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                About this place
+              </h2>
+              <p className="mt-4 max-w-3xl text-[1.15rem] leading-8 text-text-secondary">
+                {venueSummary}
+              </p>
 
-                  <div className="grid grid-cols-3 gap-3">
+              <div className="mt-7">
+                <p className="text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
+                  Vibes
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {getVibes(venue).map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-[#E7DDD2] bg-[#F8F1E8] px-4 py-2 text-body text-text-secondary"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <details className="mt-6 overflow-hidden rounded-[1.5rem] border border-[#E7DDD2] bg-[#F8F1E8]/90">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-5 text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
+                  Why this spot works
+                  <ChevronDownIcon />
+                </summary>
+                <div className="border-t border-[#E7DDD2] px-5 py-5 text-body leading-7 text-text-secondary">
+                  <p>
+                    {sharedLikeCopy} Strong first-date fit, {toPriceLabel(venue.priceLevel)} pricing, and a{" "}
+                    {venue.rating.toFixed(1)}-star rating made this one stand out.
+                  </p>
+                  <p className="mt-3">
+                    Matched on {matchedDateLabel}, with a {CATEGORY_LABELS[venue.category].toLowerCase()} setting that stays easy to revisit later.
+                  </p>
+                </div>
+              </details>
+
+              {galleryImages.length > 0 ? (
+                <section className="mt-8" aria-label="Photo gallery">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
+                      Photo gallery
+                    </p>
+                    <p className="text-body text-text-secondary">
+                      {galleryImages.length} photos
+                    </p>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     {galleryImages.slice(0, 3).map((photoUrl, photoIndex) => (
                       <div
                         key={`${photoUrl}-${photoIndex}`}
-                        className="relative aspect-[5/4] overflow-hidden rounded-[1.25rem] border border-white/70 bg-bg shadow-[0_10px_24px_rgba(45,42,38,0.08)]"
+                        className="relative aspect-[4/5] overflow-hidden rounded-[1.4rem] border border-white/70 bg-bg shadow-[0_12px_28px_rgba(45,42,38,0.08)]"
                       >
                         <Image
                           src={photoUrl}
                           alt={`${venue.name} photo ${photoIndex + 1}`}
                           fill
-                          sizes="(max-width: 1024px) 33vw, 150px"
+                          sizes="(max-width: 640px) 100vw, 200px"
                           className="object-cover"
                           unoptimized
                         />
@@ -423,65 +451,94 @@ export function ResultScreen({
                   </div>
                 </section>
               ) : null}
-
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h2 className="text-h1 font-semibold text-text">{venue.name}</h2>
-                    <p className="mt-2 text-body text-text-secondary">{venue.address}</p>
-                  </div>
-                  <PriceBadge priceLevel={venue.priceLevel} />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 text-body text-text-secondary">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-secondary-muted px-3 py-1.5 text-secondary">
-                    <StarIcon />
-                    {venue.rating.toFixed(1)} rating
-                  </div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-primary-muted px-3 py-1.5 text-primary">
-                    <HeartIcon />
-                    {matchedWithName
-                      ? `You and ${matchedWithName} both liked this spot`
-                      : "You both liked this spot"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {venue.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-muted bg-bg px-3 py-1.5 text-caption font-medium text-text-secondary"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <details className="rounded-[1.5rem] border border-muted bg-bg/70 p-4">
-                <summary className="cursor-pointer list-none text-body font-semibold text-text">
-                  Why this spot works
-                </summary>
-                <div className="mt-4 grid gap-3 text-body text-text-secondary sm:grid-cols-2">
-                  <div className="rounded-2xl bg-white px-4 py-3">
-                    Strong first-date fit with a {venue.rating.toFixed(1)} rating
-                  </div>
-                  <div className="rounded-2xl bg-white px-4 py-3">
-                    Fits a {CATEGORY_LABELS[venue.category].toLowerCase()} plan with{" "}
-                    {toPriceLabel(venue.priceLevel)} pricing
-                  </div>
-                  <div className="rounded-2xl bg-white px-4 py-3 sm:col-span-2">
-                    Matched on{" "}
-                    {matchResult.matchedAt.toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </div>
-                </div>
-              </details>
             </div>
           </section>
-        </section>
+
+          {authStatus === "saved" ? (
+            <section
+              className="mt-8 rounded-[2rem] border border-[#F0D7C2] bg-[linear-gradient(180deg,rgba(253,240,228,0.96),rgba(250,236,223,0.9))] px-6 py-8 text-center shadow-[0_18px_56px_rgba(224,116,104,0.08)]"
+              style={{
+                animation:
+                  "savePromptReveal var(--motion-base) var(--ease-enter) both",
+              }}
+            >
+              <p className="text-caption font-semibold uppercase tracking-[0.32em] text-success">
+                Saved to your history
+              </p>
+              <h2 className="mt-4 text-[clamp(2.4rem,6vw,3.8rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                This match is in your history
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-[1.1rem] leading-8 text-text-secondary">
+                Come back to this plan anytime. Future matches will save here too.
+              </p>
+              {accountEmail ? (
+                <p className="mt-6 text-body text-text-secondary">
+                  Signed in as {accountEmail}
+                </p>
+              ) : null}
+            </section>
+          ) : (
+            <section
+              className="mt-8 rounded-[2rem] border border-[#F0D7C2] bg-[linear-gradient(180deg,rgba(253,240,228,0.96),rgba(250,236,223,0.9))] px-6 py-8 text-center shadow-[0_18px_56px_rgba(224,116,104,0.08)]"
+              style={{
+                animation:
+                  "savePromptReveal var(--motion-base) var(--ease-enter) 120ms both",
+              }}
+            >
+              <p className="text-caption font-semibold uppercase tracking-[0.32em] text-secondary">
+                Save this date
+              </p>
+              <h2 className="mt-4 text-[clamp(2.4rem,6vw,3.8rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                Keep this match in your history
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-[1.1rem] leading-8 text-text-secondary">
+                Create a free account to save all your matched dates, track your plans, and never lose a great venue.
+              </p>
+
+              <div className="mx-auto mt-6 flex max-w-xl flex-col gap-3 sm:flex-row">
+                <div className="w-full">
+                  <Button
+                    onClick={() => {
+                      setAuthMode("register");
+                      setAuthDraft((current) => ({ ...current, mode: "register" }));
+                      setAuthError(null);
+                      setAuthOpen(true);
+                    }}
+                    className="rounded-full"
+                  >
+                    Create account
+                  </Button>
+                </div>
+                <div className="w-full">
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setAuthMode("login");
+                      setAuthDraft((current) => ({ ...current, mode: "login" }));
+                      setAuthError(null);
+                      setAuthOpen(true);
+                    }}
+                    className="rounded-full"
+                  >
+                    Log in
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-caption text-text-secondary">
+                <span className="rounded-full border border-[#E7DDD2] bg-white/70 px-3 py-1.5">
+                  No effect on this match
+                </span>
+                <span className="rounded-full border border-[#E7DDD2] bg-white/70 px-3 py-1.5">
+                  Google or email
+                </span>
+                <span className="rounded-full border border-[#E7DDD2] bg-white/70 px-3 py-1.5">
+                  Continue without account
+                </span>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </main>
   );
@@ -500,6 +557,128 @@ function StarIcon() {
   );
 }
 
+function LocationPinIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 21s6-5.68 6-11a6 6 0 1 0-12 0c0 5.32 6 11 6 11Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <circle cx="12" cy="10" r="2.25" fill="currentColor" />
+    </svg>
+  );
+}
+
+function PriceTagIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5C5 18.22 5.78 19 6.75 19h10.5c.97 0 1.75-.78 1.75-1.75V11"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 5h5v5M11 13l8-8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function DirectionsIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="m4 12 15-7-4.5 14-3.2-5.3L4 12Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M7 4v3M17 4v3M4.75 8.5h14.5M6.75 20h10.5c1.1 0 2-.9 2-2V8a2 2 0 0 0-2-2H6.75a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M15 8a3 3 0 1 0-2.83-4H12a3 3 0 0 0 .17 1L8.9 7.05A3 3 0 0 0 6 6a3 3 0 1 0 2.9 4.05l3.27 2.05a3 3 0 0 0-.17.95c0 .34.06.66.17.95L8.9 16.05A3 3 0 1 0 9 18c0-.34-.06-.66-.17-.95l3.27-2.05A3 3 0 1 0 15 8Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="m5 12.5 4.2 4.2L19 7"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChevronDownIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="m6 9 6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function InfoBlock({
+  icon,
+  label,
+  value,
+}: {
+  readonly icon: ReactNode;
+  readonly label: string;
+  readonly value: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center gap-3 text-primary">
+        {icon}
+        <p className="text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
+          {label}
+        </p>
+      </div>
+      <p className="mt-3 text-[1rem] leading-7 text-text sm:text-[1.1rem]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function getVenueGalleryImages(
   venue: MatchResult["venue"],
 ): readonly string[] {
@@ -512,6 +691,33 @@ function getVenueGalleryImages(
 
 function toPriceLabel(priceLevel: number): string {
   return "$".repeat(Math.max(1, Math.min(priceLevel, 4)));
+}
+
+function getVenueSummary({
+  sharedLikeCopy,
+  venue,
+  matchedDateLabel,
+}: {
+  readonly sharedLikeCopy: string;
+  readonly venue: MatchResult["venue"];
+  readonly matchedDateLabel: string;
+}): string {
+  const tags = getVibes(venue);
+  const descriptor = tags.length > 0 ? tags.join(", ") : "thoughtful";
+
+  return `${sharedLikeCopy} Known for ${descriptor}, ${toPriceLabel(venue.priceLevel)} pricing, ${venue.rating.toFixed(1)}-star ratings, and a strong first-date fit, matched on ${matchedDateLabel}.`;
+}
+
+function getVibes(venue: MatchResult["venue"]): readonly string[] {
+  if (venue.tags.length > 0) {
+    return venue.tags.slice(0, 4);
+  }
+
+  return [
+    venue.rating >= 4.5 ? "top-rated" : "well-liked",
+    venue.priceLevel <= 2 ? "easygoing" : "special-night",
+    CATEGORY_LABELS[venue.category].toLowerCase(),
+  ];
 }
 
 function HeartIcon() {
