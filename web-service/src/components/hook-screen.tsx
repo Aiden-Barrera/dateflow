@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BudgetIcon } from "./budget-icon";
+import { Button } from "./button";
 import { CategoryIcon } from "./category-icon";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
@@ -244,24 +245,9 @@ export function HookScreen({
         {error ? <p className="mt-4 text-body text-error">{error}</p> : null}
 
         <div className="mt-6">
-          <button
-            type="button"
-            onClick={handleContinue}
-            disabled={!canSubmit}
-            className={`group relative flex h-16 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl text-[1.05rem] font-bold tracking-tight text-white transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 ${
-              canSubmit
-                ? "cursor-pointer bg-[linear-gradient(135deg,_#ff8fa3_0%,_#ff5a86_45%,_#ff3d7f_100%)] shadow-[0_20px_40px_rgba(255,61,127,0.45),_0_0_0_1px_rgba(255,255,255,0.25)_inset] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[0_26px_50px_rgba(255,61,127,0.55),_0_0_0_1px_rgba(255,255,255,0.35)_inset] active:translate-y-0"
-                : "cursor-not-allowed bg-white/10 text-white/50 shadow-none"
-            }`}
-          >
-            <span className="relative z-10">Join this date plan</span>
-            {canSubmit ? (
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-x-2 top-1 h-1/3 rounded-t-xl bg-white/25 blur-[2px]"
-              />
-            ) : null}
-          </button>
+          <Button variant="secondary" onClick={handleContinue} disabled={!canSubmit}>
+            Join this date plan
+          </Button>
         </div>
       </div>
     </main>
