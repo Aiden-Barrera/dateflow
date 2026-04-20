@@ -95,7 +95,7 @@ export function HookScreen({
 
   function handleContinue() {
     if (!canSubmit) {
-      setError("Fill in your name, area, and at least one format.");
+      setError("Fill in your name, location, and select at least one category.");
       return;
     }
 
@@ -192,6 +192,7 @@ export function HookScreen({
                     <button
                       key={category.value}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() => toggleCategory(category.value)}
                       className={`flex h-14 items-center justify-center gap-2 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
@@ -216,6 +217,7 @@ export function HookScreen({
                     <button
                       key={option.value}
                       type="button"
+                      aria-pressed={selected}
                       onClick={() => setBudget(option.value)}
                       className={`flex h-12 items-center justify-center gap-1.5 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
