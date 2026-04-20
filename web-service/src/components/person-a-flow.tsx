@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./button";
-import { CategoryIcon } from "./category-icon";
-import { Logo } from "./logo";
 import { createSessionStatusSync } from "../lib/session-status-sync";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
@@ -36,10 +34,10 @@ const CATEGORIES: { value: Category; label: string }[] = [
   { value: "EVENT", label: "Event" },
 ];
 
-const BUDGETS: { value: BudgetLevel; label: string; symbol: string }[] = [
-  { value: "BUDGET", label: "Casual", symbol: "$" },
-  { value: "MODERATE", label: "Mid-range", symbol: "$$" },
-  { value: "UPSCALE", label: "Upscale", symbol: "$$$" },
+const BUDGETS: { value: BudgetLevel; label: string }[] = [
+  { value: "BUDGET", label: "Casual" },
+  { value: "MODERATE", label: "Mid" },
+  { value: "UPSCALE", label: "Upscale" },
 ];
 
 export function PersonAFlow() {
@@ -47,7 +45,6 @@ export function PersonAFlow() {
   const [name, setName] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
   const [location, setLocation] = useState<Location | null>(null);
-  const [gpsState, setGpsState] = useState<"idle" | "loading">("idle");
   const [categories, setCategories] = useState<Category[]>(["RESTAURANT", "BAR"]);
   const [budget, setBudget] = useState<BudgetLevel>("MODERATE");
   const [error, setError] = useState<string | null>(null);
@@ -71,29 +68,9 @@ export function PersonAFlow() {
     );
   }
 
-  function handleUseLocation() {
-    if (!navigator.geolocation) {
-      setError("Location access is unavailable in this browser.");
-      return;
-    }
-
-    setError(null);
-    setGpsState("loading");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          label: "Current Location",
-        });
-        setLocationLabel("Current Location");
-        setGpsState("idle");
-      },
-      () => {
-        setGpsState("idle");
-        setError("We couldn't access your location. Enter your city or zip instead.");
-      },
-    );
+  function handleSurpriseMe() {
+    setCategories(CATEGORIES.map((category) => category.value));
+    setBudget("MODERATE");
   }
 
   async function handleCreateSession() {
@@ -223,151 +200,14 @@ export function PersonAFlow() {
     router.push(redirectHref);
   }, [createdSession, createdSessionStatus, router]);
 
-  return (
-    <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
-      <div
-        className="pointer-events-none absolute -left-16 top-10 h-72 w-72 rounded-full blur-3xl"
-        style={{ background: "var(--color-primary-muted)" }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute right-0 top-24 h-80 w-80 rounded-full blur-3xl"
-        style={{ background: "var(--color-secondary-muted)" }}
-        aria-hidden="true"
-      />
-
-      <div className="mx-auto flex min-h-dvh max-w-6xl flex-col px-6 pb-12 pt-8 sm:px-8 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:pb-16">
-        <section className="relative z-10 flex flex-col justify-between">
-          <div>
-            <Logo />
-            <h1 className="mt-10 max-w-2xl text-[clamp(3.2rem,10vw,6.8rem)] font-semibold leading-[0.92] tracking-[-0.06em]">
-              Build the date invite before the vibe goes cold.
-            </h1>
-            <p className="mt-5 max-w-xl text-body text-text-secondary">
-              Start the session, set your preferences, and send one clean link.
-              For demo mode, you can open the invite yourself and run the full Person B journey.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-4 sm:grid-cols-3">
-            <StatCard label="Time to start" value="60 sec" />
-            <StatCard label="Accounts" value="None" />
-            <StatCard label="Demo path" value="Built in" />
-          </div>
-        </section>
-
-        <section className="relative z-10 mt-10 rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm sm:p-7 lg:mt-0">
-          {!createdSession ? (
-            <div className="space-y-6">
-              <div>
-                <p className="text-caption font-semibold uppercase tracking-[0.24em] text-primary">
-                  Setup
-                </p>
-                <h2 className="mt-2 text-h1 font-semibold">Create your invite</h2>
-              </div>
-
-              <label className="block">
-                <span className="mb-2 block text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                  Your first name
-                </span>
-                <input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Alex"
-                  className="h-14 w-full rounded-2xl border-[1.5px] border-muted bg-surface px-4 text-body text-text placeholder:text-text-secondary/55 focus:border-primary focus:outline-none"
-                />
-              </label>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                    Your area
-                  </span>
-                  <button
-                    onClick={handleUseLocation}
-                    className="cursor-pointer text-caption font-semibold text-secondary transition-colors hover:text-secondary/75"
-                  >
-                    {gpsState === "loading" ? "Finding you..." : "Use my location"}
-                  </button>
-                </div>
-                <input
-                  value={locationLabel}
-                  onChange={(event) => {
-                    setLocation(null);
-                    setLocationLabel(event.target.value);
-                  }}
-                  placeholder="Brooklyn or 11211"
-                  className="h-14 w-full rounded-2xl border-[1.5px] border-muted bg-surface px-4 text-body text-text placeholder:text-text-secondary/55 focus:border-primary focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                    What sounds good?
-                  </span>
-                  <button
-                    onClick={() => setCategories(CATEGORIES.map((category) => category.value))}
-                    className="cursor-pointer text-caption font-semibold text-secondary transition-colors hover:text-secondary/75"
-                  >
-                    Surprise me
-                  </button>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  {CATEGORIES.map((category) => {
-                    const selected = categories.includes(category.value);
-
-                    return (
-                      <button
-                        key={category.value}
-                        onClick={() => toggleCategory(category.value)}
-                        className={`flex h-[78px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-[1.5px] transition-all duration-200 active:scale-[0.97] ${
-                          selected
-                            ? "border-primary bg-primary text-white shadow-sm"
-                            : "border-muted bg-surface text-text shadow-sm hover:border-text-secondary"
-                        }`}
-                      >
-                        <CategoryIcon category={category.value} className="h-5 w-5" />
-                        <span className="text-body font-semibold">{category.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-                  Budget vibe
-                </span>
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  {BUDGETS.map((option) => {
-                    const selected = budget === option.value;
-
-                    return (
-                      <button
-                        key={option.value}
-                        onClick={() => setBudget(option.value)}
-                        className={`flex h-[68px] cursor-pointer flex-col items-center justify-center rounded-2xl border-[1.5px] transition-all duration-200 active:scale-[0.97] ${
-                          selected
-                            ? "border-secondary bg-secondary-muted text-secondary"
-                            : "border-muted bg-surface text-text shadow-sm hover:border-text-secondary"
-                        }`}
-                      >
-                        <span className="text-body font-bold">{option.symbol}</span>
-                        <span className="text-caption">{option.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {error ? <p className="text-body text-error">{error}</p> : null}
-
-              <Button onClick={handleCreateSession} disabled={!canSubmit} loading={submitting}>
-                Create invite link
-              </Button>
-            </div>
-          ) : (
+  if (createdSession) {
+    return (
+      <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#4a302a_0%,_#2a1a15_60%,_#1a0f0c_100%)] px-6 pb-12 pt-8 text-white">
+        <div className="mx-auto w-full max-w-md">
+          <p className="text-caption font-semibold uppercase tracking-[0.24em] text-white/70">
+            Dateflow
+          </p>
+          <div className="mt-10 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-sm">
             <InviteReadyState
               sessionId={createdSession.id}
               shareUrl={createdSession.shareUrl}
@@ -376,8 +216,130 @@ export function PersonAFlow() {
               errorMessage={error}
               onCopyInvite={handleCopyInvite}
             />
-          )}
-        </section>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#4a302a_0%,_#2a1a15_60%,_#1a0f0c_100%)] text-white">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8">
+        <p className="text-caption font-semibold uppercase tracking-[0.28em] text-white">
+          Dateflow
+        </p>
+
+        <h1 className="mt-10 text-[clamp(2.6rem,8.5vw,3.4rem)] font-bold leading-[0.98] tracking-[-0.03em] text-white">
+          Build the date invite before the vibe goes cold
+        </h1>
+        <p className="mt-5 text-body text-white/65">
+          Start the session, set your preferences, and send one clean link.
+        </p>
+
+        <div className="mt-8 rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+          <div className="space-y-5">
+            <div>
+              <label
+                htmlFor="person-a-name"
+                className="block text-body font-semibold text-white"
+              >
+                Your Name
+              </label>
+              <input
+                id="person-a-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Alex"
+                className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-transparent px-4 text-body text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="person-a-location"
+                className="block text-body font-semibold text-white"
+              >
+                Location
+              </label>
+              <input
+                id="person-a-location"
+                value={locationLabel}
+                onChange={(event) => {
+                  setLocation(null);
+                  setLocationLabel(event.target.value);
+                }}
+                placeholder="Brooklyn or 11211"
+                className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-transparent px-4 text-body text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <p className="text-body font-semibold text-white">Categories</p>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {CATEGORIES.map((category) => {
+                  const selected = categories.includes(category.value);
+                  return (
+                    <button
+                      key={category.value}
+                      type="button"
+                      onClick={() => toggleCategory(category.value)}
+                      className={`h-14 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                        selected
+                          ? "border-white/60 bg-white/15 text-white"
+                          : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-body font-semibold text-white">Budget</p>
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                {BUDGETS.map((option) => {
+                  const selected = budget === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setBudget(option.value)}
+                      className={`h-12 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                        selected
+                          ? "border-white/60 bg-white/15 text-white"
+                          : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSurpriseMe}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.04] text-body font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              <span aria-hidden>✨</span> Surprise me
+            </button>
+          </div>
+        </div>
+
+        {error ? <p className="mt-4 text-body text-error">{error}</p> : null}
+
+        <div className="mt-6">
+          <Button onClick={handleCreateSession} disabled={!canSubmit} loading={submitting}>
+            Create invite link
+          </Button>
+        </div>
+
+        <p className="mt-6 text-center text-caption text-white/50">
+          2,847 dates planned this week
+        </p>
       </div>
     </main>
   );
@@ -398,9 +360,7 @@ export function InviteReadyState({
         ? "Continue to your swipe deck"
         : sessionStatus === "expired"
           ? "Start a new session"
-          : sessionStatus === "generation_failed"
-            ? "Open live session"
-        : "Open live session";
+          : "Open live session";
   const liveSessionHref = sessionStatus === "expired" ? "/" : `/plan/${sessionId}`;
   const statusMessage =
     sessionStatus === "expired"
@@ -411,23 +371,21 @@ export function InviteReadyState({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[1.75rem] bg-[linear-gradient(140deg,#1f1a16,#57473c)] p-6 text-white shadow-[0_20px_50px_rgba(45,42,38,0.24)]">
+      <div>
         <p className="text-caption font-semibold uppercase tracking-[0.22em] text-white/70">
           Invite sent
         </p>
-        <h2 className="mt-3 text-h1 font-semibold">
+        <h2 className="mt-3 text-h1 font-semibold text-white">
           Your side is set. Now hand off the link.
         </h2>
-        <p className="mt-3 max-w-xl text-body text-white/80">
-          {statusMessage}
-        </p>
+        <p className="mt-3 text-body text-white/70">{statusMessage}</p>
       </div>
 
-      <div className="rounded-[1.5rem] border border-muted bg-bg p-4">
-        <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
+      <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-4">
+        <p className="text-caption font-semibold uppercase tracking-[0.18em] text-white/60">
           Share link
         </p>
-        <p className="mt-3 break-all text-body font-medium">{shareUrl}</p>
+        <p className="mt-3 break-all text-body font-medium text-white">{shareUrl}</p>
       </div>
 
       <div className="grid gap-3">
@@ -436,7 +394,7 @@ export function InviteReadyState({
         </Button>
         <a
           href={liveSessionHref}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border-[1.5px] border-muted bg-surface text-body font-semibold text-text transition-all duration-200 hover:border-text-secondary active:scale-[0.98] h-14 cursor-pointer"
+          className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.04] text-body font-semibold text-white transition-colors hover:bg-white/10"
         >
           {liveSessionLabel}
         </a>
@@ -476,21 +434,4 @@ export function getInviteReadyRedirectHref(
   }
 
   return null;
-}
-
-function StatCard({
-  label,
-  value,
-}: {
-  readonly label: string;
-  readonly value: string;
-}) {
-  return (
-    <div className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur">
-      <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-        {label}
-      </p>
-      <p className="mt-2 text-h2 font-semibold text-text">{value}</p>
-    </div>
-  );
 }
