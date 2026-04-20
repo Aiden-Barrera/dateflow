@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HookScreen } from "../../../components/hook-screen";
-import { LocationScreen } from "../../../components/location-screen";
-import { VibeScreen } from "../../../components/vibe-screen";
 import { LoadingScreen } from "../../../components/loading-screen";
 import { createSessionStatusSync } from "../../../lib/session-status-sync";
 import type { Location, BudgetLevel, Category } from "../../../lib/types/preference";
@@ -20,14 +18,11 @@ type PlanFlowProps = {
 /**
  * Client-side flow orchestrator for the Person B experience.
  *
- * Manages which screen is visible (hook → location → vibe → loading)
- * and holds the collected preference data as it accumulates across screens.
- *
- * When Person B completes the vibe screen, PlanFlow bundles all collected
- * data (location + categories + budget) and POSTs it to the preferences API.
- * The loading screen renders immediately while the request is in flight.
+ * HookScreen collects display name, location, categories, and budget on a
+ * single landing, then PlanFlow POSTs the bundled preferences and shows
+ * the loading screen while the session transitions.
  */
-type FlowStep = "hook" | "location" | "vibe" | "loading";
+type FlowStep = "hook" | "loading";
 
 export function PlanFlow({
   sessionId,
@@ -44,7 +39,8 @@ export function PlanFlow({
   async function submitPreferences(
     loc: Location,
     vibeCategories: Category[],
-    vibeBudget: BudgetLevel
+    vibeBudget: BudgetLevel,
+    displayNameOverride?: string,
   ) {
     try {
       const response = await fetch(
@@ -54,7 +50,7 @@ export function PlanFlow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             role: "b",
-            displayName: inviteeDisplayName,
+            displayName: displayNameOverride ?? inviteeDisplayName,
             location: { lat: loc.lat, lng: loc.lng, label: loc.label },
             budget: vibeBudget,
             categories: vibeCategories,
@@ -97,38 +93,16 @@ export function PlanFlow({
 
   if (step === "hook") {
     return (
-        <HookScreen
-          creatorName={creatorName}
-          initialDisplayName={inviteeDisplayName}
-          onContinue={(displayName) => {
-            setInviteeDisplayName(displayName);
-            setStep("location");
-          }}
-      />
-    );
-  }
-
-  if (step === "location") {
-    return (
-      <LocationScreen
-        onComplete={(loc) => {
-          setLocation(loc);
-          setStep("vibe");
-        }}
-        onBack={() => setStep("hook")}
-      />
-    );
-  }
-
-  if (step === "vibe") {
-    return (
-      <VibeScreen
-        onComplete={(vibeData) => {
-          if (!location) return;
+      <HookScreen
+        creatorName={creatorName}
+        initialDisplayName={inviteeDisplayName}
+        initialLocation={location}
+        onContinue={(data) => {
+          setInviteeDisplayName(data.displayName);
+          setLocation(data.location);
           setStep("loading");
-          submitPreferences(location, vibeData.categories, vibeData.budget);
+          submitPreferences(data.location, data.categories, data.budget, data.displayName);
         }}
-        onBack={() => setStep("location")}
       />
     );
   }
@@ -142,7 +116,7 @@ export function PlanFlow({
           <button
             onClick={() => {
               setSubmitError(null);
-              setStep("vibe");
+              setStep("hook");
             }}
             className="cursor-pointer text-body font-medium text-secondary underline underline-offset-2"
           >
