@@ -2,40 +2,81 @@
 
 import { useState } from "react";
 import { Button } from "./button";
+import type { Location } from "../lib/types/preference";
 
 type HookScreenProps = {
   readonly creatorName: string;
   readonly initialDisplayName?: string;
-  readonly onContinue: (displayName: string) => void;
+  readonly initialLocation?: Location | null;
+  readonly onContinue: (displayName: string, location: Location) => void;
 };
 
 /**
  * Person B landing — the invitation hook.
  *
- * A light, warm peach canvas with an invitation banner from Person A,
- * a welcoming headline, a single name field, and the "Join this date plan"
- * CTA. Location and vibe selections live on the next steps of the flow.
+ * Warm peach canvas. Collects display name and location (GPS or typed)
+ * before handing off to the vibe screen.
  */
 export function HookScreen({
   creatorName,
   initialDisplayName = "",
+  initialLocation = null,
   onContinue,
 }: HookScreenProps) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
-  const [showError, setShowError] = useState(false);
-  const errorId = "invitee-display-name-error";
+  const [locationLabel, setLocationLabel] = useState(initialLocation?.label ?? "");
+  const [location, setLocation] = useState<Location | null>(initialLocation);
+  const [gpsState, setGpsState] = useState<"idle" | "loading">("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [showNameError, setShowNameError] = useState(false);
+  const nameErrorId = "invitee-display-name-error";
   const initial = creatorName.trim().charAt(0).toUpperCase() || "?";
 
-  function handleContinue() {
-    const trimmed = displayName.trim();
-
-    if (!trimmed) {
-      setShowError(true);
+  function handleUseLocation() {
+    if (!navigator.geolocation) {
+      setError("Location access is unavailable in this browser.");
       return;
     }
 
-    setShowError(false);
-    onContinue(trimmed);
+    setError(null);
+    setGpsState("loading");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          label: "Current Location",
+        });
+        setLocationLabel("Current Location");
+        setGpsState("idle");
+      },
+      () => {
+        setGpsState("idle");
+        setError("We couldn't access your location. Enter your city or zip instead.");
+      },
+    );
+  }
+
+  function handleContinue() {
+    const trimmed = displayName.trim();
+    const trimmedLocation = locationLabel.trim();
+
+    if (!trimmed) {
+      setShowNameError(true);
+      return;
+    }
+
+    if (!location && trimmedLocation.length === 0) {
+      setError("Add your area so we can find a fair midpoint.");
+      return;
+    }
+
+    const resolvedLocation: Location =
+      location ?? { lat: 0, lng: 0, label: trimmedLocation };
+
+    setShowNameError(false);
+    setError(null);
+    onContinue(trimmed, resolvedLocation);
   }
 
   return (
@@ -66,41 +107,74 @@ export function HookScreen({
           Add your preferences and Dateflow will find where you both align.
         </p>
 
-        <div className="mt-8 space-y-3">
-          <label
-            htmlFor="invitee-display-name"
-            className="block text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary"
-          >
-            Your name
-          </label>
-          <input
-            id="invitee-display-name"
-            name="invitee-display-name"
-            type="text"
-            autoComplete="given-name"
-            aria-invalid={showError}
-            aria-describedby={showError ? errorId : undefined}
-            value={displayName}
-            onChange={(event) => {
-              setDisplayName(event.target.value);
-              if (showError) {
-                setShowError(false);
-              }
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                handleContinue();
-              }
-            }}
-            placeholder="What should Dateflow call you?"
-            className="h-14 w-full rounded-2xl border border-white/80 bg-white/80 px-4 text-body text-text shadow-sm outline-none transition placeholder:text-text-secondary/55 focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
-          {showError ? (
-            <p id={errorId} className="text-caption text-error">
-              Add your name so the shared result feels like both of you.
-            </p>
-          ) : null}
+        <div className="mt-8 space-y-5">
+          <div className="space-y-2">
+            <label
+              htmlFor="invitee-display-name"
+              className="block text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary"
+            >
+              Your name
+            </label>
+            <input
+              id="invitee-display-name"
+              name="invitee-display-name"
+              type="text"
+              autoComplete="given-name"
+              aria-invalid={showNameError}
+              aria-describedby={showNameError ? nameErrorId : undefined}
+              value={displayName}
+              onChange={(event) => {
+                setDisplayName(event.target.value);
+                if (showNameError) {
+                  setShowNameError(false);
+                }
+              }}
+              placeholder="What should Dateflow call you?"
+              className="h-14 w-full rounded-2xl border border-white/80 bg-white/80 px-4 text-body text-text shadow-sm outline-none transition placeholder:text-text-secondary/55 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+            {showNameError ? (
+              <p id={nameErrorId} className="text-caption text-error">
+                Add your name so the shared result feels like both of you.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <label
+                htmlFor="invitee-location"
+                className="block text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary"
+              >
+                Your area
+              </label>
+              <button
+                type="button"
+                onClick={handleUseLocation}
+                className="cursor-pointer text-caption font-semibold text-primary transition-colors hover:text-primary-hover"
+              >
+                {gpsState === "loading" ? "Finding you..." : "Use my location"}
+              </button>
+            </div>
+            <input
+              id="invitee-location"
+              type="text"
+              value={locationLabel}
+              onChange={(event) => {
+                setLocation(null);
+                setLocationLabel(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleContinue();
+                }
+              }}
+              placeholder="Brooklyn or 11211"
+              className="h-14 w-full rounded-2xl border border-white/80 bg-white/80 px-4 text-body text-text shadow-sm outline-none transition placeholder:text-text-secondary/55 focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          {error ? <p className="text-caption text-error">{error}</p> : null}
         </div>
 
         <div className="mt-auto pt-10">

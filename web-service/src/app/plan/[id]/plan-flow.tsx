@@ -100,9 +100,11 @@ export function PlanFlow({
         <HookScreen
           creatorName={creatorName}
           initialDisplayName={inviteeDisplayName}
-          onContinue={(displayName) => {
+          initialLocation={location}
+          onContinue={(displayName, hookLocation) => {
             setInviteeDisplayName(displayName);
-            setStep("location");
+            setLocation(hookLocation);
+            setStep("vibe");
           }}
       />
     );
@@ -128,7 +130,7 @@ export function PlanFlow({
           setStep("loading");
           submitPreferences(location, vibeData.categories, vibeData.budget);
         }}
-        onBack={() => setStep("location")}
+        onBack={() => setStep("hook")}
       />
     );
   }

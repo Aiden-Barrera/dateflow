@@ -45,6 +45,7 @@ export function PersonAFlow() {
   const [name, setName] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
   const [location, setLocation] = useState<Location | null>(null);
+  const [gpsState, setGpsState] = useState<"idle" | "loading">("idle");
   const [categories, setCategories] = useState<Category[]>(["RESTAURANT", "BAR"]);
   const [budget, setBudget] = useState<BudgetLevel>("MODERATE");
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +66,31 @@ export function PersonAFlow() {
       current.includes(category)
         ? current.filter((item) => item !== category)
         : [...current, category],
+    );
+  }
+
+  function handleUseLocation() {
+    if (!navigator.geolocation) {
+      setError("Location access is unavailable in this browser.");
+      return;
+    }
+
+    setError(null);
+    setGpsState("loading");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          label: "Current Location",
+        });
+        setLocationLabel("Current Location");
+        setGpsState("idle");
+      },
+      () => {
+        setGpsState("idle");
+        setError("We couldn't access your location. Enter your city or zip instead.");
+      },
     );
   }
 
@@ -255,12 +281,21 @@ export function PersonAFlow() {
             </div>
 
             <div>
-              <label
-                htmlFor="person-a-location"
-                className="block text-body font-semibold text-white"
-              >
-                Location
-              </label>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="person-a-location"
+                  className="block text-body font-semibold text-white"
+                >
+                  Location
+                </label>
+                <button
+                  type="button"
+                  onClick={handleUseLocation}
+                  className="cursor-pointer text-caption font-semibold text-white/80 transition-colors hover:text-white"
+                >
+                  {gpsState === "loading" ? "Finding you..." : "Use my location"}
+                </button>
+              </div>
               <input
                 id="person-a-location"
                 value={locationLabel}
