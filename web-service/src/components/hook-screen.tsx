@@ -2,20 +2,38 @@
 
 import { useState } from "react";
 import { Button } from "./button";
-import type { Location } from "../lib/types/preference";
+import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
 type HookScreenProps = {
   readonly creatorName: string;
   readonly initialDisplayName?: string;
   readonly initialLocation?: Location | null;
-  readonly onContinue: (displayName: string, location: Location) => void;
+  readonly onContinue: (data: {
+    displayName: string;
+    location: Location;
+    categories: Category[];
+    budget: BudgetLevel;
+  }) => void;
 };
 
+const CATEGORIES: { value: Category; label: string }[] = [
+  { value: "RESTAURANT", label: "Food" },
+  { value: "BAR", label: "Drinks" },
+  { value: "ACTIVITY", label: "Activity" },
+  { value: "EVENT", label: "Event" },
+];
+
+const BUDGETS: { value: BudgetLevel; label: string; emoji: string }[] = [
+  { value: "BUDGET", label: "Casual", emoji: "☕" },
+  { value: "MODERATE", label: "Mid-range", emoji: "🍽️" },
+  { value: "UPSCALE", label: "Upscale", emoji: "✨" },
+];
+
 /**
- * Person B landing — the invitation hook.
+ * Person B landing — single-page invitation flow.
  *
- * Warm peach canvas. Collects display name and location (GPS or typed)
- * before handing off to the vibe screen.
+ * Collects display name, area, categories, and budget in one warm peach canvas,
+ * then hands off to the loading screen in plan-flow.
  */
 export function HookScreen({
   creatorName,
@@ -27,10 +45,24 @@ export function HookScreen({
   const [locationLabel, setLocationLabel] = useState(initialLocation?.label ?? "");
   const [location, setLocation] = useState<Location | null>(initialLocation);
   const [gpsState, setGpsState] = useState<"idle" | "loading">("idle");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [budget, setBudget] = useState<BudgetLevel | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showNameError, setShowNameError] = useState(false);
-  const nameErrorId = "invitee-display-name-error";
   const initial = creatorName.trim().charAt(0).toUpperCase() || "?";
+
+  const canSubmit =
+    displayName.trim().length > 0 &&
+    (location !== null || locationLabel.trim().length > 0) &&
+    categories.length > 0 &&
+    budget !== null;
+
+  function toggleCategory(category: Category) {
+    setCategories((current) =>
+      current.includes(category)
+        ? current.filter((item) => item !== category)
+        : [...current, category],
+    );
+  }
 
   function handleUseLocation() {
     if (!navigator.geolocation) {
@@ -58,31 +90,28 @@ export function HookScreen({
   }
 
   function handleContinue() {
-    const trimmed = displayName.trim();
+    if (!canSubmit || !budget) {
+      setError("Fill in your name, area, at least one format, and a budget.");
+      return;
+    }
+
     const trimmedLocation = locationLabel.trim();
-
-    if (!trimmed) {
-      setShowNameError(true);
-      return;
-    }
-
-    if (!location && trimmedLocation.length === 0) {
-      setError("Add your area so we can find a fair midpoint.");
-      return;
-    }
-
     const resolvedLocation: Location =
       location ?? { lat: 0, lng: 0, label: trimmedLocation };
 
-    setShowNameError(false);
     setError(null);
-    onContinue(trimmed, resolvedLocation);
+    onContinue({
+      displayName: displayName.trim(),
+      location: resolvedLocation,
+      categories,
+      budget,
+    });
   }
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[linear-gradient(180deg,_#fdf1ec_0%,_#fbe4dc_55%,_#f8d9d0_100%)] text-text">
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8">
-        <p className="text-caption font-semibold uppercase tracking-[0.28em] text-text">
+        <p className="text-center text-caption font-semibold uppercase tracking-[0.28em] text-text">
           Dateflow
         </p>
 
@@ -107,7 +136,7 @@ export function HookScreen({
           Add your preferences and Dateflow will find where you both align.
         </p>
 
-        <div className="mt-8 space-y-5">
+        <div className="mt-8 space-y-6">
           <div className="space-y-2">
             <label
               htmlFor="invitee-display-name"
@@ -117,26 +146,13 @@ export function HookScreen({
             </label>
             <input
               id="invitee-display-name"
-              name="invitee-display-name"
               type="text"
               autoComplete="given-name"
-              aria-invalid={showNameError}
-              aria-describedby={showNameError ? nameErrorId : undefined}
               value={displayName}
-              onChange={(event) => {
-                setDisplayName(event.target.value);
-                if (showNameError) {
-                  setShowNameError(false);
-                }
-              }}
+              onChange={(event) => setDisplayName(event.target.value)}
               placeholder="What should Dateflow call you?"
               className="h-14 w-full rounded-2xl border border-white/80 bg-white/80 px-4 text-body text-text shadow-sm outline-none transition placeholder:text-text-secondary/55 focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
-            {showNameError ? (
-              <p id={nameErrorId} className="text-caption text-error">
-                Add your name so the shared result feels like both of you.
-              </p>
-            ) : null}
           </div>
 
           <div className="space-y-2">
@@ -163,28 +179,71 @@ export function HookScreen({
                 setLocation(null);
                 setLocationLabel(event.target.value);
               }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  handleContinue();
-                }
-              }}
               placeholder="Brooklyn or 11211"
               className="h-14 w-full rounded-2xl border border-white/80 bg-white/80 px-4 text-body text-text shadow-sm outline-none transition placeholder:text-text-secondary/55 focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
+          </div>
+
+          <div>
+            <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
+              What sounds good?
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {CATEGORIES.map((category) => {
+                const selected = categories.includes(category.value);
+                return (
+                  <button
+                    key={category.value}
+                    type="button"
+                    onClick={() => toggleCategory(category.value)}
+                    className={`h-16 rounded-2xl border text-body font-semibold shadow-sm transition-all duration-200 active:scale-[0.97] ${
+                      selected
+                        ? "border-primary bg-primary text-white"
+                        : "border-white/80 bg-white/80 text-text hover:border-primary/40"
+                    }`}
+                  >
+                    {category.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
+              Budget preference
+            </p>
+            <div className="mt-3 space-y-3">
+              {BUDGETS.map((option) => {
+                const selected = budget === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setBudget(option.value)}
+                    className={`flex h-14 w-full items-center gap-3 rounded-2xl border px-5 text-body font-semibold shadow-sm transition-all duration-200 active:scale-[0.99] ${
+                      selected
+                        ? "border-primary bg-white text-text ring-2 ring-primary/30"
+                        : "border-white/80 bg-white/80 text-text hover:border-primary/40"
+                    }`}
+                  >
+                    <span aria-hidden className="text-lg">
+                      {option.emoji}
+                    </span>
+                    <span>{option.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {error ? <p className="text-caption text-error">{error}</p> : null}
         </div>
 
         <div className="mt-auto pt-10">
-          <Button onClick={handleContinue}>Join this date plan</Button>
-
-          <div className="mt-6 flex items-center justify-center gap-2">
-            <span className="h-1.5 w-8 rounded-full bg-primary" aria-hidden />
-            <span className="h-1.5 w-6 rounded-full bg-text/15" aria-hidden />
-            <span className="h-1.5 w-6 rounded-full bg-text/15" aria-hidden />
-          </div>
+          <Button onClick={handleContinue} disabled={!canSubmit}>
+            Join this date plan
+          </Button>
         </div>
       </div>
     </main>

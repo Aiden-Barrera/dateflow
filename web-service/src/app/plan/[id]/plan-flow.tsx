@@ -44,7 +44,8 @@ export function PlanFlow({
   async function submitPreferences(
     loc: Location,
     vibeCategories: Category[],
-    vibeBudget: BudgetLevel
+    vibeBudget: BudgetLevel,
+    displayNameOverride?: string,
   ) {
     try {
       const response = await fetch(
@@ -54,7 +55,7 @@ export function PlanFlow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             role: "b",
-            displayName: inviteeDisplayName,
+            displayName: displayNameOverride ?? inviteeDisplayName,
             location: { lat: loc.lat, lng: loc.lng, label: loc.label },
             budget: vibeBudget,
             categories: vibeCategories,
@@ -97,15 +98,16 @@ export function PlanFlow({
 
   if (step === "hook") {
     return (
-        <HookScreen
-          creatorName={creatorName}
-          initialDisplayName={inviteeDisplayName}
-          initialLocation={location}
-          onContinue={(displayName, hookLocation) => {
-            setInviteeDisplayName(displayName);
-            setLocation(hookLocation);
-            setStep("vibe");
-          }}
+      <HookScreen
+        creatorName={creatorName}
+        initialDisplayName={inviteeDisplayName}
+        initialLocation={location}
+        onContinue={(data) => {
+          setInviteeDisplayName(data.displayName);
+          setLocation(data.location);
+          setStep("loading");
+          submitPreferences(data.location, data.categories, data.budget, data.displayName);
+        }}
       />
     );
   }
