@@ -111,12 +111,12 @@ describe("/plan/[id]/results page", () => {
 
     const html = renderToStaticMarkup(page);
 
-    expect(html).toContain("It’s a match");
+    expect(html).toContain("It&#x27;s a match!");
     expect(html).toContain("Cafe Blue");
-    expect(html).toContain("both liked this spot");
+    expect(html).toContain("both loved this spot");
     expect(html).toContain("12 Main St, Austin, TX");
     expect(html).toContain("Get directions");
-    expect(html).toContain("Add to calendar");
+    expect(html).toContain("Calendar");
   });
 
   it("builds result-page metadata from the matched venue", async () => {
