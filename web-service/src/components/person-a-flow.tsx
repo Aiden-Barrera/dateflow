@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "./button";
+import { BudgetIcon } from "./budget-icon";
+import { CategoryIcon } from "./category-icon";
 import { createSessionStatusSync } from "../lib/session-status-sync";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
@@ -318,12 +320,13 @@ export function PersonAFlow() {
                       key={category.value}
                       type="button"
                       onClick={() => toggleCategory(category.value)}
-                      className={`h-14 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                      className={`flex h-14 items-center justify-center gap-2 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
                           ? "border-white/60 bg-white/15 text-white"
                           : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
                       }`}
                     >
+                      <CategoryIcon category={category.value} className="h-5 w-5" />
                       {category.label}
                     </button>
                   );
@@ -341,12 +344,13 @@ export function PersonAFlow() {
                       key={option.value}
                       type="button"
                       onClick={() => setBudget(option.value)}
-                      className={`h-12 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                      className={`flex h-12 items-center justify-center gap-1.5 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
                           ? "border-white/60 bg-white/15 text-white"
                           : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
                       }`}
                     >
+                      <BudgetIcon budget={option.value} className="h-4 w-4" />
                       {option.label}
                     </button>
                   );

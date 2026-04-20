@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "./button";
+import { BudgetIcon } from "./budget-icon";
+import { CategoryIcon } from "./category-icon";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
 type HookScreenProps = {
@@ -112,14 +113,14 @@ export function HookScreen({
   }
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#c23a7a_0%,_#7a1e4c_55%,_#3e0f26_100%)] text-white">
+    <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#d03d6a_0%,_#8a2346_55%,_#4a1224_100%)] text-white">
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8">
         <p className="text-caption font-semibold uppercase tracking-[0.28em] text-white">
           Dateflow
         </p>
 
         <div className="mt-8 flex items-center gap-4 rounded-[1.5rem] border border-white/15 bg-white/[0.08] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-[#7a1e4c]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-[#8a2346]">
             {initial}
           </div>
           <div>
@@ -192,12 +193,13 @@ export function HookScreen({
                       key={category.value}
                       type="button"
                       onClick={() => toggleCategory(category.value)}
-                      className={`h-14 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                      className={`flex h-14 items-center justify-center gap-2 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
                           ? "border-white/60 bg-white/15 text-white"
                           : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
                       }`}
                     >
+                      <CategoryIcon category={category.value} className="h-5 w-5" />
                       {category.label}
                     </button>
                   );
@@ -215,12 +217,13 @@ export function HookScreen({
                       key={option.value}
                       type="button"
                       onClick={() => setBudget(option.value)}
-                      className={`h-12 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                      className={`flex h-12 items-center justify-center gap-1.5 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
                           ? "border-white/60 bg-white/15 text-white"
                           : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
                       }`}
                     >
+                      <BudgetIcon budget={option.value} className="h-4 w-4" />
                       {option.label}
                     </button>
                   );
@@ -241,9 +244,24 @@ export function HookScreen({
         {error ? <p className="mt-4 text-body text-error">{error}</p> : null}
 
         <div className="mt-6">
-          <Button onClick={handleContinue} disabled={!canSubmit}>
-            Join this date plan
-          </Button>
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={!canSubmit}
+            className={`group relative flex h-16 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl text-[1.05rem] font-bold tracking-tight text-white transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 ${
+              canSubmit
+                ? "cursor-pointer bg-[linear-gradient(135deg,_#ff8fa3_0%,_#ff5a86_45%,_#ff3d7f_100%)] shadow-[0_20px_40px_rgba(255,61,127,0.45),_0_0_0_1px_rgba(255,255,255,0.25)_inset] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[0_26px_50px_rgba(255,61,127,0.55),_0_0_0_1px_rgba(255,255,255,0.35)_inset] active:translate-y-0"
+                : "cursor-not-allowed bg-white/10 text-white/50 shadow-none"
+            }`}
+          >
+            <span className="relative z-10">Join this date plan</span>
+            {canSubmit ? (
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-2 top-1 h-1/3 rounded-t-xl bg-white/25 blur-[2px]"
+              />
+            ) : null}
+          </button>
         </div>
       </div>
     </main>
