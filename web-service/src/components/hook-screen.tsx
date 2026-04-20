@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { BudgetIcon } from "./budget-icon";
-import { Button } from "./button";
 import { CategoryIcon } from "./category-icon";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
@@ -245,9 +244,33 @@ export function HookScreen({
         {error ? <p className="mt-4 text-body text-error">{error}</p> : null}
 
         <div className="mt-6">
-          <Button variant="secondary" onClick={handleContinue} disabled={!canSubmit}>
+          <button
+            type="button"
+            onClick={handleContinue}
+            disabled={!canSubmit}
+            className={`flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-body font-semibold transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 ${
+              canSubmit
+                ? "cursor-pointer bg-white text-[#4a1224] shadow-[0_18px_40px_rgba(255,61,127,0.35),_inset_0_1px_0_rgba(255,255,255,0.9)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[0_22px_48px_rgba(255,61,127,0.45),_inset_0_1px_0_rgba(255,255,255,0.9)] active:translate-y-0"
+                : "cursor-not-allowed bg-white/20 text-white/50 shadow-none"
+            }`}
+          >
             Join this date plan
-          </Button>
+            {canSubmit ? (
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14" />
+                <path d="m13 6 6 6-6 6" />
+              </svg>
+            ) : null}
+          </button>
         </div>
       </div>
     </main>
