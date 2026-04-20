@@ -29,14 +29,10 @@ const BUDGETS: { value: BudgetLevel; label: string }[] = [
   { value: "UPSCALE", label: "Upscale" },
 ];
 
-const INK = "#3d0e1f";
-
 /**
  * Person B landing — single-page invitation flow.
  *
- * Petal pastel gradient with dark-ink type. Mirrors the Person A form
- * pattern: translucent card with Name, Location, Categories, Budget, and
- * Surprise me, then hands off to the loading screen.
+ * Magenta rose gradient mirroring the Person A form pattern.
  */
 export function HookScreen({
   creatorName,
@@ -116,43 +112,37 @@ export function HookScreen({
   }
 
   return (
-    <main
-      className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#f8cbd3_0%,_#e8a5b4_55%,_#c47a8e_100%)]"
-      style={{ color: INK }}
-    >
+    <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#c23a7a_0%,_#7a1e4c_55%,_#3e0f26_100%)] text-white">
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8">
-        <p className="text-caption font-semibold uppercase tracking-[0.28em]">
+        <p className="text-caption font-semibold uppercase tracking-[0.28em] text-white">
           Dateflow
         </p>
 
-        <div className="mt-8 flex items-center gap-4 rounded-[1.5rem] border border-[#3d0e1f]/10 bg-white/50 p-4 shadow-[0_20px_40px_rgba(61,14,31,0.12)] backdrop-blur-sm">
-          <div
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white"
-            style={{ background: INK }}
-          >
+        <div className="mt-8 flex items-center gap-4 rounded-[1.5rem] border border-white/15 bg-white/[0.08] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-[#7a1e4c]">
             {initial}
           </div>
           <div>
-            <p className="text-caption font-bold uppercase tracking-[0.14em] opacity-70">
+            <p className="text-caption font-bold uppercase tracking-[0.14em] text-white/80">
               You&apos;re invited
             </p>
-            <p className="mt-1 text-body font-semibold leading-tight">
+            <p className="mt-1 text-body font-semibold leading-tight text-white">
               {creatorName} invited you to pick the vibe
             </p>
           </div>
         </div>
 
-        <h1 className="mt-10 text-[clamp(2.4rem,8vw,3.2rem)] font-bold leading-[0.98] tracking-[-0.03em]">
+        <h1 className="mt-10 text-[clamp(2.4rem,8vw,3.2rem)] font-bold leading-[0.98] tracking-[-0.03em] text-white">
           Let&apos;s find what works for both of you
         </h1>
-        <p className="mt-5 text-body opacity-70">
+        <p className="mt-5 text-body text-white/65">
           Add your preferences and Dateflow will find where you both align.
         </p>
 
-        <div className="mt-8 rounded-[1.75rem] border border-[#3d0e1f]/10 bg-white/45 p-5 shadow-[0_24px_60px_rgba(61,14,31,0.12)] backdrop-blur-sm">
+        <div className="mt-8 rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.3)] backdrop-blur-sm">
           <div className="space-y-5">
             <div>
-              <label htmlFor="invitee-display-name" className="block text-body font-semibold">
+              <label htmlFor="invitee-display-name" className="block text-body font-semibold text-white">
                 Your Name
               </label>
               <input
@@ -162,20 +152,19 @@ export function HookScreen({
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 placeholder="Alex"
-                className="mt-3 h-12 w-full rounded-xl border border-[#3d0e1f]/15 bg-white/60 px-4 text-body placeholder:text-[#3d0e1f]/40 focus:border-[#3d0e1f]/50 focus:outline-none"
-                style={{ color: INK }}
+                className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-transparent px-4 text-body text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between gap-3">
-                <label htmlFor="invitee-location" className="block text-body font-semibold">
+                <label htmlFor="invitee-location" className="block text-body font-semibold text-white">
                   Location
                 </label>
                 <button
                   type="button"
                   onClick={handleUseLocation}
-                  className="cursor-pointer text-caption font-semibold opacity-70 transition-opacity hover:opacity-100"
+                  className="cursor-pointer text-caption font-semibold text-white/80 transition-colors hover:text-white"
                 >
                   {gpsState === "loading" ? "Finding you..." : "Use my location"}
                 </button>
@@ -189,13 +178,12 @@ export function HookScreen({
                   setLocationLabel(event.target.value);
                 }}
                 placeholder="Brooklyn or 11211"
-                className="mt-3 h-12 w-full rounded-xl border border-[#3d0e1f]/15 bg-white/60 px-4 text-body placeholder:text-[#3d0e1f]/40 focus:border-[#3d0e1f]/50 focus:outline-none"
-                style={{ color: INK }}
+                className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-transparent px-4 text-body text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
               />
             </div>
 
             <div>
-              <p className="text-body font-semibold">Categories</p>
+              <p className="text-body font-semibold text-white">Categories</p>
               <div className="mt-3 grid grid-cols-2 gap-3">
                 {CATEGORIES.map((category) => {
                   const selected = categories.includes(category.value);
@@ -206,10 +194,9 @@ export function HookScreen({
                       onClick={() => toggleCategory(category.value)}
                       className={`h-14 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
-                          ? "border-[#3d0e1f]/60 bg-[#3d0e1f]/10"
-                          : "border-[#3d0e1f]/15 bg-white/55 hover:border-[#3d0e1f]/35"
+                          ? "border-white/60 bg-white/15 text-white"
+                          : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
                       }`}
-                      style={{ color: INK }}
                     >
                       {category.label}
                     </button>
@@ -219,7 +206,7 @@ export function HookScreen({
             </div>
 
             <div>
-              <p className="text-body font-semibold">Budget</p>
+              <p className="text-body font-semibold text-white">Budget</p>
               <div className="mt-3 grid grid-cols-3 gap-3">
                 {BUDGETS.map((option) => {
                   const selected = budget === option.value;
@@ -230,10 +217,9 @@ export function HookScreen({
                       onClick={() => setBudget(option.value)}
                       className={`h-12 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
                         selected
-                          ? "border-[#3d0e1f]/60 bg-[#3d0e1f]/10"
-                          : "border-[#3d0e1f]/15 bg-white/55 hover:border-[#3d0e1f]/35"
+                          ? "border-white/60 bg-white/15 text-white"
+                          : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
                       }`}
-                      style={{ color: INK }}
                     >
                       {option.label}
                     </button>
@@ -245,8 +231,7 @@ export function HookScreen({
             <button
               type="button"
               onClick={handleSurpriseMe}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#3d0e1f]/20 bg-white/55 text-body font-semibold transition-colors hover:bg-white/70"
-              style={{ color: INK }}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.04] text-body font-semibold text-white transition-colors hover:bg-white/10"
             >
               <span aria-hidden>✨</span> Surprise me
             </button>
