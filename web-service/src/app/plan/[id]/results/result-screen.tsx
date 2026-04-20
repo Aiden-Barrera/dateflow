@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { AuthSheet } from "../../../../components/auth-sheet";
 import {
@@ -10,7 +10,6 @@ import {
 } from "../../../../components/auth-sheet-state";
 import { Button } from "../../../../components/button";
 import { Logo } from "../../../../components/logo";
-import { PriceBadge } from "../../../../components/price-badge";
 import type { MatchResult } from "../../../../lib/types/match-result";
 import type { Category } from "../../../../lib/types/preference";
 import {
@@ -53,18 +52,7 @@ export function ResultScreen({
   const { venue } = matchResult;
   const galleryImages = getVenueGalleryImages(venue);
   const heroImage = galleryImages[0] ?? null;
-  const sharedLikeCopy = matchedWithName
-    ? `You and ${matchedWithName} both liked this spot.`
-    : "You both liked this spot.";
-  const matchedDateLabel = matchResult.matchedAt.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-  });
-  const venueSummary = getVenueSummary({
-    sharedLikeCopy,
-    venue,
-    matchedDateLabel,
-  });
+  const venueTypeLabel = getVenueTypeLabel(venue);
   const [directionsUrl, setDirectionsUrl] = useState(() =>
     getResultDirectionsHref(venue, ""),
   );
@@ -248,9 +236,9 @@ export function ResultScreen({
           </span>
         </header>
 
-        <div className="mx-auto mt-6 w-full max-w-[41.5rem]">
+        <div className="mx-auto mt-6 w-full max-w-[30rem]">
           <section
-            className="relative overflow-hidden rounded-[2.25rem] border border-white/60 shadow-[0_24px_72px_rgba(45,42,38,0.16)]"
+            className="relative"
             style={{
               animation:
                 revealMode === "confetti"
@@ -258,283 +246,219 @@ export function ResultScreen({
                   : "resultReveal 520ms cubic-bezier(0.2, 1, 0.22, 1) both",
             }}
           >
-            <div className="relative aspect-[4/5] min-h-[28rem] bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))] sm:aspect-[3/4]">
-              {heroImage ? (
-                <Image
-                  src={heroImage}
-                  alt={venue.name}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 664px"
-                  loading="eager"
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-full items-end bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.92),_transparent_55%),linear-gradient(135deg,var(--color-secondary),var(--color-primary))] p-6">
-                  <div className="rounded-full border border-white/60 bg-white/15 px-3 py-1 text-caption font-medium text-white backdrop-blur">
-                    Photo coming soon
+            <div className="border-b border-[#E7DDD2] pb-8 text-center">
+              <p className="text-caption font-semibold uppercase tracking-[0.22em] text-text-secondary">
+                Match reveal
+              </p>
+              <div className="mt-6 flex items-center justify-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F8D8D0]">
+                  <HeartIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DDEBE6]">
+                  <HeartIcon className="h-5 w-5 text-secondary" />
+                </div>
+              </div>
+              <h1 className="mt-5 text-[clamp(2.6rem,8vw,3.5rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                It&apos;s a match!
+              </h1>
+              <p className="mt-3 text-[1.15rem] text-text-secondary">
+                {matchedWithName ? (
+                  <>
+                    You and <span className="text-primary">{matchedWithName}</span> both loved this spot
+                  </>
+                ) : (
+                  "You both liked this spot."
+                )}
+              </p>
+            </div>
+
+            <div className="mt-7 overflow-hidden rounded-[2rem] border border-[#E7DDD2] bg-white shadow-[0_18px_50px_rgba(45,42,38,0.08)]">
+              <div className="relative aspect-[4/3] overflow-hidden bg-[#E9E1D7]">
+                {heroImage ? (
+                  <Image
+                    src={heroImage}
+                    alt={venue.name}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 480px"
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-text shadow-[0_8px_18px_rgba(45,42,38,0.14)]"
+                >
+                  <BookmarkIcon />
+                </button>
+              </div>
+
+              <div className="px-6 pb-6 pt-5">
+                <div className="inline-flex rounded-full bg-[#E6F0EB] px-3 py-1 text-caption font-semibold text-secondary">
+                  {venueTypeLabel}
+                </div>
+                <h2 className="mt-4 text-[clamp(2rem,6vw,2.9rem)] leading-[0.98] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                  {venue.name}
+                </h2>
+                <div className="mt-4 grid gap-4 text-body text-text-secondary sm:grid-cols-2">
+                  <div className="flex items-start gap-3">
+                    <LocationPinIcon />
+                    <span>{venue.address}</span>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <StarRatingIcon />
+                    <span>{venue.rating.toFixed(1)}</span>
                   </div>
                 </div>
-              )}
+              </div>
+            </div>
 
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(250,248,245,0.16),rgba(250,248,245,0.14)_34%,rgba(250,248,245,0.45)_68%,rgba(250,248,245,0.88)_100%)]" />
-              <div
-                className="absolute inset-x-0 bottom-0 top-0"
-                style={{
-                  background:
-                    "radial-gradient(circle at 50% 52%, rgba(250,248,245,0.08), rgba(250,248,245,0) 34%)",
-                }}
-                aria-hidden="true"
-              />
-
-              <div className="relative z-10 flex h-full flex-col justify-end px-5 pb-20 pt-12 text-center sm:px-8 sm:pb-24">
-                <div className="mx-auto w-full max-w-[30rem]">
-                  <p className="text-[clamp(3.2rem,10vw,5.8rem)] leading-[0.84] tracking-[-0.06em] text-[#2B211D] [font-family:Georgia,'Times_New_Roman',serif] [font-variant-ligatures:common-ligatures]">
-                    It&apos;s a match
-                  </p>
-                  <p className="mt-5 text-[0.95rem] font-medium text-white/92 sm:text-[1.05rem]">
-                    {matchedWithName
-                      ? `${matchedWithName} & you both chose`
-                      : "You both chose"}
-                  </p>
-                  <h1 className="mt-4 text-[clamp(2.8rem,8vw,4.6rem)] leading-[0.92] tracking-[-0.05em] text-white [font-family:Georgia,'Times_New_Roman',serif]">
-                    {venue.name}
-                  </h1>
-                  <p className="mt-2 text-[1.05rem] italic text-white/88 [font-family:Georgia,'Times_New_Roman',serif]">
-                    {CATEGORY_LABELS[venue.category]}
+            <div className="mt-6 rounded-[1.5rem] border border-[#ECE3D9] bg-white px-5 py-5 shadow-[0_14px_36px_rgba(45,42,38,0.06)]">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#D98E7A,#7A9B8E)] text-white">
+                  <HeartIcon className="h-3.5 w-3.5" />
+                </div>
+                <div>
+                  <p className="text-[1.15rem] font-semibold text-text">Why this works</p>
+                  <p className="mt-2 text-[1rem] leading-8 text-text-secondary">
+                    Both of you liked activity-forward options. This spot feels playful, memorable, and makes conversation easy, perfect for breaking the ice.
                   </p>
                 </div>
               </div>
-
-              <div className="pointer-events-none absolute left-1/2 top-[43%] z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border border-black/14 bg-white/72 shadow-[0_10px_24px_rgba(45,42,38,0.12)] backdrop-blur-sm">
-                <HeartIcon />
-              </div>
             </div>
-          </section>
 
-          <section
-            className="-mt-14 rounded-[1.85rem] border border-white/80 bg-white/96 p-4 shadow-[0_20px_64px_rgba(45,42,38,0.14)] backdrop-blur sm:p-5"
-            style={{
-              animation: "savePromptReveal var(--motion-base) var(--ease-enter) 120ms both",
-            }}
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="mt-5">
               <a
                 href={directionsUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="w-full"
+                className="block w-full"
               >
-                <Button icon={<DirectionsIcon />} className="rounded-full">
+                <Button icon={<DirectionsIcon />} className="h-14 rounded-[1rem] text-[1rem] shadow-[0_12px_26px_rgba(224,116,104,0.18)]">
                   Get directions
                 </Button>
               </a>
-              <a
-                href={`/api/sessions/${matchResult.sessionId}/calendar`}
-                className="w-full"
-              >
-                <Button
-                  variant="secondary"
-                  icon={<CalendarIcon />}
-                  className="rounded-full border-0 bg-secondary text-white hover:bg-[#4e897b] hover:border-0"
+
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <a
+                  href={`/api/sessions/${matchResult.sessionId}/calendar`}
+                  className="col-span-2 w-full"
                 >
-                  Add to calendar
-                </Button>
-              </a>
+                  <Button
+                    variant="secondary"
+                    icon={<CalendarIcon />}
+                    className="h-12 w-full rounded-[1rem] !border-0 !bg-[#E7EFE9] !text-secondary shadow-none hover:!bg-[#dbe9e1]"
+                  >
+                    Calendar
+                  </Button>
+                </a>
+              </div>
             </div>
 
-            <div className="mt-4 border-t border-[#E7DDD2] pt-4">
-              <div className="flex items-center justify-center gap-3 text-caption text-text-secondary">
-                <button
-                  type="button"
-                  className="inline-flex cursor-pointer items-center gap-2 rounded-full px-3 py-1.5 transition-colors duration-200 hover:bg-bg"
-                >
-                  <ShareIcon />
-                  Share
-                </button>
-                <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-success">
-                  <CheckIcon />
-                  Saved
+            {galleryImages.length > 1 ? (
+              <section className="mt-6" aria-label="Photo gallery">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-caption font-semibold uppercase tracking-[0.2em] text-text-secondary">
+                    Photo gallery
+                  </p>
+                  <p className="text-caption text-text-secondary">{galleryImages.length} photos</p>
                 </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="mt-6 rounded-[2rem] border border-white/75 bg-white/94 p-5 shadow-[0_18px_56px_rgba(45,42,38,0.12)] sm:p-7">
-            <div className="grid gap-5 sm:grid-cols-[1.15fr_0.9fr_1.15fr] sm:items-start">
-              <InfoBlock
-                icon={<LocationPinIcon />}
-                label="Location"
-                value={venue.address}
-              />
-              <InfoBlock
-                icon={<StarIcon />}
-                label="Rating"
-                value={`${venue.rating.toFixed(1)} / 5.0`}
-              />
-              <div className="flex items-start justify-between gap-4">
-                <InfoBlock
-                  icon={<PriceTagIcon />}
-                  label="Price Range"
-                  value={`${toPriceLabel(venue.priceLevel)} • ${CATEGORY_LABELS[venue.category]}`}
-                />
-                <PriceBadge priceLevel={venue.priceLevel} />
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-[#E7DDD2] pt-7">
-              <h2 className="text-[clamp(2rem,5vw,3.1rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
-                About this place
-              </h2>
-              <p className="mt-4 max-w-3xl text-[1.15rem] leading-8 text-text-secondary">
-                {venueSummary}
-              </p>
-
-              <div className="mt-7">
-                <p className="text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
-                  Vibes
-                </p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  {getVibes(venue).map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-[#E7DDD2] bg-[#F8F1E8] px-4 py-2 text-body text-text-secondary"
+                <div className="mt-3 grid grid-cols-3 gap-2.5">
+                  {galleryImages.slice(0, 3).map((photoUrl, photoIndex) => (
+                    <div
+                      key={`${photoUrl}-${photoIndex}`}
+                      className="relative aspect-square overflow-hidden rounded-[1rem] bg-[#E9E1D7]"
                     >
-                      {tag}
-                    </span>
+                      <Image
+                        src={photoUrl}
+                        alt={`${venue.name} photo ${photoIndex + 1}`}
+                        fill
+                        sizes="(max-width: 640px) 33vw, 120px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
                   ))}
                 </div>
-              </div>
-
-              <details className="mt-6 overflow-hidden rounded-[1.5rem] border border-[#E7DDD2] bg-[#F8F1E8]/90">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-5 text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
-                  Why this spot works
-                  <ChevronDownIcon />
-                </summary>
-                <div className="border-t border-[#E7DDD2] px-5 py-5 text-body leading-7 text-text-secondary">
-                  <p>
-                    {sharedLikeCopy} Strong first-date fit, {toPriceLabel(venue.priceLevel)} pricing, and a{" "}
-                    {venue.rating.toFixed(1)}-star rating made this one stand out.
-                  </p>
-                  <p className="mt-3">
-                    Matched on {matchedDateLabel}, with a {CATEGORY_LABELS[venue.category].toLowerCase()} setting that stays easy to revisit later.
-                  </p>
-                </div>
-              </details>
-
-              {galleryImages.length > 0 ? (
-                <section className="mt-8" aria-label="Photo gallery">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
-                      Photo gallery
-                    </p>
-                    <p className="text-body text-text-secondary">
-                      {galleryImages.length} photos
-                    </p>
-                  </div>
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {galleryImages.slice(0, 3).map((photoUrl, photoIndex) => (
-                      <div
-                        key={`${photoUrl}-${photoIndex}`}
-                        className="relative aspect-[4/5] overflow-hidden rounded-[1.4rem] border border-white/70 bg-bg shadow-[0_12px_28px_rgba(45,42,38,0.08)]"
-                      >
-                        <Image
-                          src={photoUrl}
-                          alt={`${venue.name} photo ${photoIndex + 1}`}
-                          fill
-                          sizes="(max-width: 640px) 100vw, 200px"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </div>
+              </section>
+            ) : null}
           </section>
 
           {authStatus === "saved" ? (
             <section
-              className="mt-8 rounded-[2rem] border border-[#F0D7C2] bg-[linear-gradient(180deg,rgba(253,240,228,0.96),rgba(250,236,223,0.9))] px-6 py-8 text-center shadow-[0_18px_56px_rgba(224,116,104,0.08)]"
+              className="mt-6 rounded-[1.5rem] border border-[#F0E6DC] bg-[linear-gradient(180deg,rgba(249,243,238,0.98),rgba(245,240,234,0.92))] px-6 py-6 text-center shadow-[0_14px_36px_rgba(45,42,38,0.06)]"
               style={{
                 animation:
                   "savePromptReveal var(--motion-base) var(--ease-enter) both",
               }}
             >
-              <p className="text-caption font-semibold uppercase tracking-[0.32em] text-success">
+              <p className="text-caption font-semibold uppercase tracking-[0.24em] text-text-secondary">
                 Saved to your history
               </p>
-              <h2 className="mt-4 text-[clamp(2.4rem,6vw,3.8rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
-                This match is in your history
+              <div className="mx-auto mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#D98E7A,#7A9B8E)] text-white">
+                <HeartIcon className="h-5 w-5" />
+              </div>
+              <h2 className="mt-5 text-[2rem] leading-[1.05] tracking-[-0.03em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                This date is saved
               </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-[1.1rem] leading-8 text-text-secondary">
+              <p className="mx-auto mt-3 max-w-sm text-[1rem] leading-7 text-text-secondary">
                 Come back to this plan anytime. Future matches will save here too.
               </p>
               {accountEmail ? (
-                <p className="mt-6 text-body text-text-secondary">
+                <p className="mt-4 text-[0.98rem] text-text-secondary">
                   Signed in as {accountEmail}
                 </p>
               ) : null}
             </section>
           ) : (
             <section
-              className="mt-8 rounded-[2rem] border border-[#F0D7C2] bg-[linear-gradient(180deg,rgba(253,240,228,0.96),rgba(250,236,223,0.9))] px-6 py-8 text-center shadow-[0_18px_56px_rgba(224,116,104,0.08)]"
+              className="mt-6 rounded-[1.5rem] border border-[#F0E6DC] bg-[linear-gradient(180deg,rgba(249,243,238,0.98),rgba(245,240,234,0.92))] px-6 py-6 text-center shadow-[0_14px_36px_rgba(45,42,38,0.06)]"
               style={{
                 animation:
                   "savePromptReveal var(--motion-base) var(--ease-enter) 120ms both",
               }}
             >
-              <p className="text-caption font-semibold uppercase tracking-[0.32em] text-secondary">
+              <p className="text-caption font-semibold uppercase tracking-[0.24em] text-text-secondary">
                 Save this date
               </p>
-              <h2 className="mt-4 text-[clamp(2.4rem,6vw,3.8rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
-                Keep this match in your history
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#D98E7A,#7A9B8E)] text-white">
+                <HeartIcon className="h-5 w-5" />
+              </div>
+              <h2 className="mt-5 text-[2rem] leading-[1.05] tracking-[-0.03em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                Save your date plans
               </h2>
-              <p className="mx-auto mt-4 max-w-2xl text-[1.1rem] leading-8 text-text-secondary">
-                Create a free account to save all your matched dates, track your plans, and never lose a great venue.
+              <p className="mx-auto mt-3 max-w-sm text-[1rem] leading-7 text-text-secondary">
+                Create an account to save this plan and track all your future dates in one place
               </p>
 
-              <div className="mx-auto mt-6 flex max-w-xl flex-col gap-3 sm:flex-row">
-                <div className="w-full">
-                  <Button
-                    onClick={() => {
-                      setAuthMode("register");
-                      setAuthDraft((current) => ({ ...current, mode: "register" }));
-                      setAuthError(null);
-                      setAuthOpen(true);
-                    }}
-                    className="rounded-full"
-                  >
-                    Create account
-                  </Button>
-                </div>
-                <div className="w-full">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setAuthMode("login");
-                      setAuthDraft((current) => ({ ...current, mode: "login" }));
-                      setAuthError(null);
-                      setAuthOpen(true);
-                    }}
-                    className="rounded-full"
-                  >
-                    Log in
-                  </Button>
-                </div>
+              <div className="mx-auto mt-5 max-w-[15rem]">
+                <Button
+                  onClick={() => {
+                    setAuthMode("register");
+                    setAuthDraft((current) => ({ ...current, mode: "register" }));
+                    setAuthError(null);
+                    setAuthOpen(true);
+                  }}
+                  className="h-11 rounded-[0.95rem] bg-[#25201C] text-[1rem] text-white hover:bg-[#1d1916]"
+                >
+                  Create account
+                </Button>
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-caption text-text-secondary">
-                <span className="rounded-full border border-[#E7DDD2] bg-white/70 px-3 py-1.5">
-                  No effect on this match
-                </span>
-                <span className="rounded-full border border-[#E7DDD2] bg-white/70 px-3 py-1.5">
-                  Google or email
-                </span>
-                <span className="rounded-full border border-[#E7DDD2] bg-white/70 px-3 py-1.5">
-                  Continue without account
-                </span>
+              <div className="mt-4 flex items-center justify-center gap-4 text-caption text-text-secondary">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode("login");
+                    setAuthDraft((current) => ({ ...current, mode: "login" }));
+                    setAuthError(null);
+                    setAuthOpen(true);
+                  }}
+                  className="cursor-pointer underline decoration-[#CFC4B9] underline-offset-4"
+                >
+                  Log in
+                </button>
+                <span className="text-[#C7BDB3]">•</span>
+                <span>Continue without account</span>
               </div>
             </section>
           )}
@@ -544,47 +468,15 @@ export function ResultScreen({
   );
 }
 
-function StarIcon() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M12 3.75 14.78 9l5.72.78-4.13 4 1 5.72L12 16.98 6.63 19.5l1-5.72-4.13-4L9.22 9 12 3.75Z" />
-    </svg>
-  );
-}
-
 function LocationPinIcon() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg className="h-5 w-5 shrink-0 text-primary" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 21s6-5.68 6-11a6 6 0 1 0-12 0c0 5.32 6 11 6 11Z"
         stroke="currentColor"
         strokeWidth="2"
       />
       <circle cx="12" cy="10" r="2.25" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PriceTagIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5C5 18.22 5.78 19 6.75 19h10.5c.97 0 1.75-.78 1.75-1.75V11"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M14 5h5v5M11 13l8-8"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
     </svg>
   );
 }
@@ -615,67 +507,17 @@ function CalendarIcon() {
   );
 }
 
-function ShareIcon() {
+function BookmarkIcon() {
   return (
     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M15 8a3 3 0 1 0-2.83-4H12a3 3 0 0 0 .17 1L8.9 7.05A3 3 0 0 0 6 6a3 3 0 1 0 2.9 4.05l3.27 2.05a3 3 0 0 0-.17.95c0 .34.06.66.17.95L8.9 16.05A3 3 0 1 0 9 18c0-.34-.06-.66-.17-.95l3.27-2.05A3 3 0 1 0 15 8Z"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="m5 12.5 4.2 4.2L19 7"
+        d="M7 5.75A1.75 1.75 0 0 1 8.75 4h6.5A1.75 1.75 0 0 1 17 5.75V20l-5-3.1L7 20V5.75Z"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="m6 9 6 6 6-6"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function InfoBlock({
-  icon,
-  label,
-  value,
-}: {
-  readonly icon: ReactNode;
-  readonly label: string;
-  readonly value: string;
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-3 text-primary">
-        {icon}
-        <p className="text-caption font-semibold uppercase tracking-[0.28em] text-text-secondary">
-          {label}
-        </p>
-      </div>
-      <p className="mt-3 text-[1rem] leading-7 text-text sm:text-[1.1rem]">
-        {value}
-      </p>
-    </div>
   );
 }
 
@@ -689,48 +531,42 @@ function getVenueGalleryImages(
   return venue.photoUrl ? [venue.photoUrl] : [];
 }
 
-function toPriceLabel(priceLevel: number): string {
-  return "$".repeat(Math.max(1, Math.min(priceLevel, 4)));
-}
-
-function getVenueSummary({
-  sharedLikeCopy,
-  venue,
-  matchedDateLabel,
+function HeartIcon({
+  className = "h-4 w-4",
 }: {
-  readonly sharedLikeCopy: string;
-  readonly venue: MatchResult["venue"];
-  readonly matchedDateLabel: string;
-}): string {
-  const tags = getVibes(venue);
-  const descriptor = tags.length > 0 ? tags.join(", ") : "thoughtful";
-
-  return `${sharedLikeCopy} Known for ${descriptor}, ${toPriceLabel(venue.priceLevel)} pricing, ${venue.rating.toFixed(1)}-star ratings, and a strong first-date fit, matched on ${matchedDateLabel}.`;
-}
-
-function getVibes(venue: MatchResult["venue"]): readonly string[] {
-  if (venue.tags.length > 0) {
-    return venue.tags.slice(0, 4);
-  }
-
-  return [
-    venue.rating >= 4.5 ? "top-rated" : "well-liked",
-    venue.priceLevel <= 2 ? "easygoing" : "special-night",
-    CATEGORY_LABELS[venue.category].toLowerCase(),
-  ];
-}
-
-function HeartIcon() {
+  readonly className?: string;
+}) {
   return (
     <svg
-      className="h-4 w-4"
+      className={className}
       viewBox="0 0 24 24"
-      fill="currentColor"
+      fill="none"
       aria-hidden="true"
     >
-      <path d="M12 21s-6.72-4.32-9.33-8.35C.96 10.01 1.53 6.5 4.43 4.84c2.35-1.35 4.85-.48 6.1 1.33 1.25-1.81 3.75-2.68 6.1-1.33 2.9 1.66 3.47 5.17 1.76 7.81C18.72 16.68 12 21 12 21Z" />
+      <path
+        d="M12 20.5c-4.9-3.13-8.5-5.9-8.5-10.02A4.48 4.48 0 0 1 8.02 6c1.57 0 3 .74 3.98 1.93A5.03 5.03 0 0 1 15.98 6a4.48 4.48 0 0 1 4.52 4.48c0 4.12-3.6 6.89-8.5 10.02Z"
+        fill="currentColor"
+      />
     </svg>
   );
+}
+
+function StarRatingIcon() {
+  return (
+    <svg className="h-5 w-5 text-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 3.75 14.78 9l5.72.78-4.13 4 1 5.72L12 16.98 6.63 19.5l1-5.72-4.13-4L9.22 9 12 3.75Z" />
+    </svg>
+  );
+}
+
+function getVenueTypeLabel(venue: MatchResult["venue"]): string {
+  const name = venue.name.toLowerCase();
+
+  if (name.includes("skate") || name.includes("rink") || name.includes("roller")) {
+    return "Activity";
+  }
+
+  return CATEGORY_LABELS[venue.category];
 }
 
 function CelebrationConfetti() {
