@@ -23,17 +23,18 @@ const CATEGORIES: { value: Category; label: string }[] = [
   { value: "EVENT", label: "Event" },
 ];
 
-const BUDGETS: { value: BudgetLevel; label: string; emoji: string }[] = [
-  { value: "BUDGET", label: "Casual", emoji: "☕" },
-  { value: "MODERATE", label: "Mid-range", emoji: "🍽️" },
-  { value: "UPSCALE", label: "Upscale", emoji: "✨" },
+const BUDGETS: { value: BudgetLevel; label: string }[] = [
+  { value: "BUDGET", label: "Casual" },
+  { value: "MODERATE", label: "Mid" },
+  { value: "UPSCALE", label: "Upscale" },
 ];
 
 /**
  * Person B landing — single-page invitation flow.
  *
- * Collects display name, area, categories, and budget in one warm peach canvas,
- * then hands off to the loading screen in plan-flow.
+ * Mirrors the Person A form pattern (translucent card on a rich gradient)
+ * but in a saturated pink palette. Collects name, area, formats, and
+ * budget before handing off to the loading screen.
  */
 export function HookScreen({
   creatorName,
@@ -46,15 +47,14 @@ export function HookScreen({
   const [location, setLocation] = useState<Location | null>(initialLocation);
   const [gpsState, setGpsState] = useState<"idle" | "loading">("idle");
   const [categories, setCategories] = useState<Category[]>([]);
-  const [budget, setBudget] = useState<BudgetLevel | null>(null);
+  const [budget, setBudget] = useState<BudgetLevel>("MODERATE");
   const [error, setError] = useState<string | null>(null);
   const initial = creatorName.trim().charAt(0).toUpperCase() || "?";
 
   const canSubmit =
     displayName.trim().length > 0 &&
     (location !== null || locationLabel.trim().length > 0) &&
-    categories.length > 0 &&
-    budget !== null;
+    categories.length > 0;
 
   function toggleCategory(category: Category) {
     setCategories((current) =>
@@ -62,6 +62,11 @@ export function HookScreen({
         ? current.filter((item) => item !== category)
         : [...current, category],
     );
+  }
+
+  function handleSurpriseMe() {
+    setCategories(CATEGORIES.map((c) => c.value));
+    setBudget("MODERATE");
   }
 
   function handleUseLocation() {
@@ -90,8 +95,8 @@ export function HookScreen({
   }
 
   function handleContinue() {
-    if (!canSubmit || !budget) {
-      setError("Fill in your name, area, at least one format, and a budget.");
+    if (!canSubmit) {
+      setError("Fill in your name, area, and at least one format.");
       return;
     }
 
@@ -109,138 +114,141 @@ export function HookScreen({
   }
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[linear-gradient(180deg,_#fdf1ec_0%,_#fbe4dc_55%,_#f8d9d0_100%)] text-text">
+    <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#a83358_0%,_#6a1a36_55%,_#3d0e1f_100%)] text-white">
       <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-10 pt-8">
-        <p className="text-center text-caption font-semibold uppercase tracking-[0.28em] text-text">
+        <p className="text-caption font-semibold uppercase tracking-[0.28em] text-white">
           Dateflow
         </p>
 
-        <div className="mt-8 flex items-center gap-4 rounded-[1.5rem] bg-[#fbd7cc] p-4 shadow-[0_20px_40px_rgba(200,80,70,0.12)]">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">
+        <div className="mt-8 flex items-center gap-4 rounded-[1.5rem] border border-white/15 bg-white/[0.08] p-4 shadow-[0_20px_40px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/90 text-lg font-bold text-[#6a1a36]">
             {initial}
           </div>
           <div>
-            <p className="text-caption font-bold uppercase tracking-[0.14em] text-primary">
+            <p className="text-caption font-bold uppercase tracking-[0.14em] text-white/80">
               You&apos;re invited
             </p>
-            <p className="mt-1 text-body font-semibold leading-tight text-text">
+            <p className="mt-1 text-body font-semibold leading-tight text-white">
               {creatorName} invited you to pick the vibe
             </p>
           </div>
         </div>
 
-        <h1 className="mt-10 text-[clamp(2.4rem,8vw,3.2rem)] font-bold leading-[0.98] tracking-[-0.03em] text-text">
+        <h1 className="mt-10 text-[clamp(2.4rem,8vw,3.2rem)] font-bold leading-[0.98] tracking-[-0.03em] text-white">
           Let&apos;s find what works for both of you
         </h1>
-        <p className="mt-5 text-body text-text-secondary">
+        <p className="mt-5 text-body text-white/65">
           Add your preferences and Dateflow will find where you both align.
         </p>
 
-        <div className="mt-8 space-y-6">
-          <div className="space-y-2">
-            <label
-              htmlFor="invitee-display-name"
-              className="block text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary"
-            >
-              Your name
-            </label>
-            <input
-              id="invitee-display-name"
-              type="text"
-              autoComplete="given-name"
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder="What should Dateflow call you?"
-              className="h-14 w-full rounded-2xl border border-white/80 bg-white/80 px-4 text-body text-text shadow-sm outline-none transition placeholder:text-text-secondary/55 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-3">
+        <div className="mt-8 rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+          <div className="space-y-5">
+            <div>
               <label
-                htmlFor="invitee-location"
-                className="block text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary"
+                htmlFor="invitee-display-name"
+                className="block text-body font-semibold text-white"
               >
-                Your area
+                Your Name
               </label>
-              <button
-                type="button"
-                onClick={handleUseLocation}
-                className="cursor-pointer text-caption font-semibold text-primary transition-colors hover:text-primary-hover"
-              >
-                {gpsState === "loading" ? "Finding you..." : "Use my location"}
-              </button>
+              <input
+                id="invitee-display-name"
+                type="text"
+                autoComplete="given-name"
+                value={displayName}
+                onChange={(event) => setDisplayName(event.target.value)}
+                placeholder="Alex"
+                className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-transparent px-4 text-body text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
+              />
             </div>
-            <input
-              id="invitee-location"
-              type="text"
-              value={locationLabel}
-              onChange={(event) => {
-                setLocation(null);
-                setLocationLabel(event.target.value);
-              }}
-              placeholder="Brooklyn or 11211"
-              className="h-14 w-full rounded-2xl border border-white/80 bg-white/80 px-4 text-body text-text shadow-sm outline-none transition placeholder:text-text-secondary/55 focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
 
-          <div>
-            <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-              What sounds good?
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {CATEGORIES.map((category) => {
-                const selected = categories.includes(category.value);
-                return (
-                  <button
-                    key={category.value}
-                    type="button"
-                    onClick={() => toggleCategory(category.value)}
-                    className={`h-16 rounded-2xl border text-body font-semibold shadow-sm transition-all duration-200 active:scale-[0.97] ${
-                      selected
-                        ? "border-primary bg-primary text-white"
-                        : "border-white/80 bg-white/80 text-text hover:border-primary/40"
-                    }`}
-                  >
-                    {category.label}
-                  </button>
-                );
-              })}
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <label
+                  htmlFor="invitee-location"
+                  className="block text-body font-semibold text-white"
+                >
+                  Location
+                </label>
+                <button
+                  type="button"
+                  onClick={handleUseLocation}
+                  className="cursor-pointer text-caption font-semibold text-white/80 transition-colors hover:text-white"
+                >
+                  {gpsState === "loading" ? "Finding you..." : "Use my location"}
+                </button>
+              </div>
+              <input
+                id="invitee-location"
+                type="text"
+                value={locationLabel}
+                onChange={(event) => {
+                  setLocation(null);
+                  setLocationLabel(event.target.value);
+                }}
+                placeholder="Brooklyn or 11211"
+                className="mt-3 h-12 w-full rounded-xl border border-white/15 bg-transparent px-4 text-body text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none"
+              />
             </div>
-          </div>
 
-          <div>
-            <p className="text-caption font-semibold uppercase tracking-[0.18em] text-text-secondary">
-              Budget preference
-            </p>
-            <div className="mt-3 space-y-3">
-              {BUDGETS.map((option) => {
-                const selected = budget === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setBudget(option.value)}
-                    className={`flex h-14 w-full items-center gap-3 rounded-2xl border px-5 text-body font-semibold shadow-sm transition-all duration-200 active:scale-[0.99] ${
-                      selected
-                        ? "border-primary bg-white text-text ring-2 ring-primary/30"
-                        : "border-white/80 bg-white/80 text-text hover:border-primary/40"
-                    }`}
-                  >
-                    <span aria-hidden className="text-lg">
-                      {option.emoji}
-                    </span>
-                    <span>{option.label}</span>
-                  </button>
-                );
-              })}
+            <div>
+              <p className="text-body font-semibold text-white">Categories</p>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {CATEGORIES.map((category) => {
+                  const selected = categories.includes(category.value);
+                  return (
+                    <button
+                      key={category.value}
+                      type="button"
+                      onClick={() => toggleCategory(category.value)}
+                      className={`h-14 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                        selected
+                          ? "border-white/60 bg-white/15 text-white"
+                          : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {error ? <p className="text-caption text-error">{error}</p> : null}
+            <div>
+              <p className="text-body font-semibold text-white">Budget</p>
+              <div className="mt-3 grid grid-cols-3 gap-3">
+                {BUDGETS.map((option) => {
+                  const selected = budget === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setBudget(option.value)}
+                      className={`h-12 rounded-xl border text-body font-semibold transition-all duration-200 active:scale-[0.97] ${
+                        selected
+                          ? "border-white/60 bg-white/15 text-white"
+                          : "border-white/15 bg-white/[0.04] text-white/85 hover:border-white/30"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleSurpriseMe}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/[0.04] text-body font-semibold text-white transition-colors hover:bg-white/10"
+            >
+              <span aria-hidden>✨</span> Surprise me
+            </button>
+          </div>
         </div>
 
-        <div className="mt-auto pt-10">
+        {error ? <p className="mt-4 text-body text-error">{error}</p> : null}
+
+        <div className="mt-6">
           <Button onClick={handleContinue} disabled={!canSubmit}>
             Join this date plan
           </Button>
