@@ -74,6 +74,8 @@ export function SwipeFlow({
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
+  const loadedFallbackVenueIdRef = useRef<string | null>(null);
+  const loadingFallbackRef = useRef(false);
   const roundSwipesRef = useRef<Record<number, DemoRoundSwipe[]>>({});
   const demoRoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toast, setToast] = useState<string | null>(
@@ -115,27 +117,46 @@ export function SwipeFlow({
   }, [sessionId]);
 
   const loadFallback = useCallback(async (matchedVenueId: string | null) => {
+    // Skip if we've already loaded this exact fallback venue, or a load is in
+    // flight. Prevents the status-sync polling loop from flashing the loading
+    // screen every few seconds while the user is on the fallback pick screen.
+    if (loadingFallbackRef.current) {
+      return;
+    }
+    if (
+      loadedFallbackVenueIdRef.current !== null &&
+      loadedFallbackVenueIdRef.current === (matchedVenueId ?? "")
+    ) {
+      return;
+    }
+
+    loadingFallbackRef.current = true;
     setStatus("loading");
     setStatusMessage("Preparing your fallback pick...");
 
-    const response = await fetch(`/api/sessions/${sessionId}/venues`);
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/venues`);
 
-    if (!response.ok) {
-      throw new Error("Failed to load the fallback suggestion.");
+      if (!response.ok) {
+        throw new Error("Failed to load the fallback suggestion.");
+      }
+
+      const body = (await response.json()) as { venues: Venue[] };
+      const resolvedVenue = resolveFallbackVenue(matchedVenueId, body.venues);
+
+      if (!resolvedVenue) {
+        throw new Error("We couldn't find the fallback venue for this session.");
+      }
+
+      setVenues(body.venues);
+      logVenuePhotoSnapshot("fallback", null, body.venues);
+      setFallbackVenue(resolvedVenue);
+      loadedFallbackVenueIdRef.current = matchedVenueId ?? "";
+      setStatus("fallback");
+      setStatusMessage("");
+    } finally {
+      loadingFallbackRef.current = false;
     }
-
-    const body = (await response.json()) as { venues: Venue[] };
-    const resolvedVenue = resolveFallbackVenue(matchedVenueId, body.venues);
-
-    if (!resolvedVenue) {
-      throw new Error("We couldn't find the fallback venue for this session.");
-    }
-
-    setVenues(body.venues);
-    logVenuePhotoSnapshot("fallback", null, body.venues);
-    setFallbackVenue(resolvedVenue);
-    setStatus("fallback");
-    setStatusMessage("");
   }, [logVenuePhotoSnapshot, sessionId]);
 
   const loadRound = useCallback(async (nextRound: number) => {
@@ -395,6 +416,7 @@ export function SwipeFlow({
     try {
       const result = await requestFallbackRetryDecision(sessionId, preferences);
       setFallbackVenue(null);
+      loadedFallbackVenueIdRef.current = null;
 
       if (result.status === "ready_to_swipe") {
         loadedRoundRef.current = null;
