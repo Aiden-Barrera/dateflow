@@ -23,6 +23,10 @@ const FIELD_MASK = [
   "places.rating",
   "places.userRatingCount",
   "places.photos",
+  "places.editorialSummary",
+  "places.regularOpeningHours",
+  "places.currentOpeningHours",
+  "places.websiteUri",
 ].join(",");
 
 export function getGooglePlacesReadiness(): {
@@ -178,6 +182,11 @@ export function categoriesToGoogleTypes(categories: readonly Category[]): readon
 // Response types (Google Places API v1 shape)
 // ---------------------------------------------------------------------------
 
+type GoogleOpeningHours = {
+  readonly openNow?: boolean;
+  readonly weekdayDescriptions?: readonly string[];
+};
+
 type GooglePlace = {
   readonly id: string;
   readonly displayName: { readonly text: string };
@@ -188,6 +197,10 @@ type GooglePlace = {
   readonly rating?: number;
   readonly userRatingCount?: number;
   readonly photos?: readonly { readonly name: string }[];
+  readonly editorialSummary?: { readonly text?: string };
+  readonly regularOpeningHours?: GoogleOpeningHours;
+  readonly currentOpeningHours?: GoogleOpeningHours;
+  readonly websiteUri?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -261,9 +274,19 @@ export async function searchNearby(
   const data = await response.json();
   const places: readonly GooglePlace[] = data.places ?? [];
 
-  const candidates = places.map((place) => {
+  const candidates: readonly PlaceCandidate[] = places.map((place) => {
     const photoReferences = (place.photos ?? []).map((photo) => photo.name);
     const priceLevel = parsePriceLevel(place.priceLevel);
+    const editorialSummary = place.editorialSummary?.text?.trim();
+    const hoursSource = place.currentOpeningHours ?? place.regularOpeningHours;
+    const openingHours =
+      hoursSource && typeof hoursSource.openNow === "boolean"
+        ? {
+            openNow: hoursSource.openNow,
+            weekdayText: hoursSource.weekdayDescriptions ?? [],
+          }
+        : undefined;
+    const website = place.websiteUri?.trim();
 
     return {
       placeId: place.id,
@@ -281,6 +304,9 @@ export async function searchNearby(
       photoReferences,
       photoReference: photoReferences[0] ?? null,
       photoUrls: buildGooglePlacePhotoUrls(photoReferences),
+      ...(editorialSummary ? { editorialSummary } : {}),
+      ...(openingHours ? { openingHours } : {}),
+      ...(website ? { website } : {}),
     };
   });
 

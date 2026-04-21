@@ -469,16 +469,37 @@ export function SwipeDeckCard({
                     {venue.name}
                   </h2>
                   <p className="mt-2 text-body text-[#6a4a3a]">{venue.address}</p>
+                  {venue.editorialSummary ? (
+                    <p className="mt-2 line-clamp-2 text-body italic text-[#8a6a5a]">
+                      {venue.editorialSummary}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <InfoPill>
                     <StarIcon />
-                    {venue.rating.toFixed(1)} rating
+                    {formatRatingWithCount(venue.rating, venue.userRatingCount)}
                   </InfoPill>
                   <InfoPill>
                     <CategoryIcon category={venue.category} />
                     {CATEGORY_LABELS[venue.category]}
                   </InfoPill>
+                  {typeof venue.distanceMeters === "number" ? (
+                    <InfoPill>{formatDistance(venue.distanceMeters)}</InfoPill>
+                  ) : null}
+                  {venue.openingHours ? (
+                    <InfoPill>
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          venue.openingHours.openNow
+                            ? "bg-[#10a37f]"
+                            : "bg-[#c2410c]"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {venue.openingHours.openNow ? "Open now" : "Closed"}
+                    </InfoPill>
+                  ) : null}
                   <InfoPill>{`Round ${venue.round}`}</InfoPill>
                 </div>
               </div>
@@ -547,6 +568,15 @@ export function SwipeDeckCard({
               </span>
             ))}
           </div>
+
+          {venue.whyPicked ? (
+            <div className="rounded-[1.25rem] border border-[rgba(208,61,106,0.25)] bg-[rgba(208,61,106,0.08)] p-4">
+              <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#8a2346]">
+                Why we picked this
+              </p>
+              <p className="mt-2 text-body text-[#2a1a1c]">{venue.whyPicked}</p>
+            </div>
+          ) : null}
 
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -944,4 +974,33 @@ function getActionButtonStyle(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+export function formatRatingWithCount(
+  rating: number,
+  reviewCount: number | undefined,
+): string {
+  const ratingLabel = `${rating.toFixed(1)}`;
+  if (typeof reviewCount !== "number" || reviewCount <= 0) {
+    return `${ratingLabel} rating`;
+  }
+  return `${ratingLabel} · ${formatReviewCount(reviewCount)} reviews`;
+}
+
+function formatReviewCount(count: number): string {
+  if (count >= 1_000) {
+    const thousands = count / 1_000;
+    const rounded =
+      thousands >= 10 ? Math.round(thousands) : Math.round(thousands * 10) / 10;
+    return `${rounded}k`;
+  }
+  return String(count);
+}
+
+export function formatDistance(meters: number): string {
+  const miles = meters / 1609.344;
+  if (miles < 0.1) {
+    return "<0.1 mi away";
+  }
+  return `${miles.toFixed(1)} mi away`;
 }
