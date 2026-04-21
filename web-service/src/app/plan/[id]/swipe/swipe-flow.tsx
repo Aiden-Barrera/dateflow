@@ -127,6 +127,11 @@ export function SwipeFlow({
       loadedFallbackVenueIdRef.current !== null &&
       loadedFallbackVenueIdRef.current === (matchedVenueId ?? "")
     ) {
+      // Callers (e.g. bootstrap) may have flipped status to "loading" before
+      // dispatching here. Restore the fallback view so the UI doesn't stall
+      // on the loading screen.
+      setStatus("fallback");
+      setStatusMessage("");
       return;
     }
 
