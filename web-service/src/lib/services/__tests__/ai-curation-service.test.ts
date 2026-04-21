@@ -122,6 +122,47 @@ describe("scoreAndCurate", () => {
     );
   });
 
+  it("prefers park-style venues for budget-first date preferences", async () => {
+    const budgetPreferences: readonly [Preference, Preference] = [
+      {
+        ...preferences[0],
+        budget: "BUDGET",
+        categories: ["ACTIVITY", "RESTAURANT"],
+      },
+      {
+        ...preferences[1],
+        budget: "BUDGET",
+        categories: ["ACTIVITY", "RESTAURANT"],
+      },
+    ];
+
+    const ranked = buildDeterministicRanking(
+      [
+        makeCandidate("cheap-restaurant", {
+          name: "Budget Bites",
+          types: ["restaurant"],
+          primaryType: "restaurant",
+          priceLevel: 1,
+          rating: 4.8,
+          reviewCount: 480,
+        }),
+        makeCandidate("park-date", {
+          name: "Lakeside Park",
+          types: ["park", "tourist_attraction"],
+          primaryType: "park",
+          priceLevel: 0,
+          rating: 4.0,
+          reviewCount: 85,
+        }),
+      ],
+      budgetPreferences,
+      1,
+      midpoint,
+    );
+
+    expect(ranked[0].placeId).toBe("park-date");
+  });
+
   it("extracts deterministic finalists and only lets AI touch allowed fields", async () => {
     const deterministic = buildDeterministicRanking(
       [

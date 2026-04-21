@@ -98,6 +98,47 @@ function roundBonus(category: Category, round: number): number {
   return 0;
 }
 
+const BUDGET_ROMANTIC_PRIMARY_TYPES = new Set<string>([
+  "park",
+  "botanical_garden",
+  "tourist_attraction",
+  "art_gallery",
+  "museum",
+]);
+
+function budgetRomanticBonus(
+  candidate: PlaceCandidate,
+  category: Category,
+  preferences: readonly [Preference, Preference],
+): number {
+  const budgetPreferenceCount = preferences.filter(
+    (preference) => preference.budget === "BUDGET",
+  ).length;
+
+  if (budgetPreferenceCount === 0) {
+    return 0;
+  }
+
+  const hasBudgetPrimaryType =
+    candidate.primaryType !== null &&
+    BUDGET_ROMANTIC_PRIMARY_TYPES.has(candidate.primaryType);
+  const hasBudgetFriendlyType = candidate.types.some((type) =>
+    BUDGET_ROMANTIC_PRIMARY_TYPES.has(type),
+  );
+
+  const baseMultiplier = budgetPreferenceCount === 2 ? 1 : 0.65;
+
+  if ((hasBudgetPrimaryType || hasBudgetFriendlyType) && candidate.priceLevel === 0) {
+    return 0.28 * baseMultiplier;
+  }
+
+  if (category === "RESTAURANT" && candidate.primaryType === "cafe") {
+    return 0.12 * baseMultiplier;
+  }
+
+  return 0;
+}
+
 function categoryOverlapScore(
   category: Category,
   preferences: readonly [Preference, Preference]
@@ -197,7 +238,12 @@ export function buildDeterministicRanking(
         composite: baseComposite,
       };
 
-      const rankingComposite = Math.min(1, baseComposite + roundBonus(category, round));
+      const rankingComposite = Math.min(
+        1,
+        baseComposite +
+          roundBonus(category, round) +
+          budgetRomanticBonus(candidate, category, preferences),
+      );
 
       return {
         rankingComposite,

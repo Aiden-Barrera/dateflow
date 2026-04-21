@@ -358,5 +358,88 @@ describe("places-api-client", () => {
       expect(body).not.toHaveProperty("includedPrimaryTypes");
       expect(results.map((result) => result.placeId)).toEqual(["budget-ok"]);
     });
+
+    it("excludes deny-listed venue types while keeping valid activity venues", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          places: [
+            {
+              id: "gym-1",
+              displayName: { text: "Downtown Climbing Gym" },
+              formattedAddress: "1 Fitness Way",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["gym", "point_of_interest", "establishment"],
+              primaryType: "gym",
+              rating: 4.6,
+              userRatingCount: 300,
+              photos: [],
+            },
+            {
+              id: "liquor-1",
+              displayName: { text: "Bottle Shop" },
+              formattedAddress: "2 Spirits Ave",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["liquor_store", "store", "point_of_interest"],
+              primaryType: "liquor_store",
+              rating: 4.2,
+              userRatingCount: 120,
+              photos: [],
+            },
+            {
+              id: "rink-1",
+              displayName: { text: "Moonlight Roller Rink" },
+              formattedAddress: "3 Date Night Dr",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["roller_skating_rink", "point_of_interest", "restaurant"],
+              primaryType: "roller_skating_rink",
+              rating: 4.7,
+              userRatingCount: 410,
+              photos: [],
+            },
+          ],
+        }),
+      });
+
+      const results = await searchNearby(location, 2000, ["restaurant", "activity"], 4);
+
+      expect(results.map((result) => result.placeId)).toEqual(["rink-1"]);
+    });
+
+    it("excludes fast-food chains by name while keeping cafes", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          places: [
+            {
+              id: "fast-food-1",
+              displayName: { text: "McDonald's" },
+              formattedAddress: "4 Chain Ln",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["restaurant", "food", "point_of_interest"],
+              primaryType: "restaurant",
+              rating: 3.9,
+              userRatingCount: 1200,
+              photos: [],
+            },
+            {
+              id: "cafe-1",
+              displayName: { text: "Morning Bloom Cafe" },
+              formattedAddress: "5 Slow Date St",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["cafe", "restaurant", "food"],
+              primaryType: "cafe",
+              rating: 4.6,
+              userRatingCount: 210,
+              photos: [],
+            },
+          ],
+        }),
+      });
+
+      const results = await searchNearby(location, 2000, ["restaurant"], 2);
+
+      expect(results.map((result) => result.placeId)).toEqual(["cafe-1"]);
+    });
   });
 });
