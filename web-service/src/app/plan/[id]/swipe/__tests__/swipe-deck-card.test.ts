@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Venue } from "../../../../../../lib/types/venue";
-import { clampSlideIndex, getVenueSlides } from "../swipe-deck-card";
+import {
+  clampSlideIndex,
+  getDisplayTags,
+  getVenueSlides,
+} from "../swipe-deck-card";
 
 function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
@@ -65,5 +69,20 @@ describe("getVenueSlides", () => {
     expect(clampSlideIndex(3, 3)).toBe(0);
     expect(clampSlideIndex(1, 3)).toBe(1);
     expect(clampSlideIndex(0, 0)).toBe(0);
+  });
+});
+
+describe("getDisplayTags", () => {
+  it("removes internal markers case-insensitively and preserves user-facing tags", () => {
+    expect(
+      getDisplayTags([
+        "cozy",
+        "AI-CURATED",
+        "restaurant",
+        "Live Music",
+        "Top-Rated",
+        "well-reviewed",
+      ]),
+    ).toEqual(["cozy", "Live Music"]);
   });
 });

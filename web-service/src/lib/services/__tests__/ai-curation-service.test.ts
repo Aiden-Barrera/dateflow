@@ -58,6 +58,7 @@ function makeCandidate(
     address: "123 Main St, Austin, TX",
     location: midpoint,
     types: ["restaurant"],
+    primaryType: null,
     priceLevel: 2,
     rating: 4.5,
     reviewCount: 300,

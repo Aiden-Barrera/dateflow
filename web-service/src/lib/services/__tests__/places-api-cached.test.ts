@@ -38,10 +38,13 @@ describe("searchNearbyWithCache", () => {
       address: "123 Main St",
       location: { lat: 30.26, lng: -97.73, label: "Test Venue" },
       types: ["restaurant"],
+      primaryType: null,
       priceLevel: 2,
       rating: 4.5,
       reviewCount: 200,
+      photoReferences: ["photo_ref_1"],
       photoReference: "photo_ref_1",
+      photoUrls: [],
     },
   ];
 

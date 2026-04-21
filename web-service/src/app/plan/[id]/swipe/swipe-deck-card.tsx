@@ -538,9 +538,9 @@ export function SwipeDeckCard({
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            {getDisplayTags(venue.tags).slice(0, 3).map((tag) => (
+            {getDisplayTags(venue.tags).slice(0, 3).map((tag, index) => (
               <span
-                key={tag}
+                key={`${tag}-${index}`}
                 className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-3 py-1.5 text-caption font-medium text-[#8a2346]"
               >
                 {tag}
@@ -659,9 +659,9 @@ function PreviewVenueCard({
             <StarIcon />
             {venue.rating.toFixed(1)}
           </div>
-          {getDisplayTags(venue.tags).slice(0, 2).map((tag) => (
+          {getDisplayTags(venue.tags).slice(0, 2).map((tag, index) => (
             <div
-              key={tag}
+              key={`${tag}-${index}`}
               className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-2.5 py-1 text-caption text-[#8a2346]"
             >
               {tag}
@@ -686,7 +686,7 @@ const INTERNAL_TAGS = new Set<string>([
   "event",
 ]);
 
-function getDisplayTags(tags: readonly string[]): readonly string[] {
+export function getDisplayTags(tags: readonly string[]): readonly string[] {
   return tags.filter((tag) => !INTERNAL_TAGS.has(tag.toLowerCase()));
 }
 
