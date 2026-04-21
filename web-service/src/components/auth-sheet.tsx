@@ -83,8 +83,8 @@ export function AuthSheet({
               className="pointer-events-none absolute inset-0"
               style={{
                 background: [
-                  "radial-gradient(ellipse 90% 60% at 10% 0%,   rgba(224,116,104,0.28) 0%, transparent 55%)",
-                  "radial-gradient(ellipse 70% 80% at 90% 100%,  rgba(91,154,139,0.2)  0%, transparent 50%)",
+                  "radial-gradient(ellipse 90% 60% at 10% 0%,   rgba(208,61,106,0.35) 0%, transparent 55%)",
+                  "radial-gradient(ellipse 70% 80% at 90% 100%,  rgba(232,160,138,0.22)  0%, transparent 50%)",
                   "radial-gradient(ellipse 55% 45% at 60% 45%,   rgba(255,255,255,0.025) 0%, transparent 70%)",
                 ].join(","),
               }}
@@ -182,7 +182,7 @@ export function AuthSheet({
                     key={m}
                     type="button"
                     onClick={() => onModeChange(m)}
-                    className={`flex-1 cursor-pointer rounded-[0.65rem] px-3 py-2.5 text-[0.83rem] font-semibold transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E07468] ${
+                    className={`flex-1 cursor-pointer rounded-[0.65rem] px-3 py-2.5 text-[0.83rem] font-semibold transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d03d6a] ${
                       mode === m
                         ? "bg-white text-[#1A1410] shadow-[0_1px_6px_rgba(0,0,0,0.1)]"
                         : "text-[#8A827A] hover:text-[#1A1410]"
@@ -196,7 +196,7 @@ export function AuthSheet({
                 type="button"
                 onClick={onClose}
                 aria-label="Close account modal"
-                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#DDD8D1] bg-white text-[#8A827A] shadow-sm transition-all duration-200 hover:border-[#C8C0B5] hover:text-[#1A1410] motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E07468]"
+                className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-[#DDD8D1] bg-white text-[#8A827A] shadow-sm transition-all duration-200 hover:border-[#C8C0B5] hover:text-[#1A1410] motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d03d6a]"
               >
                 <CloseIcon />
               </button>
@@ -248,7 +248,7 @@ export function AuthSheet({
                     onDraftChange({ ...draft, email: event.target.value })
                   }
                   placeholder="you@example.com"
-                  className="w-full rounded-[0.85rem] border border-[#DDD8D1] bg-white px-4 py-3 text-[0.9rem] text-[#1A1410] outline-none placeholder:text-[#C0B8AF] transition-[border-color,box-shadow] duration-200 focus:border-[#E07468] focus:shadow-[0_0_0_3px_rgba(224,116,104,0.15)]"
+                  className="w-full rounded-[0.85rem] border border-[#DDD8D1] bg-white px-4 py-3 text-[0.9rem] text-[#1A1410] outline-none placeholder:text-[#C0B8AF] transition-[border-color,box-shadow] duration-200 focus:border-[#d03d6a] focus:shadow-[0_0_0_3px_rgba(208,61,106,0.2)]"
                 />
               </label>
 
@@ -266,7 +266,7 @@ export function AuthSheet({
                   placeholder={
                     mode === "register" ? "At least 8 characters" : "Your password"
                   }
-                  className="w-full rounded-[0.85rem] border border-[#DDD8D1] bg-white px-4 py-3 text-[0.9rem] text-[#1A1410] outline-none placeholder:text-[#C0B8AF] transition-[border-color,box-shadow] duration-200 focus:border-[#E07468] focus:shadow-[0_0_0_3px_rgba(224,116,104,0.15)]"
+                  className="w-full rounded-[0.85rem] border border-[#DDD8D1] bg-white px-4 py-3 text-[0.9rem] text-[#1A1410] outline-none placeholder:text-[#C0B8AF] transition-[border-color,box-shadow] duration-200 focus:border-[#d03d6a] focus:shadow-[0_0_0_3px_rgba(208,61,106,0.2)]"
                 />
               </label>
 
@@ -315,7 +315,7 @@ type OAuthButtonProps = {
 
 function OAuthButton({ onClick, disabled, variant, icon, label }: OAuthButtonProps) {
   const base =
-    "flex h-[3.1rem] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[0.85rem] px-4 text-[0.87rem] font-semibold transition-[transform,box-shadow,opacity] duration-200 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E07468] disabled:cursor-not-allowed disabled:opacity-50";
+    "flex h-[3.1rem] w-full cursor-pointer items-center justify-center gap-2.5 rounded-[0.85rem] px-4 text-[0.87rem] font-semibold transition-[transform,box-shadow,opacity] duration-200 motion-safe:hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d03d6a] disabled:cursor-not-allowed disabled:opacity-50";
 
   const dark =
     "bg-[#0D0B09] text-white shadow-[0_2px_8px_rgba(0,0,0,0.22)] hover:shadow-[0_6px_22px_rgba(0,0,0,0.32)]";
@@ -357,7 +357,7 @@ function HeartDotIcon() {
     <svg aria-hidden="true" viewBox="0 0 16 16" className="h-3 w-3" fill="none">
       <path
         d="M8 13.5S2 9.5 2 5.5a3 3 0 0 1 6-1.02A3 3 0 0 1 14 5.5c0 4-6 8-6 8z"
-        fill="rgba(224,116,104,0.7)"
+        fill="rgba(208,61,106,0.85)"
       />
     </svg>
   );

@@ -417,7 +417,7 @@ export function SwipeDeckCard({
             }}
           />
 
-          <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-caption font-medium text-text shadow-sm">
+          <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-caption font-medium text-[#2a1a1c] shadow-sm">
             <CategoryIcon category={venue.category} />
             {CATEGORY_LABELS[venue.category]}
           </div>
@@ -459,17 +459,17 @@ export function SwipeDeckCard({
         </div>
 
         <div className="space-y-4 p-6">
-          <div className="rounded-[1.5rem] border border-muted bg-bg/72 p-4">
+          <div className="rounded-[1.5rem] border border-[#d9c7b5] bg-[#f5ebe3]/80 p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 space-y-3">
                 <div>
-                  <p className="text-caption font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                  <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#6a4a3a]">
                     Venue {cardIndex} of {totalCards}
                   </p>
-                  <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-text">
+                  <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-[#2a1a1c]">
                     {venue.name}
                   </h2>
-                  <p className="mt-2 text-body text-text-secondary">{venue.address}</p>
+                  <p className="mt-2 text-body text-[#6a4a3a]">{venue.address}</p>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <InfoPill>
@@ -492,7 +492,7 @@ export function SwipeDeckCard({
           {currentSlides.length > 1 ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-caption font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#6a4a3a]">
                   Venue photos
                 </p>
                 <div className="flex items-center gap-1.5">
@@ -517,10 +517,10 @@ export function SwipeDeckCard({
                     type="button"
                     key={`${slide}-thumb-${slideIndex}`}
                     aria-label={`Show photo ${slideIndex + 1} of ${currentSlides.length}`}
-                    className={`relative h-20 min-w-24 overflow-hidden rounded-[1.1rem] border bg-bg shadow-[0_10px_24px_rgba(45,42,38,0.08)] ${
+                    className={`relative h-20 min-w-24 overflow-hidden rounded-[1.1rem] border bg-[#f5ebe3] shadow-[0_10px_24px_rgba(45,42,38,0.08)] ${
                       slideIndex === activeSlideIndex
                         ? "border-primary ring-2 ring-primary/20"
-                        : "border-muted"
+                        : "border-[#d9c7b5]"
                     }`}
                     onClick={() => moveToSlide(slideIndex)}
                   >
@@ -542,7 +542,7 @@ export function SwipeDeckCard({
             {venue.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-muted bg-bg px-3 py-1.5 text-caption font-medium text-text-secondary"
+                className="rounded-full border border-[#d9c7b5] bg-[#f5ebe3] px-3 py-1.5 text-caption font-medium text-[#6a4a3a]"
               >
                 {tag}
               </span>
@@ -642,7 +642,7 @@ function PreviewVenueCard({
           </>
         )}
         <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.94))]" />
-        <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption text-text-secondary shadow-sm">
+        <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption text-[#6a4a3a] shadow-sm">
           <CategoryIcon category={venue.category} />
           {CATEGORY_LABELS[venue.category]}
         </div>
@@ -651,22 +651,22 @@ function PreviewVenueCard({
       <div className="space-y-4 px-5 py-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-body font-semibold text-text">{venue.name}</p>
-            <p className="mt-1 text-caption text-text-secondary">{venue.address}</p>
+            <p className="text-body font-semibold text-[#2a1a1c]">{venue.name}</p>
+            <p className="mt-1 text-caption text-[#6a4a3a]">{venue.address}</p>
           </div>
           <div className="scale-[0.92] origin-top-right opacity-88">
             <PriceBadge priceLevel={venue.priceLevel} />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-muted bg-white px-2.5 py-1 text-caption text-text-secondary">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#d9c7b5] bg-white px-2.5 py-1 text-caption text-[#6a4a3a]">
             <StarIcon />
             {venue.rating.toFixed(1)}
           </div>
           {venue.tags.slice(0, 2).map((tag) => (
             <div
               key={tag}
-              className="rounded-full border border-muted bg-white px-2.5 py-1 text-caption text-text-secondary"
+              className="rounded-full border border-[#d9c7b5] bg-white px-2.5 py-1 text-caption text-[#6a4a3a]"
             >
               {tag}
             </div>
@@ -679,7 +679,7 @@ function PreviewVenueCard({
 
 function InfoPill({ children }: { readonly children: React.ReactNode }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-muted bg-white px-3 py-1.5 text-caption font-medium text-text-secondary">
+    <div className="inline-flex items-center gap-2 rounded-full border border-[#d9c7b5] bg-white px-3 py-1.5 text-caption font-medium text-[#6a4a3a]">
       {children}
     </div>
   );

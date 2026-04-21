@@ -31,31 +31,34 @@ export function LoadingOrnament({
   return <VenueGenerationLoader />;
 }
 
+// Role tones — raspberry (hot) and warm terracotta (bridges with brown).
+const RASPBERRY_SOFT = "rgba(255,61,127,0.32)";
+const WARM_SOFT = "rgba(232,160,138,0.22)";
+
 function VenueGenerationLoader() {
   return (
     <div className="relative flex h-44 items-center justify-center" aria-hidden="true">
       <div
-        className="absolute inset-x-8 top-10 h-24 rounded-[2rem] opacity-70 blur-2xl"
+        className="absolute inset-x-8 top-10 h-24 rounded-[2rem] opacity-80 blur-2xl"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(255,126,107,0.2), rgba(120,214,201,0.16))",
+          background: `linear-gradient(135deg, ${RASPBERRY_SOFT}, ${WARM_SOFT})`,
         }}
       />
       <ShortlistCard
         className="-translate-x-10 translate-y-4 motion-safe:animate-[shortlistCardLeft_2.8s_ease-in-out_infinite] motion-reduce:animate-none"
-        accent="var(--color-primary-muted)"
+        accent={RASPBERRY_SOFT}
         title="Fair commute"
-        tone="coral"
+        tone="raspberry"
       />
       <ShortlistCard
         className="z-10 motion-safe:animate-[shortlistCardCenter_2.8s_ease-in-out_infinite] motion-reduce:animate-none"
-        accent="var(--color-secondary-muted)"
+        accent={WARM_SOFT}
         title="Good vibe"
-        tone="teal"
+        tone="warm"
       />
       <ShortlistCard
         className="translate-x-10 translate-y-4 motion-safe:animate-[shortlistCardRight_2.8s_ease-in-out_infinite] motion-reduce:animate-none"
-        accent="rgba(255,255,255,0.92)"
+        accent="rgba(255,255,255,0.85)"
         title="Top pick"
         tone="neutral"
       />
@@ -81,25 +84,24 @@ function DemoDeckLoader() {
   return (
     <div className="relative flex h-44 items-center justify-center" aria-hidden="true">
       <div
-        className="absolute inset-x-8 top-8 h-28 rounded-[2rem] opacity-70 blur-2xl"
+        className="absolute inset-x-8 top-8 h-28 rounded-[2rem] opacity-80 blur-2xl"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(255,126,107,0.22), rgba(120,214,201,0.18))",
+          background: `linear-gradient(135deg, ${RASPBERRY_SOFT}, ${WARM_SOFT})`,
         }}
       />
       <DemoCard
         className="-rotate-12 motion-safe:animate-[demoCardLeft_2.6s_ease-in-out_infinite] motion-reduce:animate-none"
-        accent="var(--color-primary-muted)"
+        accent={RASPBERRY_SOFT}
         label="Food"
       />
       <DemoCard
         className="z-10 motion-safe:animate-[demoCardCenter_2.6s_ease-in-out_infinite] motion-reduce:animate-none"
-        accent="var(--color-secondary-muted)"
+        accent={WARM_SOFT}
         label="Drinks"
       />
       <DemoCard
         className="rotate-12 motion-safe:animate-[demoCardRight_2.6s_ease-in-out_infinite] motion-reduce:animate-none"
-        accent="rgba(255,255,255,0.88)"
+        accent="rgba(255,255,255,0.82)"
         label="Activity"
       />
       <style jsx>{`
@@ -124,20 +126,23 @@ function PartnerPreferencesLoader() {
   return (
     <div className="relative flex h-40 w-40 items-center justify-center" aria-hidden="true">
       <div
-        className="absolute inset-8 rounded-full opacity-75 blur-2xl"
+        className="absolute inset-8 rounded-full opacity-80 blur-2xl"
         style={{
           background:
-            "radial-gradient(circle, rgba(255,126,107,0.25) 0%, rgba(255,126,107,0.06) 70%, transparent 100%)",
+            "radial-gradient(circle, rgba(255,61,127,0.38) 0%, rgba(255,61,127,0.08) 70%, transparent 100%)",
         }}
       />
-      <div className="absolute bottom-8 left-11 flex h-9 w-9 items-center justify-center rounded-full bg-white/92 text-primary shadow-[0_16px_30px_rgba(45,42,38,0.12)] motion-safe:animate-[floatHeart_2.4s_ease-in-out_infinite] motion-reduce:animate-none">
+      <div className="absolute bottom-8 left-11 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#8a2346] shadow-[0_16px_30px_rgba(0,0,0,0.4)] motion-safe:animate-[floatHeart_2.4s_ease-in-out_infinite] motion-reduce:animate-none">
         <HeartIcon className="h-4 w-4" />
       </div>
-      <div className="absolute bottom-12 right-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/88 text-secondary shadow-[0_14px_24px_rgba(45,42,38,0.1)] motion-safe:animate-[floatDot_2s_ease-in-out_infinite] motion-reduce:animate-none">
-        <div className="h-2.5 w-2.5 rounded-full bg-secondary" />
+      <div className="absolute bottom-12 right-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/85 text-[#4a302a] shadow-[0_14px_24px_rgba(0,0,0,0.35)] motion-safe:animate-[floatDot_2s_ease-in-out_infinite] motion-reduce:animate-none">
+        <div className="h-2.5 w-2.5 rounded-full bg-[#8a5a4a]" />
       </div>
-      <div className="absolute inset-[2.6rem] flex items-center justify-center rounded-full bg-white/92 shadow-[0_18px_34px_rgba(45,42,38,0.12)]">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-muted text-primary motion-safe:animate-pulse motion-reduce:animate-none">
+      <div className="absolute inset-[2.6rem] flex items-center justify-center rounded-full bg-white/90 shadow-[0_18px_34px_rgba(0,0,0,0.4)]">
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-full text-[#8a2346] motion-safe:animate-pulse motion-reduce:animate-none"
+          style={{ background: RASPBERRY_SOFT }}
+        >
           <HeartIcon className="h-6 w-6" />
         </div>
       </div>
@@ -159,14 +164,17 @@ function PartnerRoundLoader() {
   return (
     <div className="relative flex h-40 w-40 items-center justify-center" aria-hidden="true">
       <div
-        className="absolute inset-10 rounded-full opacity-75 blur-2xl"
+        className="absolute inset-10 rounded-full opacity-80 blur-2xl"
         style={{
           background:
-            "radial-gradient(circle, rgba(255,126,107,0.22) 0%, rgba(120,214,201,0.08) 68%, transparent 100%)",
+            "radial-gradient(circle, rgba(255,61,127,0.32) 0%, rgba(232,160,138,0.1) 68%, transparent 100%)",
         }}
       />
-      <div className="absolute inset-[2.55rem] flex items-center justify-center rounded-full bg-white/92 shadow-[0_18px_38px_rgba(45,42,38,0.14)]">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-muted text-primary">
+      <div className="absolute inset-[2.55rem] flex items-center justify-center rounded-full bg-white/90 shadow-[0_18px_38px_rgba(0,0,0,0.42)]">
+        <div
+          className="flex h-14 w-14 items-center justify-center rounded-full text-[#8a2346]"
+          style={{ background: RASPBERRY_SOFT }}
+        >
           <HeartIcon className="h-6 w-6" />
         </div>
       </div>
@@ -174,8 +182,8 @@ function PartnerRoundLoader() {
         className="absolute inset-0 motion-safe:animate-spin motion-reduce:animate-none"
         style={{ animationDuration: "9s" }}
       >
-        <div className="absolute left-1/2 top-1 h-7 w-7 -translate-x-1/2 rounded-full bg-white/92 shadow-[0_14px_28px_rgba(45,42,38,0.12)]">
-          <div className="flex h-full items-center justify-center text-primary">
+        <div className="absolute left-1/2 top-1 h-7 w-7 -translate-x-1/2 rounded-full bg-white/90 shadow-[0_14px_28px_rgba(0,0,0,0.4)]">
+          <div className="flex h-full items-center justify-center text-[#8a2346]">
             <HeartIcon className="h-3.5 w-3.5" />
           </div>
         </div>
@@ -184,7 +192,9 @@ function PartnerRoundLoader() {
         className="absolute inset-[0.85rem] motion-safe:animate-spin motion-reduce:animate-none"
         style={{ animationDirection: "reverse", animationDuration: "6.3s" }}
       >
-        <div className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-secondary shadow-[0_0_0_8px_rgba(120,214,201,0.14)]" />
+        <div
+          className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[#e8a08a] shadow-[0_0_0_8px_rgba(232,160,138,0.18)]"
+        />
       </div>
     </div>
   );
@@ -194,17 +204,17 @@ function SessionCheckLoader() {
   return (
     <div className="relative flex h-36 w-36 items-center justify-center" aria-hidden="true">
       <div
-        className="absolute inset-6 rounded-full opacity-70 blur-2xl"
+        className="absolute inset-6 rounded-full opacity-75 blur-2xl"
         style={{
           background:
-            "radial-gradient(circle, rgba(120,214,201,0.24) 0%, rgba(120,214,201,0.06) 72%, transparent 100%)",
+            "radial-gradient(circle, rgba(255,61,127,0.32) 0%, rgba(255,61,127,0.06) 72%, transparent 100%)",
         }}
       />
       <div className="flex items-end gap-2">
         {[0, 1, 2].map((index) => (
           <div
             key={index}
-            className="w-3 rounded-full bg-secondary/80 motion-safe:animate-[signalRise_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
+            className="w-3 rounded-full bg-white/80 motion-safe:animate-[signalRise_1.4s_ease-in-out_infinite] motion-reduce:animate-none"
             style={{
               height: `${26 + index * 10}px`,
               animationDelay: `${index * 0.16}s`,
@@ -233,16 +243,16 @@ function DemoCard({
 }) {
   return (
     <div
-      className={`absolute flex h-32 w-24 flex-col justify-between rounded-[1.6rem] border border-white/70 bg-white/92 p-3 shadow-[0_22px_40px_rgba(45,42,38,0.12)] ${className}`}
+      className={`absolute flex h-32 w-24 flex-col justify-between rounded-[1.6rem] border border-white/20 bg-white/[0.08] p-3 shadow-[0_22px_40px_rgba(0,0,0,0.4)] backdrop-blur-sm ${className}`}
     >
       <div
         className="h-14 rounded-[1rem]"
-        style={{ background: `linear-gradient(135deg, ${accent}, rgba(255,255,255,0.35))` }}
+        style={{ background: `linear-gradient(135deg, ${accent}, rgba(255,255,255,0.25))` }}
       />
       <div className="space-y-2">
-        <div className="h-2 w-12 rounded-full bg-text/10" />
-        <div className="h-2 w-16 rounded-full bg-text/10" />
-        <p className="text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-text-secondary">
+        <div className="h-2 w-12 rounded-full bg-white/25" />
+        <div className="h-2 w-16 rounded-full bg-white/25" />
+        <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-white/70">
           {label}
         </p>
       </div>
@@ -259,28 +269,28 @@ function ShortlistCard({
   readonly className: string;
   readonly accent: string;
   readonly title: string;
-  readonly tone: "coral" | "teal" | "neutral";
+  readonly tone: "raspberry" | "warm" | "neutral";
 }) {
   const pillClassName =
-    tone === "coral"
-      ? "bg-primary-muted text-primary"
-      : tone === "teal"
-        ? "bg-secondary-muted text-secondary"
-        : "bg-bg text-text-secondary";
+    tone === "raspberry"
+      ? "bg-white/15 text-white"
+      : tone === "warm"
+        ? "bg-white/12 text-[#f5d5c5]"
+        : "bg-white/10 text-white/80";
 
   return (
     <div
-      className={`absolute flex h-28 w-28 flex-col justify-between rounded-[1.6rem] border border-white/70 bg-white/94 p-3 shadow-[0_22px_40px_rgba(45,42,38,0.12)] ${className}`}
+      className={`absolute flex h-28 w-28 flex-col justify-between rounded-[1.6rem] border border-white/20 bg-white/[0.08] p-3 shadow-[0_22px_40px_rgba(0,0,0,0.4)] backdrop-blur-sm ${className}`}
     >
       <div
         className="h-11 rounded-[1rem]"
-        style={{ background: `linear-gradient(135deg, ${accent}, rgba(255,255,255,0.35))` }}
+        style={{ background: `linear-gradient(135deg, ${accent}, rgba(255,255,255,0.22))` }}
       />
       <div className="space-y-2">
         <div className={`inline-flex rounded-full px-2 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.12em] ${pillClassName}`}>
           {title}
         </div>
-        <div className="h-2 w-14 rounded-full bg-text/10" />
+        <div className="h-2 w-14 rounded-full bg-white/25" />
       </div>
     </div>
   );
@@ -293,3 +303,4 @@ function HeartIcon({ className }: { readonly className: string }) {
     </svg>
   );
 }
+

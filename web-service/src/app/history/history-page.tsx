@@ -118,38 +118,38 @@ export function HistoryPage({
   }, [includeAll, page]);
 
   return (
-    <main className="min-h-dvh bg-bg text-text">
+    <main className="bg-shared-wine min-h-dvh text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col px-6 pb-16 pt-8 sm:px-8">
         <header className="flex items-center justify-between">
           <Logo />
-          <span className="rounded-full border border-white/60 bg-white/80 px-3 py-1 text-caption text-text-secondary shadow-sm backdrop-blur">
+          <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-caption text-white/70 backdrop-blur">
             Saved dates
           </span>
         </header>
 
         <section className="mt-10 max-w-3xl">
-          <p className="text-caption font-semibold uppercase tracking-[0.22em] text-secondary">
+          <p className="text-caption font-semibold uppercase tracking-[0.28em] text-white/65">
             History
           </p>
-          <h1 className="mt-4 text-[clamp(2.75rem,8vw,4.5rem)] font-semibold leading-[0.95] tracking-[-0.05em]">
+          <h1 className="mt-4 text-[clamp(2.75rem,8vw,4.5rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-white">
             Saved dates
           </h1>
-          <p className="mt-4 text-body text-text-secondary">
+          <p className="mt-4 text-body text-white/70">
             Keep every promising plan in one place, then come back when you need the details again.
           </p>
           {accountEmail ? (
-            <p className="mt-4 text-caption font-medium text-text-secondary">
+            <p className="mt-4 text-caption font-medium text-white/60">
               Signed in as {accountEmail}
             </p>
           ) : null}
         </section>
 
         {tokenState === "missing" ? (
-          <section className="mt-10 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_18px_50px_rgba(45,42,38,0.08)]">
-            <h2 className="text-h2 font-semibold text-text">
+          <section className="mt-10 rounded-[2rem] border border-white/15 bg-white/[0.06] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-md">
+            <h2 className="text-h2 font-semibold text-white">
               Sign in to view your saved dates
             </h2>
-            <p className="mt-3 max-w-2xl text-body text-text-secondary">
+            <p className="mt-3 max-w-2xl text-body text-white/70">
               Your match history only appears after you create an account or log in from a saved result.
             </p>
           </section>
@@ -179,17 +179,17 @@ export function HistoryPage({
             </div>
 
             {loading ? (
-              <section className="mt-8 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_18px_50px_rgba(45,42,38,0.08)]">
-                <p className="text-body text-text-secondary">Loading your saved dates...</p>
+              <section className="mt-8 rounded-[2rem] border border-white/15 bg-white/[0.06] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-md">
+                <p className="text-body text-white/70">Loading your saved dates...</p>
               </section>
             ) : error ? (
               <section className="mt-8 rounded-[2rem] border border-error/15 bg-white/90 p-6 shadow-[0_18px_50px_rgba(45,42,38,0.08)]">
                 <p className="text-body text-error">{error}</p>
               </section>
             ) : history && history.sessions.length === 0 ? (
-              <section className="mt-8 rounded-[2rem] border border-white/70 bg-white/90 p-6 shadow-[0_18px_50px_rgba(45,42,38,0.08)]">
-                <h2 className="text-h2 font-semibold text-text">No saved dates yet</h2>
-                <p className="mt-3 max-w-2xl text-body text-text-secondary">
+              <section className="mt-8 rounded-[2rem] border border-white/15 bg-white/[0.06] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.35)] backdrop-blur-md">
+                <h2 className="text-h2 font-semibold text-white">No saved dates yet</h2>
+                <p className="mt-3 max-w-2xl text-body text-white/70">
                   Your future matches will show up here once you save them from the result page.
                 </p>
               </section>

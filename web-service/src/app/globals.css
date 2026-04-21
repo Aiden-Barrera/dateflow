@@ -3,25 +3,59 @@
 /* ---------------------------------------------------------------------------
  * Dateflow Design Tokens
  *
- * Every color, font size, and spacing value used in the app lives here.
- * Components reference these via Tailwind utilities (e.g., bg-primary,
- * text-heading1) instead of hardcoding hex values.
+ * Two role palettes (Person A = brown, Person B = raspberry) share a common
+ * dark wine canvas. Legacy semantic tokens (bg, surface, primary, secondary,
+ * text) have been reassigned so components inherit the new look without
+ * per-file rewrites. Role-specific gradients opt in via CSS vars below.
  * --------------------------------------------------------------------------- */
 
 :root {
-  /* Colors — two-accent system (coral + teal) */
-  --color-bg: #FAF8F5;
-  --color-surface: #FFFFFF;
-  --color-primary: #E07468;
-  --color-primary-hover: #C9625A;
-  --color-primary-muted: #E0746833;
-  --color-secondary: #5B9A8B;
-  --color-secondary-muted: #5B9A8B1A;
-  --color-muted: #D5D0CA;
-  --color-text: #2D2A26;
-  --color-text-secondary: #7A756E;
-  --color-success: #4CAF7A;
-  --color-error: #C94545;
+  /* Role palette — Person A (rich brown) */
+  --brown-50: #efe5de;
+  --brown-200: #c9a899;
+  --brown-400: #8a5a4a;
+  --brown-600: #4a302a;
+  --brown-800: #2a1a15;
+  --brown-900: #1a0f0c;
+
+  /* Role palette — Person B (raspberry) */
+  --raspberry-50: #f8d6e0;
+  --raspberry-200: #e88aa6;
+  --raspberry-400: #d03d6a;
+  --raspberry-600: #8a2346;
+  --raspberry-800: #4a1224;
+  --raspberry-900: #2d0a18;
+
+  /* Shared neutral — dark wine that plays with both brown and raspberry */
+  --wine-bg: #1a0f10;
+  --wine-surface: #2a1a1c;
+  --wine-card: #33202a;
+  --wine-border: #3a2a2f;
+
+  /* Glass tokens — for translucent cards layered on gradient canvases */
+  --glass-fill: rgba(255, 255, 255, 0.06);
+  --glass-fill-strong: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-strong: rgba(255, 255, 255, 0.28);
+
+  /* Hot accent — the pink CTA glow from the Person B landing */
+  --accent-hot: #ff3d7f;
+  --accent-hot-soft: rgba(255, 61, 127, 0.35);
+
+  /* Semantic tokens — reassigned to the new palette */
+  --color-bg: var(--wine-bg);
+  --color-surface: var(--wine-surface);
+  --color-primary: var(--raspberry-400);
+  --color-primary-hover: #b83057;
+  --color-primary-muted: rgba(208, 61, 106, 0.22);
+  --color-secondary: #e8a08a; /* warm terracotta — pairs with both brown & raspberry */
+  --color-secondary-muted: rgba(232, 160, 138, 0.18);
+  --color-muted: var(--wine-border);
+  --color-text: #f5ebe3;
+  --color-text-secondary: #b8a598;
+  --color-success: #6bd9a4;
+  --color-error: #ff8585;
+
   --motion-fast: 180ms;
   --motion-base: 240ms;
   --motion-slow: 320ms;
@@ -30,7 +64,6 @@
 }
 
 @theme inline {
-  /* Colors — maps CSS vars to Tailwind classes (bg-primary, text-text, etc.) */
   --color-bg: var(--color-bg);
   --color-surface: var(--color-surface);
   --color-primary: var(--color-primary);
@@ -43,11 +76,16 @@
   --color-text-secondary: var(--color-text-secondary);
   --color-success: var(--color-success);
   --color-error: var(--color-error);
+  --color-brown-600: var(--brown-600);
+  --color-brown-800: var(--brown-800);
+  --color-brown-900: var(--brown-900);
+  --color-raspberry-400: var(--raspberry-400);
+  --color-raspberry-600: var(--raspberry-600);
+  --color-raspberry-800: var(--raspberry-800);
+  --color-accent-hot: var(--accent-hot);
 
-  /* Typography — font family */
   --font-sans: var(--font-inter);
 
-  /* Typography — font sizes with line-height baked in */
   --text-display: 36px;
   --text-display--line-height: 1.2;
   --text-h1: 28px;
@@ -58,6 +96,19 @@
   --text-body--line-height: 1.5;
   --text-caption: 14px;
   --text-caption--line-height: 1.5;
+}
+
+/* Utility gradients for role-aware surfaces — apply as bg via arbitrary value */
+.bg-person-a {
+  background: radial-gradient(circle at top, var(--brown-600) 0%, var(--brown-800) 55%, var(--brown-900) 100%);
+}
+
+.bg-person-b {
+  background: radial-gradient(circle at top, var(--raspberry-400) 0%, var(--raspberry-600) 55%, var(--raspberry-800) 100%);
+}
+
+.bg-shared-wine {
+  background: radial-gradient(circle at top, #2d1a20 0%, var(--wine-bg) 70%, #140a0c 100%);
 }
 
 body {
