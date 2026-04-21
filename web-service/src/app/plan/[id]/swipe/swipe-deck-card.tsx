@@ -302,7 +302,7 @@ export function SwipeDeckCard({
 
       <article
         ref={cardRef}
-        className={`relative overflow-hidden rounded-[2rem] border border-white/72 bg-white/92 backdrop-blur-sm ${
+        className={`relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/95 shadow-[0_30px_80px_rgba(74,18,36,0.45)] backdrop-blur-sm ${
           submitting ? "pointer-events-none" : "cursor-grab active:cursor-grabbing"
         }`}
         style={{
@@ -459,11 +459,11 @@ export function SwipeDeckCard({
         </div>
 
         <div className="space-y-4 p-6">
-          <div className="rounded-[1.5rem] border border-[#d9c7b5] bg-[#f5ebe3]/80 p-4">
+          <div className="rounded-[1.5rem] border border-[rgba(208,61,106,0.18)] bg-[rgba(208,61,106,0.05)] p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 space-y-3">
                 <div>
-                  <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#6a4a3a]">
+                  <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#8a2346]">
                     Venue {cardIndex} of {totalCards}
                   </p>
                   <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-[#2a1a1c]">
@@ -539,10 +539,10 @@ export function SwipeDeckCard({
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            {venue.tags.slice(0, 3).map((tag) => (
+            {getDisplayTags(venue.tags).slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-[#d9c7b5] bg-[#f5ebe3] px-3 py-1.5 text-caption font-medium text-[#6a4a3a]"
+                className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-3 py-1.5 text-caption font-medium text-[#8a2346]"
               >
                 {tag}
               </span>
@@ -663,10 +663,10 @@ function PreviewVenueCard({
             <StarIcon />
             {venue.rating.toFixed(1)}
           </div>
-          {venue.tags.slice(0, 2).map((tag) => (
+          {getDisplayTags(venue.tags).slice(0, 2).map((tag) => (
             <div
               key={tag}
-              className="rounded-full border border-[#d9c7b5] bg-white px-2.5 py-1 text-caption text-[#6a4a3a]"
+              className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-2.5 py-1 text-caption text-[#8a2346]"
             >
               {tag}
             </div>
@@ -677,9 +677,26 @@ function PreviewVenueCard({
   );
 }
 
+// Internal markers emitted by the scoring pipeline that should never reach the
+// user-facing venue card.
+const INTERNAL_TAGS = new Set<string>([
+  "unscored",
+  "ai-curated",
+  "top-rated",
+  "well-reviewed",
+  "restaurant",
+  "bar",
+  "activity",
+  "event",
+]);
+
+function getDisplayTags(tags: readonly string[]): readonly string[] {
+  return tags.filter((tag) => !INTERNAL_TAGS.has(tag.toLowerCase()));
+}
+
 function InfoPill({ children }: { readonly children: React.ReactNode }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-[#d9c7b5] bg-white px-3 py-1.5 text-caption font-medium text-[#6a4a3a]">
+    <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(208,61,106,0.25)] bg-white px-3 py-1.5 text-caption font-medium text-[#8a2346]">
       {children}
     </div>
   );

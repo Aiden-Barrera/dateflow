@@ -136,12 +136,42 @@ function timeOfDayFit(category: Category, round: number): number {
 }
 
 function buildFallbackTags(category: Category, candidate: PlaceCandidate): readonly string[] {
+  // First tag is the internal `unscored` marker (used by tests and the AI
+  // pipeline to detect a deterministic fallback); remaining tags are the
+  // excitement-driven labels rendered on the swipe card.
   return [
     "unscored",
-    ...(candidate.rating >= 4.5 ? ["top-rated"] : []),
-    ...(candidate.reviewCount >= 250 ? ["well-reviewed"] : []),
-    category.toLowerCase(),
+    ...pickRatingFlair(candidate.rating),
+    ...pickBuzzFlair(candidate.reviewCount),
+    pickCategoryFlair(category),
   ];
+}
+
+function pickRatingFlair(rating: number): readonly string[] {
+  if (rating >= 4.7) return ["Crowd favorite"];
+  if (rating >= 4.4) return ["Raves in"];
+  if (rating >= 4.1) return ["Well-loved"];
+  return [];
+}
+
+function pickBuzzFlair(reviewCount: number): readonly string[] {
+  if (reviewCount >= 500) return ["Legendary spot"];
+  if (reviewCount >= 250) return ["Locals' pick"];
+  if (reviewCount >= 80) return ["Neighborhood gem"];
+  return ["Under the radar"];
+}
+
+function pickCategoryFlair(category: Category): string {
+  switch (category) {
+    case "RESTAURANT":
+      return "Dinner-worthy";
+    case "BAR":
+      return "Sip & linger";
+    case "ACTIVITY":
+      return "Playful pick";
+    case "EVENT":
+      return "Main event";
+  }
 }
 
 export function buildDeterministicRanking(
