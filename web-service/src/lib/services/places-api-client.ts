@@ -19,6 +19,7 @@ const FIELD_MASK = [
   "places.formattedAddress",
   "places.location",
   "places.types",
+  "places.primaryType",
   "places.priceLevel",
   "places.rating",
   "places.userRatingCount",
@@ -111,6 +112,10 @@ const TYPE_TO_CATEGORY: Record<string, Category> = {
   movie_theater: "EVENT",
   performing_arts_theater: "EVENT",
   stadium: "EVENT",
+  // EVENT (extended)
+  concert_hall: "EVENT",
+  opera_house: "EVENT",
+  comedy_club: "EVENT",
   // ACTIVITY
   bowling_alley: "ACTIVITY",
   amusement_park: "ACTIVITY",
@@ -121,6 +126,18 @@ const TYPE_TO_CATEGORY: Record<string, Category> = {
   spa: "ACTIVITY",
   tourist_attraction: "ACTIVITY",
   zoo: "ACTIVITY",
+  roller_skating_rink: "ACTIVITY",
+  ice_skating_rink: "ACTIVITY",
+  skating_rink: "ACTIVITY",
+  escape_room: "ACTIVITY",
+  arcade: "ACTIVITY",
+  mini_golf_course: "ACTIVITY",
+  karaoke: "ACTIVITY",
+  billiard_hall: "ACTIVITY",
+  go_kart_track: "ACTIVITY",
+  laser_tag_center: "ACTIVITY",
+  trampoline_park: "ACTIVITY",
+  axe_throwing: "ACTIVITY",
 };
 
 /**
@@ -135,12 +152,25 @@ const CATEGORY_PRIORITY: readonly Category[] = [
 ];
 
 /**
- * Given a Google Places types array, returns the best-matching Category.
- * Applies explicit priority RESTAURANT > BAR > EVENT > ACTIVITY so the
- * result is deterministic regardless of Google's type ordering.
- * Falls back to ACTIVITY for unrecognized types.
+ * Given a Google Places `primaryType` and full `types` array, returns the
+ * best-matching Category. Prefers `primaryType` when it maps to a known
+ * Category — this avoids misclassifying activities that also carry a
+ * secondary `restaurant`/`food` tag (e.g. a roller skating rink with a
+ * concession bar). Falls back to a priority scan of `types`
+ * (RESTAURANT > BAR > EVENT > ACTIVITY) when `primaryType` is absent or
+ * unknown. Falls back to ACTIVITY if nothing matches.
  */
-export function mapGoogleTypeToCategory(types: readonly string[]): Category {
+export function mapGoogleTypeToCategory(
+  types: readonly string[],
+  primaryType?: string | null,
+): Category {
+  if (primaryType) {
+    const primaryCategory = TYPE_TO_CATEGORY[primaryType];
+    if (primaryCategory) {
+      return primaryCategory;
+    }
+  }
+
   const presentCategories = new Set<Category>();
 
   for (const type of types) {
@@ -193,6 +223,7 @@ type GooglePlace = {
   readonly formattedAddress: string;
   readonly location: { readonly latitude: number; readonly longitude: number };
   readonly types: readonly string[];
+  readonly primaryType?: string;
   readonly priceLevel?: string;
   readonly rating?: number;
   readonly userRatingCount?: number;
@@ -298,6 +329,7 @@ export async function searchNearby(
         label: place.displayName.text,
       },
       types: place.types,
+      primaryType: place.primaryType ?? null,
       priceLevel,
       rating: place.rating ?? 0,
       reviewCount: place.userRatingCount ?? 0,

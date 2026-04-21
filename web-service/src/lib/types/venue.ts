@@ -239,6 +239,7 @@ export type PlaceCandidate = {
   readonly address: string;
   readonly location: Location;
   readonly types: readonly string[];
+  readonly primaryType: string | null;
   readonly priceLevel: number;
   readonly rating: number;
   readonly reviewCount: number;

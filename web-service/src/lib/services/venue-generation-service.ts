@@ -227,7 +227,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         pool_id: poolId,
         place_id: candidate.placeId,
         name: candidate.name,
-        category: mapGoogleTypeToCategory(candidate.types),
+        category: mapGoogleTypeToCategory(candidate.types, candidate.primaryType),
         address: candidate.address,
         lat: candidate.location.lat,
         lng: candidate.location.lng,

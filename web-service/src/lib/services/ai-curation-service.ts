@@ -182,7 +182,7 @@ export function buildDeterministicRanking(
 ): readonly CuratedVenueCandidate[] {
   return candidates
     .map((candidate) => {
-      const category = mapGoogleTypeToCategory(candidate.types);
+      const category = mapGoogleTypeToCategory(candidate.types, candidate.primaryType);
       const partialScore = {
         categoryOverlap: categoryOverlapScore(category, preferences),
         distanceToMidpoint: distanceScore(candidate, midpoint),

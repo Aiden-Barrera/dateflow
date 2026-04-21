@@ -109,7 +109,9 @@ function matchesRequestedCategories(
     return true;
   }
 
-  return requestedCategories.includes(mapGoogleTypeToCategory(candidate.types));
+  return requestedCategories.includes(
+    mapGoogleTypeToCategory(candidate.types, candidate.primaryType),
+  );
 }
 
 function passesHardRules(
