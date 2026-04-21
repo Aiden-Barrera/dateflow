@@ -343,6 +343,7 @@ function toPlaceCandidate(
       label: candidate.name,
     },
     types: candidate.rawTypes,
+    primaryType: null,
     priceLevel: candidate.priceLevel,
     rating: candidate.rating,
     reviewCount: 250,
