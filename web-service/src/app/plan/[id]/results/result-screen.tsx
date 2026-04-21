@@ -438,7 +438,7 @@ export function ResultScreen({
                     setAuthError(null);
                     setAuthOpen(true);
                   }}
-                  className="h-11 rounded-[0.95rem] bg-[#4a1224] text-[1rem] text-white hover:bg-[#3a0e1c]"
+                  className="h-11 rounded-[0.95rem] text-[1rem]"
                 >
                   Create account
                 </Button>
