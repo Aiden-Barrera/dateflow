@@ -346,8 +346,8 @@ export function SwipeDeckCard({
             opacity: Math.max(dragStrength * 0.9, animatingSwipe ? 0.45 : 0),
             background:
               dragRatio >= 0
-                ? `linear-gradient(135deg, rgba(224,116,104,${0.12 + dragStrength * 0.24}), rgba(224,116,104,0) 60%)`
-                : `linear-gradient(225deg, rgba(91,154,139,${0.12 + dragStrength * 0.24}), rgba(91,154,139,0) 60%)`,
+                ? `linear-gradient(135deg, rgba(16,163,127,${0.14 + dragStrength * 0.26}), rgba(16,163,127,0) 60%)`
+                : `linear-gradient(225deg, rgba(220,53,69,${0.14 + dragStrength * 0.26}), rgba(220,53,69,0) 60%)`,
             transition: isDragging ? "opacity 70ms linear" : "opacity 180ms ease",
           }}
         />
@@ -556,7 +556,7 @@ export function SwipeDeckCard({
                 void triggerSwipe(false);
               }}
               disabled={submitting || Boolean(animatingSwipe)}
-              className="h-14 rounded-2xl border-white/80 bg-white/92 shadow-[0_12px_28px_rgba(45,42,38,0.06)]"
+              className="h-14 rounded-2xl border-[rgba(220,53,69,0.35)] bg-[rgba(220,53,69,0.08)] text-[#b22233] shadow-[0_12px_28px_rgba(220,53,69,0.15)] hover:bg-[rgba(220,53,69,0.14)]"
               style={getActionButtonStyle("left", dragRatio, neutralReturnStrength)}
             >
               <span className="flex items-center gap-2">
@@ -569,7 +569,7 @@ export function SwipeDeckCard({
                 void triggerSwipe(true);
               }}
               disabled={submitting || Boolean(animatingSwipe)}
-              className="h-14 rounded-2xl shadow-[0_14px_30px_rgba(224,116,104,0.24)]"
+              className="h-14 rounded-2xl border-transparent bg-[#10a37f] text-white shadow-[0_14px_30px_rgba(16,163,127,0.32)] hover:bg-[#0e8e6f]"
               style={getActionButtonStyle("right", dragRatio, neutralReturnStrength)}
             >
               <span className="flex items-center gap-2">
@@ -599,8 +599,8 @@ function SwipeIntentBadge({
     <div
       className={`rounded-full border px-4 py-2 text-caption font-semibold uppercase tracking-[0.18em] shadow-sm backdrop-blur-sm transition-all duration-150 ${
         tone === "like"
-          ? "border-white/68 bg-white/92 text-primary"
-          : "border-white/55 bg-black/36 text-white"
+          ? "border-[rgba(16,163,127,0.6)] bg-[rgba(16,163,127,0.92)] text-white"
+          : "border-[rgba(220,53,69,0.6)] bg-[rgba(220,53,69,0.92)] text-white"
       }`}
       style={{
         opacity: visible ? 1 : 0,
@@ -930,8 +930,8 @@ function getActionButtonStyle(
     transform: `translateY(${translateY}px) scale(${emphasis > 0 ? activeScale : restingScale})`,
     boxShadow:
       direction === "right"
-        ? `0 16px 34px rgba(224,116,104,${shadowAlpha})`
-        : `0 14px 30px rgba(45,42,38,${shadowAlpha})`,
+        ? `0 16px 34px rgba(16,163,127,${shadowAlpha})`
+        : `0 14px 30px rgba(220,53,69,${shadowAlpha})`,
     transition:
       "transform 180ms cubic-bezier(0.18, 0.86, 0.24, 1), box-shadow 180ms ease, background-color 180ms ease",
   };
