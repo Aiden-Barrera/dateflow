@@ -15,6 +15,7 @@ type FallbackEndingScreenProps = {
   readonly initialRetryBudget: BudgetLevel;
   readonly venueAddress: string;
   readonly explanation: string;
+  readonly retryStep?: "default" | "partner_confirm";
   readonly onAccept: () => void;
   readonly onRetry: (preferences: {
     categories: readonly Category[];
@@ -47,6 +48,7 @@ export function FallbackEndingScreen({
   initialRetryBudget,
   venueAddress,
   explanation,
+  retryStep = "default",
   onAccept,
   onRetry,
   onStartOver,
@@ -68,18 +70,34 @@ export function FallbackEndingScreen({
     );
   }
 
+  const isPartnerConfirmStep = retryStep === "partner_confirm";
+  const eyebrow = isPartnerConfirmStep
+    ? "New mix request"
+    : "Dateflow fallback pick";
+  const title = isPartnerConfirmStep
+    ? "Your partner wants a new mix"
+    : "No mutual match this time";
+  const introCopy = isPartnerConfirmStep
+    ? "Keep your current vibes or tweak them below, then confirm the retry together."
+    : `You and ${creatorName} did not land on the same venue, so Dateflow pulled forward the best next option instead of ending the night flat.`;
+  const retryEyebrow = isPartnerConfirmStep ? "Confirm the new mix" : "Try a new mix";
+  const retryIntro = isPartnerConfirmStep
+    ? "You can keep your current vibe selections as-is or update them before you confirm the refresh."
+    : `If ${venueName} is not the move, tighten the vibe below and Dateflow will reshuffle the shortlist around a fresh direction.`;
+  const retryButtonLabel = isPartnerConfirmStep ? "Confirm new mix" : "Try a new mix";
+
   return (
     <section className="mx-auto max-w-3xl rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,244,246,0.96))] px-6 py-8 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-xl sm:px-8 sm:py-10">
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div>
           <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
-            Dateflow fallback pick
+            {eyebrow}
           </p>
           <h1 className="mt-3 max-w-xl text-[clamp(2.5rem,6vw,4.5rem)] font-semibold leading-[0.94] tracking-[-0.05em] text-text">
-            No mutual match this time
+            {title}
           </h1>
           <p className="mt-4 max-w-2xl text-body text-text-secondary">
-            You and {creatorName} did not land on the same venue, so Dateflow pulled forward the best next option instead of ending the night flat.
+            {introCopy}
           </p>
           <p className="mt-4 max-w-2xl text-body text-text-secondary">
             {explanation}
@@ -114,10 +132,10 @@ export function FallbackEndingScreen({
 
       <div className="mt-8 rounded-[1.75rem] border border-white/80 bg-white/88 p-5 shadow-[0_18px_40px_rgba(45,42,38,0.08)]">
         <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
-          Try a new mix
+          {retryEyebrow}
         </p>
         <p className="mt-3 max-w-2xl text-body text-text-secondary">
-          If {venueName} is not the move, tighten the vibe below and Dateflow will reshuffle the shortlist around a fresh direction.
+          {retryIntro}
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -173,12 +191,14 @@ export function FallbackEndingScreen({
       </div>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        <Button
-          onClick={onAccept}
-          disabled={submittingAction !== null}
-        >
-          {submittingAction === "accept" ? "Locking it in..." : "Lock in this plan"}
-        </Button>
+        {!isPartnerConfirmStep ? (
+          <Button
+            onClick={onAccept}
+            disabled={submittingAction !== null}
+          >
+            {submittingAction === "accept" ? "Locking it in..." : "Lock in this plan"}
+          </Button>
+        ) : null}
         <Button
           variant="secondary"
           onClick={() =>
@@ -189,7 +209,7 @@ export function FallbackEndingScreen({
           }
           disabled={submittingAction !== null || selectedCategories.length === 0}
         >
-          {submittingAction === "retry" ? "Refreshing picks..." : "Try a new mix"}
+          {submittingAction === "retry" ? "Refreshing picks..." : retryButtonLabel}
         </Button>
       </div>
 

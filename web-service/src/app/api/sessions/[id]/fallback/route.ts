@@ -4,6 +4,7 @@ import {
   requestFallbackRetry,
 } from "../../../../../lib/services/fallback-decision-service";
 import { serializeSession } from "../../../../../lib/services/session-serializer";
+import { readBoundSessionRole } from "../../../../../lib/session-role-access";
 import type { BudgetLevel, Category } from "../../../../../lib/types/preference";
 
 type RouteParams = {
@@ -94,6 +95,7 @@ function validateRetryPreferences(body: RequestBody): {
 export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
   // TODO(ds-06): enforce session ownership once authenticated users and session history exist.
+  const boundRole = readBoundSessionRole(id, request.headers.get("cookie"));
 
   let body: RequestBody;
   try {
@@ -141,7 +143,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const session = await requestFallbackRetry(id, retryPreferences);
+    if (!boundRole) {
+      return NextResponse.json(
+        { error: "This session requires role-bound access before retrying fallback" },
+        { status: 403 },
+      );
+    }
+
+    const session = await requestFallbackRetry(id, boundRole, retryPreferences);
 
     return NextResponse.json({ session: serializeSession(session) });
   } catch (err) {

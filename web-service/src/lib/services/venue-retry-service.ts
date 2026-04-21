@@ -96,13 +96,12 @@ type RetryVenueCandidate = PlaceCandidate &
 
 export async function rerankStoredCandidates(
   sessionId: string,
-  input: RetryPreferencesInput,
+  input?: RetryPreferencesInput,
 ): Promise<VenueRetryResult> {
-  const retryPreferences = buildRetryPreferences(input);
-  const preferences = applyRetryPreferences(
-    await getBothPreferences(sessionId),
-    retryPreferences,
-  );
+  const basePreferences = await getBothPreferences(sessionId);
+  const preferences = input
+    ? applyRetryPreferences(basePreferences, buildRetryPreferences(input))
+    : basePreferences;
   const midpoint = calculateMidpoint(
     preferences[0].location,
     preferences[1].location,

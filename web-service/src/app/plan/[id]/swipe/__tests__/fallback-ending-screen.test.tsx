@@ -35,4 +35,29 @@ describe("FallbackEndingScreen", () => {
     expect(html).toContain('role="radio"');
     expect(html).toContain('aria-checked="true"');
   });
+
+  it("renders a partner-requested retry state with explicit confirmation copy", () => {
+    const html = renderToStaticMarkup(
+      <FallbackEndingScreen
+        creatorName="Alex"
+        venueName="Cafe Blue"
+        venuePhotoUrl={null}
+        venueCategoryLabel="Restaurant"
+        initialRetryCategories={["BAR"]}
+        initialRetryBudget="UPSCALE"
+        venueAddress="12 Main St, Austin, TX"
+        explanation="Dateflow picked the spot that stayed strongest across both of your picks."
+        retryStep="partner_confirm"
+        onAccept={() => undefined}
+        onRetry={() => undefined}
+        onStartOver={() => undefined}
+        submittingAction={null}
+      />,
+    );
+
+    expect(html).toContain("Your partner wants a new mix");
+    expect(html).toContain("Keep your current vibes or tweak them below, then confirm the retry together.");
+    expect(html).toContain("Confirm new mix");
+    expect(html).not.toContain("Lock in this plan");
+  });
 });

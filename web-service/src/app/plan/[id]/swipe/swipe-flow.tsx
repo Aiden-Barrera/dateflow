@@ -34,6 +34,17 @@ type SessionStatusPayload = {
   readonly matchedVenueId: string | null;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
+  readonly retryState?: {
+    readonly initiatorRole: string;
+    readonly viewerRole: string;
+    readonly viewerHasConfirmed: boolean;
+    readonly partnerHasConfirmed: boolean;
+    readonly initiatedByPartner: boolean;
+    readonly viewerPreferences?: {
+      readonly categories: readonly Category[];
+      readonly budget: BudgetLevel;
+    };
+  };
 };
 
 type SwipeApiResult = {
@@ -71,6 +82,7 @@ export function SwipeFlow({
   const [submitting, setSubmitting] = useState(false);
   const [submittingFallbackAction, setSubmittingFallbackAction] = useState<"accept" | "retry" | null>(null);
   const [fallbackVenue, setFallbackVenue] = useState<Venue | null>(null);
+  const [fallbackRetryState, setFallbackRetryState] = useState<SessionStatusPayload["retryState"] | null>(null);
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
@@ -114,9 +126,13 @@ export function SwipeFlow({
     return (await response.json()) as SessionStatusPayload;
   }, [sessionId]);
 
-  const loadFallback = useCallback(async (matchedVenueId: string | null) => {
+  const loadFallback = useCallback(async (
+    matchedVenueId: string | null,
+    retryState: SessionStatusPayload["retryState"] | null = null,
+  ) => {
     setStatus("loading");
     setStatusMessage("Preparing your fallback pick...");
+    setFallbackRetryState(retryState);
 
     const response = await fetch(`/api/sessions/${sessionId}/venues`);
 
@@ -137,6 +153,14 @@ export function SwipeFlow({
     setStatus("fallback");
     setStatusMessage("");
   }, [logVenuePhotoSnapshot, sessionId]);
+
+  const shouldShowPartnerRetryConfirm = useCallback(
+    (snapshot: SessionStatusPayload) =>
+      snapshot.status === "retry_pending" &&
+      snapshot.retryState?.initiatedByPartner === true &&
+      snapshot.retryState.viewerHasConfirmed === false,
+    [],
+  );
 
   const loadRound = useCallback(async (nextRound: number) => {
     if (
@@ -185,6 +209,11 @@ export function SwipeFlow({
         return;
       }
 
+      if (snapshot.status === "fallback_pending" || shouldShowPartnerRetryConfirm(snapshot)) {
+        await loadFallback(snapshot.matchedVenueId, snapshot.retryState ?? null);
+        return;
+      }
+
       if (snapshot.status !== "ready_to_swipe") {
         const nextState = getSwipeFlowStatusState(snapshot.status);
 
@@ -204,7 +233,7 @@ export function SwipeFlow({
       setStatus("error");
       setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
     }
-  }, [fetchStatus, loadFallback, loadRound, router, sessionId]);
+  }, [fetchStatus, loadFallback, loadRound, router, sessionId, shouldShowPartnerRetryConfirm]);
 
   useEffect(() => {
     const sync = createSessionStatusSync(sessionId, (snapshot) => {
@@ -214,10 +243,34 @@ export function SwipeFlow({
       }
 
       if (snapshot.status === "fallback_pending") {
-        void loadFallback(snapshot.matchedVenueId).catch(() => {
+        void loadFallback(snapshot.matchedVenueId, snapshot.retryState ?? null).catch(() => {
           setStatus("error");
           setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
         });
+        return;
+      }
+
+      if (snapshot.status === "retry_pending" || snapshot.status === "reranking") {
+        void fetchStatus()
+          .then((nextSnapshot) => {
+            if (shouldShowPartnerRetryConfirm(nextSnapshot)) {
+              return loadFallback(
+                nextSnapshot.matchedVenueId,
+                nextSnapshot.retryState ?? null,
+              );
+            }
+
+            const nextState = getSwipeFlowStatusState(nextSnapshot.status);
+            if (nextState.kind === "waiting") {
+              setWaitingStage(nextState.stage);
+              setStatus("waiting");
+              setStatusMessage(nextState.message);
+            }
+          })
+          .catch(() => {
+            setStatus("error");
+            setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
+          });
         return;
       }
 
@@ -227,7 +280,7 @@ export function SwipeFlow({
     });
 
     return () => sync.stop();
-  }, [loadFallback, loadRound, router, sessionId]);
+  }, [fetchStatus, loadFallback, loadRound, router, sessionId, shouldShowPartnerRetryConfirm]);
 
   useEffect(() => {
     void bootstrap();
@@ -395,6 +448,7 @@ export function SwipeFlow({
     try {
       const result = await requestFallbackRetryDecision(sessionId, preferences);
       setFallbackVenue(null);
+      setFallbackRetryState(null);
 
       if (result.status === "ready_to_swipe") {
         loadedRoundRef.current = null;
@@ -479,6 +533,15 @@ export function SwipeFlow({
 
   if (status === "fallback" && fallbackVenue) {
     const retryDefaults = buildInitialRetryPreferences(fallbackVenue);
+    const initialRetryCategories =
+      fallbackRetryState?.viewerPreferences?.categories ?? retryDefaults.categories;
+    const initialRetryBudget =
+      fallbackRetryState?.viewerPreferences?.budget ?? retryDefaults.budget;
+    const retryStep =
+      fallbackRetryState?.initiatedByPartner &&
+      fallbackRetryState.viewerHasConfirmed === false
+        ? "partner_confirm"
+        : "default";
 
     return (
       <SwipeShell creatorName={creatorName}>
@@ -490,8 +553,9 @@ export function SwipeFlow({
           venueCategoryLabel={CATEGORY_LABELS[fallbackVenue.category]}
           venueAddress={fallbackVenue.address}
           explanation={buildFallbackExplanation(fallbackVenue)}
-          initialRetryCategories={retryDefaults.categories}
-          initialRetryBudget={retryDefaults.budget}
+          initialRetryCategories={initialRetryCategories}
+          initialRetryBudget={initialRetryBudget}
+          retryStep={retryStep}
           onAccept={handleAcceptFallback}
           onRetry={handleRetryFallback}
           onStartOver={handleFallbackStartOver}

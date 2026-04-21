@@ -1,11 +1,21 @@
 import { getSupabaseServerClient } from "../supabase-server";
 import { toSession, type Session, type SessionRow } from "../types/session";
+import type { Role } from "../types/preference";
 import {
   rerankStoredCandidates,
   type RetryPreferencesInput,
 } from "./venue-retry-service";
+import { updatePreferenceVibes } from "./preference-service";
 
 const NOT_FOUND_CODE = "PGRST116";
+
+type RetrySessionRow = SessionRow & {
+  readonly retry_initiator_role: Role | null;
+  readonly retry_a_confirmed_at: string | null;
+  readonly retry_b_confirmed_at: string | null;
+};
+
+type RetrySession = Session;
 
 export async function acceptFallbackSuggestion(
   sessionId: string,
@@ -24,17 +34,57 @@ export async function acceptFallbackSuggestion(
 
 export async function requestFallbackRetry(
   sessionId: string,
+  role: Role,
   preferences: RetryPreferencesInput,
 ): Promise<Session> {
-  await getFallbackPendingSession(sessionId);
+  const session = await getFallbackRetrySession(sessionId);
+  const confirmedAt = new Date().toISOString();
 
-  await updateSessionStatus(sessionId, "reranking");
+  await updatePreferenceVibes(sessionId, role, {
+    budget: preferences.budget,
+    categories: preferences.categories,
+  });
+
+  if (shouldWaitForOtherParticipant(session, role)) {
+    return updateSession(sessionId, {
+      status: "retry_pending",
+      retry_initiator_role: session.retryInitiatorRole ?? role,
+      retry_a_confirmed_at:
+        role === "a"
+          ? confirmedAt
+          : toNullableIsoString(session.retryAConfirmedAt ?? null),
+      retry_b_confirmed_at:
+        role === "b"
+          ? confirmedAt
+          : toNullableIsoString(session.retryBConfirmedAt ?? null),
+    });
+  }
+
+  await updateSession(sessionId, {
+    status: "reranking",
+    retry_initiator_role: session.retryInitiatorRole ?? getOppositeRole(role),
+    retry_a_confirmed_at:
+      role === "a"
+        ? confirmedAt
+        : toNullableIsoString(session.retryAConfirmedAt ?? null),
+    retry_b_confirmed_at:
+      role === "b"
+        ? confirmedAt
+        : toNullableIsoString(session.retryBConfirmedAt ?? null),
+  });
 
   try {
-    const result = await rerankStoredCandidates(sessionId, preferences);
+    const result = await rerankStoredCandidates(sessionId);
 
     if (result.requiresFullRegeneration) {
-      return updateSessionStatus(sessionId, "retry_pending");
+      return updateSession(sessionId, {
+        status: "both_ready",
+        matched_venue_id: null,
+        matched_at: null,
+        retry_initiator_role: null,
+        retry_a_confirmed_at: null,
+        retry_b_confirmed_at: null,
+      });
     }
 
     await clearSessionSwipes(sessionId);
@@ -43,20 +93,44 @@ export async function requestFallbackRetry(
       status: "ready_to_swipe",
       matched_venue_id: null,
       matched_at: null,
+      retry_initiator_role: null,
+      retry_a_confirmed_at: null,
+      retry_b_confirmed_at: null,
     });
   } catch (error) {
-    await updateSessionStatus(sessionId, "fallback_pending");
+    await updateSession(sessionId, {
+      status: "retry_pending",
+      retry_initiator_role: session.retryInitiatorRole ?? getOppositeRole(role),
+      retry_a_confirmed_at:
+        role === "a"
+          ? confirmedAt
+          : toNullableIsoString(session.retryAConfirmedAt ?? null),
+      retry_b_confirmed_at:
+        role === "b"
+          ? confirmedAt
+          : toNullableIsoString(session.retryBConfirmedAt ?? null),
+    });
     throw error;
   }
 }
 
 async function getFallbackPendingSession(sessionId: string): Promise<Session> {
+  const session = await getFallbackRetrySession(sessionId);
+
+  if (session.status !== "fallback_pending") {
+    throw new Error("Session must be in fallback_pending to resolve fallback");
+  }
+
+  return session;
+}
+
+async function getFallbackRetrySession(sessionId: string): Promise<RetrySession> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("sessions")
     .select("*")
     .eq("id", sessionId)
-    .single<SessionRow>();
+    .single<RetrySessionRow>();
 
   if (error) {
     if (error.code === NOT_FOUND_CODE) {
@@ -68,18 +142,14 @@ async function getFallbackPendingSession(sessionId: string): Promise<Session> {
 
   const session = toSession(data);
 
-  if (session.status !== "fallback_pending") {
+  if (
+    session.status !== "fallback_pending" &&
+    session.status !== "retry_pending"
+  ) {
     throw new Error("Session must be in fallback_pending to resolve fallback");
   }
 
   return session;
-}
-
-async function updateSessionStatus(
-  sessionId: string,
-  status: "matched" | "retry_pending" | "reranking" | "fallback_pending",
-): Promise<Session> {
-  return updateSession(sessionId, { status });
 }
 
 async function clearSessionSwipes(sessionId: string): Promise<void> {
@@ -96,7 +166,17 @@ async function clearSessionSwipes(sessionId: string): Promise<void> {
 
 async function updateSession(
   sessionId: string,
-  updates: Partial<Pick<SessionRow, "status" | "matched_venue_id" | "matched_at">>,
+  updates: Partial<
+    Pick<
+      RetrySessionRow,
+      | "status"
+      | "matched_venue_id"
+      | "matched_at"
+      | "retry_initiator_role"
+      | "retry_a_confirmed_at"
+      | "retry_b_confirmed_at"
+    >
+  >,
 ): Promise<Session> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
@@ -111,4 +191,33 @@ async function updateSession(
   }
 
   return toSession(data);
+}
+
+function shouldWaitForOtherParticipant(
+  session: RetrySession,
+  role: Role,
+): boolean {
+  if (session.status === "fallback_pending") {
+    return true;
+  }
+
+  const oppositeRole = getOppositeRole(role);
+  return getConfirmedAt(session, oppositeRole) === null;
+}
+
+function getConfirmedAt(
+  session: RetrySession,
+  role: Role,
+): Date | null {
+  return role === "a"
+    ? session.retryAConfirmedAt ?? null
+    : session.retryBConfirmedAt ?? null;
+}
+
+function getOppositeRole(role: Role): Role {
+  return role === "a" ? "b" : "a";
+}
+
+function toNullableIsoString(value: Date | null): string | null {
+  return value ? value.toISOString() : null;
 }

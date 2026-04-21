@@ -4,6 +4,9 @@ import {
   type Preference,
   type PreferenceInput,
   type PreferenceRow,
+  type Role,
+  type BudgetLevel,
+  type Category,
 } from "../types/preference";
 
 /**
@@ -97,4 +100,28 @@ export async function getBothPreferences(
   }
 
   return [prefA, prefB];
+}
+
+export async function updatePreferenceVibes(
+  sessionId: string,
+  role: Role,
+  input: {
+    readonly budget: BudgetLevel;
+    readonly categories: readonly Category[];
+  },
+): Promise<void> {
+  const supabase = getSupabaseServerClient();
+
+  const { error } = await supabase
+    .from("preferences")
+    .update({
+      budget: input.budget,
+      categories: [...input.categories],
+    })
+    .eq("session_id", sessionId)
+    .eq("role", role);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }

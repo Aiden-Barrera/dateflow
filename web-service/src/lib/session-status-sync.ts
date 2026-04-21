@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "./supabase";
 import { SESSION_STATUS_POLL_INTERVAL_MS } from "./swipe-config";
+import type { BudgetLevel, Category, Role } from "./types/preference";
 
 type SessionRowUpdate = {
   status?: string;
@@ -12,6 +13,17 @@ export type SessionStatusSnapshot = {
   readonly matchedVenueId: string | null;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
+  readonly retryState?: {
+    readonly initiatorRole: Role;
+    readonly viewerRole: Role;
+    readonly viewerHasConfirmed: boolean;
+    readonly partnerHasConfirmed: boolean;
+    readonly initiatedByPartner: boolean;
+    readonly viewerPreferences?: {
+      readonly categories: readonly Category[];
+      readonly budget: BudgetLevel;
+    };
+  };
 };
 
 type SessionStatusSyncOptions = {
