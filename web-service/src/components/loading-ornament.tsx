@@ -135,8 +135,8 @@ function PartnerPreferencesLoader() {
       <div className="absolute bottom-8 left-11 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#8a2346] shadow-[0_16px_30px_rgba(0,0,0,0.4)] motion-safe:animate-[floatHeart_2.4s_ease-in-out_infinite] motion-reduce:animate-none">
         <HeartIcon className="h-4 w-4" />
       </div>
-      <div className="absolute bottom-12 right-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/85 text-[#4a302a] shadow-[0_14px_24px_rgba(0,0,0,0.35)] motion-safe:animate-[floatDot_2s_ease-in-out_infinite] motion-reduce:animate-none">
-        <div className="h-2.5 w-2.5 rounded-full bg-[#8a5a4a]" />
+      <div className="absolute bottom-12 right-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-[#b22233] shadow-[0_14px_24px_rgba(0,0,0,0.35)] motion-safe:animate-[floatDot_2s_ease-in-out_infinite] motion-reduce:animate-none">
+        <PassIcon className="h-4 w-4" />
       </div>
       <div className="absolute inset-[2.6rem] flex items-center justify-center rounded-full bg-white/90 shadow-[0_18px_34px_rgba(0,0,0,0.4)]">
         <div
@@ -192,9 +192,9 @@ function PartnerRoundLoader() {
         className="absolute inset-[0.85rem] motion-safe:animate-spin motion-reduce:animate-none"
         style={{ animationDirection: "reverse", animationDuration: "6.3s" }}
       >
-        <div
-          className="absolute right-0 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[#e8a08a] shadow-[0_0_0_8px_rgba(232,160,138,0.18)]"
-        />
+        <div className="absolute right-0 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#b22233] shadow-[0_12px_24px_rgba(0,0,0,0.4)]">
+          <PassIcon className="h-3.5 w-3.5" />
+        </div>
       </div>
     </div>
   );
@@ -298,8 +298,35 @@ function ShortlistCard({
 
 function HeartIcon({ className }: { readonly className: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 21s-6.72-4.32-9.33-8.35C.96 10.01 1.53 6.5 4.43 4.84c2.35-1.35 4.85-.48 6.1 1.33 1.25-1.81 3.75-2.68 6.1-1.33 2.9 1.66 3.47 5.17 1.76 7.81C18.72 16.68 12 21 12 21Z" />
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 20.5c-.5 0-.98-.19-1.35-.53-2.5-2.3-4.6-4.2-6.07-6.08C3.14 12.04 2.5 10.4 2.5 8.75c0-2.9 2.24-5.25 5-5.25 1.77 0 3.38.92 4.25 2.33.87-1.41 2.48-2.33 4.25-2.33 2.76 0 5 2.35 5 5.25 0 1.65-.64 3.29-2.08 5.14-1.47 1.88-3.57 3.78-6.07 6.08-.37.34-.85.53-1.35.53Z" />
+    </svg>
+  );
+}
+
+function PassIcon({ className }: { readonly className: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9.25" />
+      <path d="M8.5 8.5 15.5 15.5" />
+      <path d="M15.5 8.5 8.5 15.5" />
     </svg>
   );
 }
