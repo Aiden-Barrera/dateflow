@@ -198,7 +198,7 @@ export function ResultScreen({
   }
 
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-bg text-text">
+    <main className="bg-shared-wine relative min-h-dvh overflow-hidden text-white">
       <AuthSheet
         open={authOpen}
         mode={authMode}
@@ -231,7 +231,7 @@ export function ResultScreen({
       <div className="mx-auto flex min-h-dvh w-full max-w-[54rem] flex-col px-4 pb-12 pt-6 sm:px-6 sm:pt-8">
         <header className="flex items-center justify-between">
           <Logo />
-          <span className="rounded-full border border-white/70 bg-white/85 px-3 py-1 text-caption text-text-secondary shadow-sm backdrop-blur">
+          <span className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-caption text-white/70 backdrop-blur">
             Shared result
           </span>
         </header>
@@ -246,22 +246,22 @@ export function ResultScreen({
                   : "resultReveal 520ms cubic-bezier(0.2, 1, 0.22, 1) both",
             }}
           >
-            <div className="border-b border-[#E7DDD2] pb-8 text-center">
-              <p className="text-caption font-semibold uppercase tracking-[0.22em] text-text-secondary">
+            <div className="border-b border-white/12 pb-8 text-center">
+              <p className="text-caption font-semibold uppercase tracking-[0.22em] text-white/65">
                 Match reveal
               </p>
               <div className="mt-6 flex items-center justify-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#F8D8D0]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(255,61,127,0.22)] backdrop-blur-sm">
                   <HeartIcon className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#DDEBE6]">
-                  <HeartIcon className="h-5 w-5 text-secondary" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(232,160,138,0.22)] backdrop-blur-sm">
+                  <HeartIcon className="h-5 w-5 text-white" />
                 </div>
               </div>
-              <h1 className="mt-5 text-[clamp(2.6rem,8vw,3.5rem)] leading-[0.95] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+              <h1 className="mt-5 text-[clamp(2.6rem,8vw,3.5rem)] leading-[0.95] tracking-[-0.04em] text-white [font-family:Georgia,'Times_New_Roman',serif]">
                 It&apos;s a match!
               </h1>
-              <p className="mt-3 text-[1.15rem] text-text-secondary">
+              <p className="mt-3 text-[1.15rem] text-white/65">
                 {matchedWithName ? (
                   <>
                     You and <span className="text-primary">{matchedWithName}</span> both loved this spot
@@ -272,8 +272,8 @@ export function ResultScreen({
               </p>
             </div>
 
-            <div className="mt-7 overflow-hidden rounded-[2rem] border border-[#E7DDD2] bg-white shadow-[0_18px_50px_rgba(45,42,38,0.08)]">
-              <div className="relative aspect-[4/3] overflow-hidden bg-[#E9E1D7]">
+            <div className="mt-7 overflow-hidden rounded-[2rem] border border-white/15 bg-white/[0.06] shadow-[0_30px_80px_rgba(0,0,0,0.4)] backdrop-blur-md">
+              <div className="relative aspect-[4/3] overflow-hidden bg-white/[0.08]">
                 {heroImage ? (
                   <Image
                     src={heroImage}
@@ -286,20 +286,20 @@ export function ResultScreen({
                 ) : null}
                 <button
                   type="button"
-                  className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/92 text-text shadow-[0_8px_18px_rgba(45,42,38,0.14)]"
+                  className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-[#4a1224] shadow-[0_10px_24px_rgba(0,0,0,0.4)]"
                 >
                   <BookmarkIcon />
                 </button>
               </div>
 
               <div className="px-6 pb-6 pt-5">
-                <div className="inline-flex rounded-full bg-[#E6F0EB] px-3 py-1 text-caption font-semibold text-secondary">
+                <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-caption font-semibold text-white backdrop-blur-sm">
                   {venueTypeLabel}
                 </div>
-                <h2 className="mt-4 text-[clamp(2rem,6vw,2.9rem)] leading-[0.98] tracking-[-0.04em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+                <h2 className="mt-4 text-[clamp(2rem,6vw,2.9rem)] leading-[0.98] tracking-[-0.04em] text-white [font-family:Georgia,'Times_New_Roman',serif]">
                   {venue.name}
                 </h2>
-                <div className="mt-4 grid gap-4 text-body text-text-secondary sm:grid-cols-2">
+                <div className="mt-4 grid gap-4 text-body text-white/65 sm:grid-cols-2">
                   <div className="flex items-start gap-3">
                     <LocationPinIcon />
                     <span>{venue.address}</span>
@@ -312,14 +312,14 @@ export function ResultScreen({
               </div>
             </div>
 
-            <div className="mt-6 rounded-[1.5rem] border border-[#ECE3D9] bg-white px-5 py-5 shadow-[0_14px_36px_rgba(45,42,38,0.06)]">
+            <div className="mt-6 rounded-[1.5rem] border border-white/12 bg-white/[0.06] px-5 py-5 shadow-[0_24px_56px_rgba(0,0,0,0.35)] backdrop-blur-md">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#D98E7A,#7A9B8E)] text-white">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#d03d6a,#8a5a4a)] text-white">
                   <HeartIcon className="h-3.5 w-3.5" />
                 </div>
                 <div>
-                  <p className="text-[1.15rem] font-semibold text-text">Why this works</p>
-                  <p className="mt-2 text-[1rem] leading-8 text-text-secondary">
+                  <p className="text-[1.15rem] font-semibold text-white">Why this works</p>
+                  <p className="mt-2 text-[1rem] leading-8 text-white/65">
                     Both of you liked activity-forward options. This spot feels playful, memorable, and makes conversation easy, perfect for breaking the ice.
                   </p>
                 </div>
@@ -346,7 +346,7 @@ export function ResultScreen({
                   <Button
                     variant="secondary"
                     icon={<CalendarIcon />}
-                    className="h-12 w-full rounded-[1rem] !border-0 !bg-[#E7EFE9] !text-secondary shadow-none hover:!bg-[#dbe9e1]"
+                    className="h-12 w-full rounded-[1rem] !border !border-white/20 !bg-white/[0.08] !text-white !shadow-none hover:!bg-white/[0.14]"
                   >
                     Calendar
                   </Button>
@@ -357,16 +357,16 @@ export function ResultScreen({
             {galleryImages.length > 1 ? (
               <section className="mt-6" aria-label="Photo gallery">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-caption font-semibold uppercase tracking-[0.2em] text-text-secondary">
+                  <p className="text-caption font-semibold uppercase tracking-[0.2em] text-white/65">
                     Photo gallery
                   </p>
-                  <p className="text-caption text-text-secondary">{galleryImages.length} photos</p>
+                  <p className="text-caption text-white/65">{galleryImages.length} photos</p>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2.5">
                   {galleryImages.slice(0, 3).map((photoUrl, photoIndex) => (
                     <div
                       key={`${photoUrl}-${photoIndex}`}
-                      className="relative aspect-square overflow-hidden rounded-[1rem] bg-[#E9E1D7]"
+                      className="relative aspect-square overflow-hidden rounded-[1rem] border border-white/10 bg-white/[0.06]"
                     >
                       <Image
                         src={photoUrl}
@@ -385,48 +385,48 @@ export function ResultScreen({
 
           {authStatus === "saved" ? (
             <section
-              className="mt-6 rounded-[1.5rem] border border-[#F0E6DC] bg-[linear-gradient(180deg,rgba(249,243,238,0.98),rgba(245,240,234,0.92))] px-6 py-6 text-center shadow-[0_14px_36px_rgba(45,42,38,0.06)]"
+              className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/[0.06] px-6 py-6 text-center shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-md"
               style={{
                 animation:
                   "savePromptReveal var(--motion-base) var(--ease-enter) both",
               }}
             >
-              <p className="text-caption font-semibold uppercase tracking-[0.24em] text-text-secondary">
+              <p className="text-caption font-semibold uppercase tracking-[0.24em] text-white/65">
                 Saved to your history
               </p>
-              <div className="mx-auto mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#D98E7A,#7A9B8E)] text-white">
+              <div className="mx-auto mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#d03d6a,#8a5a4a)] text-white">
                 <HeartIcon className="h-5 w-5" />
               </div>
-              <h2 className="mt-5 text-[2rem] leading-[1.05] tracking-[-0.03em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+              <h2 className="mt-5 text-[2rem] leading-[1.05] tracking-[-0.03em] text-white [font-family:Georgia,'Times_New_Roman',serif]">
                 This date is saved
               </h2>
-              <p className="mx-auto mt-3 max-w-sm text-[1rem] leading-7 text-text-secondary">
+              <p className="mx-auto mt-3 max-w-sm text-[1rem] leading-7 text-white/65">
                 Come back to this plan anytime. Future matches will save here too.
               </p>
               {accountEmail ? (
-                <p className="mt-4 text-[0.98rem] text-text-secondary">
+                <p className="mt-4 text-[0.98rem] text-white/65">
                   Signed in as {accountEmail}
                 </p>
               ) : null}
             </section>
           ) : (
             <section
-              className="mt-6 rounded-[1.5rem] border border-[#F0E6DC] bg-[linear-gradient(180deg,rgba(249,243,238,0.98),rgba(245,240,234,0.92))] px-6 py-6 text-center shadow-[0_14px_36px_rgba(45,42,38,0.06)]"
+              className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/[0.06] px-6 py-6 text-center shadow-[0_24px_60px_rgba(0,0,0,0.4)] backdrop-blur-md"
               style={{
                 animation:
                   "savePromptReveal var(--motion-base) var(--ease-enter) 120ms both",
               }}
             >
-              <p className="text-caption font-semibold uppercase tracking-[0.24em] text-text-secondary">
+              <p className="text-caption font-semibold uppercase tracking-[0.24em] text-white/65">
                 Save this date
               </p>
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#D98E7A,#7A9B8E)] text-white">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#d03d6a,#8a5a4a)] text-white">
                 <HeartIcon className="h-5 w-5" />
               </div>
-              <h2 className="mt-5 text-[2rem] leading-[1.05] tracking-[-0.03em] text-text [font-family:Georgia,'Times_New_Roman',serif]">
+              <h2 className="mt-5 text-[2rem] leading-[1.05] tracking-[-0.03em] text-white [font-family:Georgia,'Times_New_Roman',serif]">
                 Save your date plans
               </h2>
-              <p className="mx-auto mt-3 max-w-sm text-[1rem] leading-7 text-text-secondary">
+              <p className="mx-auto mt-3 max-w-sm text-[1rem] leading-7 text-white/65">
                 Create an account to save this plan and track all your future dates in one place
               </p>
 
@@ -438,13 +438,13 @@ export function ResultScreen({
                     setAuthError(null);
                     setAuthOpen(true);
                   }}
-                  className="h-11 rounded-[0.95rem] bg-[#25201C] text-[1rem] text-white hover:bg-[#1d1916]"
+                  className="h-11 rounded-[0.95rem] bg-[#4a1224] text-[1rem] text-white hover:bg-[#3a0e1c]"
                 >
                   Create account
                 </Button>
               </div>
 
-              <div className="mt-4 flex items-center justify-center gap-4 text-caption text-text-secondary">
+              <div className="mt-4 flex items-center justify-center gap-4 text-caption text-white/65">
                 <button
                   type="button"
                   onClick={() => {
@@ -453,11 +453,11 @@ export function ResultScreen({
                     setAuthError(null);
                     setAuthOpen(true);
                   }}
-                  className="cursor-pointer underline decoration-[#CFC4B9] underline-offset-4"
+                  className="cursor-pointer underline decoration-white/30 underline-offset-4"
                 >
                   Log in
                 </button>
-                <span className="text-[#C7BDB3]">•</span>
+                <span className="text-white/35">•</span>
                 <span>Continue without account</span>
               </div>
             </section>

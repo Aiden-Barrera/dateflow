@@ -431,7 +431,7 @@ export function SwipeFlow({
               Swipe deck
             </p>
             <h1 className="mt-3 text-h1 font-semibold">Loading your venues</h1>
-            <p className="mt-3 text-body text-text-secondary">{statusMessage}</p>
+            <p className="mt-3 text-body text-white/70">{statusMessage}</p>
           </div>
         </div>
       </SwipeShell>
@@ -443,18 +443,18 @@ export function SwipeFlow({
 
     return (
       <SwipeShell creatorName={creatorName}>
-        <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-white/85 px-6 py-10 text-center shadow-[0_20px_60px_rgba(45,42,38,0.12)] backdrop-blur-sm sm:px-8">
+        <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center rounded-[2rem] border border-white/15 bg-white/[0.06] px-6 py-10 text-center shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-md sm:px-8">
           <LoadingOrnament variant={getWaitingLoaderVariant(waitingStage)} />
           <p className="mt-6 text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
             {waitingCopy.eyebrow}
           </p>
-          <h1 className="mt-3 max-w-lg text-[clamp(2.2rem,6vw,3.5rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-text">
+          <h1 className="mt-3 max-w-lg text-[clamp(2.2rem,6vw,3.5rem)] font-semibold leading-[0.96] tracking-[-0.04em] text-white">
             {waitingCopy.title}
           </h1>
-          <p className="mt-4 max-w-xl text-body text-text-secondary">
+          <p className="mt-4 max-w-xl text-body text-white/70">
             {waitingCopy.body}
           </p>
-          <p className="mt-3 max-w-lg text-body text-text-secondary">
+          <p className="mt-3 max-w-lg text-body text-white/70">
             {statusMessage}
           </p>
           <div className="mt-6 grid w-full max-w-lg gap-3 sm:grid-cols-2">
@@ -505,9 +505,9 @@ export function SwipeFlow({
   if (status === "error" || !currentVenue) {
     return (
       <SwipeShell creatorName={creatorName}>
-        <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center rounded-[2rem] border border-white/70 bg-white/85 px-6 py-10 text-center shadow-[0_20px_60px_rgba(45,42,38,0.12)] backdrop-blur-sm">
+        <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center rounded-[2rem] border border-white/15 bg-white/[0.06] px-6 py-10 text-center shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-md">
           <h1 className="text-h1 font-semibold">Swipe demo unavailable</h1>
-          <p className="mt-3 text-body text-text-secondary">{statusMessage}</p>
+          <p className="mt-3 text-body text-white/70">{statusMessage}</p>
           <div className="mt-6 w-full max-w-sm">
             <Button variant="secondary" onClick={() => void bootstrap()}>
               Try again
@@ -522,7 +522,7 @@ export function SwipeFlow({
     <SwipeShell creatorName={creatorName}>
       <div className="mx-auto w-full max-w-md">
         <div className="relative mb-4 flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/88 px-3 py-2 text-caption font-medium text-text-secondary shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3 py-2 text-caption font-medium text-white/70 shadow-sm">
             <span className="rounded-full bg-secondary-muted px-2.5 py-1 font-semibold text-secondary">
               {progressLabel}
             </span>
@@ -538,13 +538,13 @@ export function SwipeFlow({
             onClick={() => {
               setShowDeckInfo((current) => !current);
             }}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/70 bg-white/88 text-text-secondary shadow-sm transition-colors duration-200 hover:text-text"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/70 shadow-sm transition-colors duration-200 hover:text-text"
           >
             <InfoIcon />
           </button>
           {showDeckInfo ? (
-            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-[min(18rem,calc(100vw-3rem))] rounded-[1.35rem] border border-white/70 bg-white/90 p-4 shadow-[0_18px_40px_rgba(45,42,38,0.12)] backdrop-blur-xl">
-              <p className="text-body text-text-secondary">
+            <div className="absolute right-0 top-[calc(100%+0.5rem)] z-30 w-[min(18rem,calc(100vw-3rem))] rounded-[1.35rem] border border-white/15 bg-white/[0.08] p-4 shadow-[0_24px_56px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+              <p className="text-body text-white/70">
                 Drag right to like, drag left to pass. You can also use the buttons at the bottom of the card.
               </p>
             </div>
@@ -592,7 +592,7 @@ function SwipeShell({
   readonly creatorName: string;
 }) {
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-bg px-6 pb-10 pt-8 text-text sm:px-8">
+    <main className="bg-shared-wine relative min-h-dvh overflow-hidden px-6 pb-10 pt-8 text-white sm:px-8">
       <div
         className="pointer-events-none absolute -left-20 top-12 h-72 w-72 rounded-full blur-3xl"
         style={{ background: "var(--color-primary-muted)" }}
@@ -607,7 +607,7 @@ function SwipeShell({
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-center justify-between gap-4">
           <Logo />
-          <div className="rounded-full border border-white/70 bg-white/85 px-3 py-2 text-caption font-medium text-text-secondary shadow-sm">
+          <div className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-2 text-caption font-medium text-white/70 backdrop-blur-sm">
             {creatorName}
             {"'"}s invite
           </div>
@@ -627,9 +627,9 @@ function WaitingCard({
   readonly body: string;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-muted bg-bg/75 px-4 py-4 text-left">
-      <h2 className="text-body font-semibold text-text">{title}</h2>
-      <p className="mt-2 text-body text-text-secondary">{body}</p>
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.04] px-4 py-4 text-left backdrop-blur-sm">
+      <h2 className="text-body font-semibold text-white">{title}</h2>
+      <p className="mt-2 text-body text-white/70">{body}</p>
     </div>
   );
 }

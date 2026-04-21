@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
 import { PriceBadge } from "../../../../components/price-badge";
 import type { Category } from "../../../../lib/types/preference";
@@ -302,7 +301,7 @@ export function SwipeDeckCard({
 
       <article
         ref={cardRef}
-        className={`relative overflow-hidden rounded-[2rem] border border-white/72 bg-white/92 backdrop-blur-sm ${
+        className={`relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/95 shadow-[0_30px_80px_rgba(74,18,36,0.45)] backdrop-blur-sm ${
           submitting ? "pointer-events-none" : "cursor-grab active:cursor-grabbing"
         }`}
         style={{
@@ -346,8 +345,8 @@ export function SwipeDeckCard({
             opacity: Math.max(dragStrength * 0.9, animatingSwipe ? 0.45 : 0),
             background:
               dragRatio >= 0
-                ? `linear-gradient(135deg, rgba(224,116,104,${0.12 + dragStrength * 0.24}), rgba(224,116,104,0) 60%)`
-                : `linear-gradient(225deg, rgba(91,154,139,${0.12 + dragStrength * 0.24}), rgba(91,154,139,0) 60%)`,
+                ? `linear-gradient(135deg, rgba(16,163,127,${0.14 + dragStrength * 0.26}), rgba(16,163,127,0) 60%)`
+                : `linear-gradient(225deg, rgba(220,53,69,${0.14 + dragStrength * 0.26}), rgba(220,53,69,0) 60%)`,
             transition: isDragging ? "opacity 70ms linear" : "opacity 180ms ease",
           }}
         />
@@ -417,7 +416,7 @@ export function SwipeDeckCard({
             }}
           />
 
-          <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-caption font-medium text-text shadow-sm">
+          <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-caption font-medium text-[#2a1a1c] shadow-sm">
             <CategoryIcon category={venue.category} />
             {CATEGORY_LABELS[venue.category]}
           </div>
@@ -459,27 +458,48 @@ export function SwipeDeckCard({
         </div>
 
         <div className="space-y-4 p-6">
-          <div className="rounded-[1.5rem] border border-muted bg-bg/72 p-4">
+          <div className="rounded-[1.5rem] border border-[rgba(208,61,106,0.18)] bg-[rgba(208,61,106,0.05)] p-4">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 space-y-3">
                 <div>
-                  <p className="text-caption font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                  <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#8a2346]">
                     Venue {cardIndex} of {totalCards}
                   </p>
-                  <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-text">
+                  <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-[#2a1a1c]">
                     {venue.name}
                   </h2>
-                  <p className="mt-2 text-body text-text-secondary">{venue.address}</p>
+                  <p className="mt-2 text-body text-[#6a4a3a]">{venue.address}</p>
+                  {venue.editorialSummary ? (
+                    <p className="mt-2 line-clamp-2 text-body italic text-[#8a6a5a]">
+                      {venue.editorialSummary}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <InfoPill>
                     <StarIcon />
-                    {venue.rating.toFixed(1)} rating
+                    {formatRatingWithCount(venue.rating, venue.userRatingCount)}
                   </InfoPill>
                   <InfoPill>
                     <CategoryIcon category={venue.category} />
                     {CATEGORY_LABELS[venue.category]}
                   </InfoPill>
+                  {typeof venue.distanceMeters === "number" ? (
+                    <InfoPill>{formatDistance(venue.distanceMeters)}</InfoPill>
+                  ) : null}
+                  {venue.openingHours ? (
+                    <InfoPill>
+                      <span
+                        className={`inline-block h-2 w-2 rounded-full ${
+                          venue.openingHours.openNow
+                            ? "bg-[#10a37f]"
+                            : "bg-[#c2410c]"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {venue.openingHours.openNow ? "Open now" : "Closed"}
+                    </InfoPill>
+                  ) : null}
                   <InfoPill>{`Round ${venue.round}`}</InfoPill>
                 </div>
               </div>
@@ -492,7 +512,7 @@ export function SwipeDeckCard({
           {currentSlides.length > 1 ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-caption font-semibold uppercase tracking-[0.16em] text-text-secondary">
+                <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#6a4a3a]">
                   Venue photos
                 </p>
                 <div className="flex items-center gap-1.5">
@@ -517,10 +537,10 @@ export function SwipeDeckCard({
                     type="button"
                     key={`${slide}-thumb-${slideIndex}`}
                     aria-label={`Show photo ${slideIndex + 1} of ${currentSlides.length}`}
-                    className={`relative h-20 min-w-24 overflow-hidden rounded-[1.1rem] border bg-bg shadow-[0_10px_24px_rgba(45,42,38,0.08)] ${
+                    className={`relative h-20 min-w-24 overflow-hidden rounded-[1.1rem] border bg-[#f5ebe3] shadow-[0_10px_24px_rgba(45,42,38,0.08)] ${
                       slideIndex === activeSlideIndex
                         ? "border-primary ring-2 ring-primary/20"
-                        : "border-muted"
+                        : "border-[#d9c7b5]"
                     }`}
                     onClick={() => moveToSlide(slideIndex)}
                   >
@@ -539,44 +559,50 @@ export function SwipeDeckCard({
           ) : null}
 
           <div className="flex flex-wrap gap-2">
-            {venue.tags.slice(0, 3).map((tag) => (
+            {getDisplayTags(venue.tags).slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-muted bg-bg px-3 py-1.5 text-caption font-medium text-text-secondary"
+                className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-3 py-1.5 text-caption font-medium text-[#8a2346]"
               >
                 {tag}
               </span>
             ))}
           </div>
 
+          {venue.whyPicked ? (
+            <div className="rounded-[1.25rem] border border-[rgba(208,61,106,0.25)] bg-[rgba(208,61,106,0.08)] p-4">
+              <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#8a2346]">
+                Why we picked this
+              </p>
+              <p className="mt-2 text-body text-[#2a1a1c]">{venue.whyPicked}</p>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="secondary"
+            <button
+              type="button"
               onClick={() => {
                 void triggerSwipe(false);
               }}
               disabled={submitting || Boolean(animatingSwipe)}
-              className="h-14 rounded-2xl border-white/80 bg-white/92 shadow-[0_12px_28px_rgba(45,42,38,0.06)]"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#dc3545] bg-[#dc3545] text-body font-semibold text-white transition-all duration-200 hover:bg-[#c42a3c] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
               style={getActionButtonStyle("left", dragRatio, neutralReturnStrength)}
             >
-              <span className="flex items-center gap-2">
-                <PassIcon />
-                Pass
-              </span>
-            </Button>
-            <Button
+              <PassIcon />
+              Pass
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 void triggerSwipe(true);
               }}
               disabled={submitting || Boolean(animatingSwipe)}
-              className="h-14 rounded-2xl shadow-[0_14px_30px_rgba(224,116,104,0.24)]"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#10a37f] bg-[#10a37f] text-body font-semibold text-white transition-all duration-200 hover:bg-[#0e8e6f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
               style={getActionButtonStyle("right", dragRatio, neutralReturnStrength)}
             >
-              <span className="flex items-center gap-2">
-                <HeartIcon />
-                Like
-              </span>
-            </Button>
+              <HeartIcon />
+              Like
+            </button>
           </div>
         </div>
       </article>
@@ -599,8 +625,8 @@ function SwipeIntentBadge({
     <div
       className={`rounded-full border px-4 py-2 text-caption font-semibold uppercase tracking-[0.18em] shadow-sm backdrop-blur-sm transition-all duration-150 ${
         tone === "like"
-          ? "border-white/68 bg-white/92 text-primary"
-          : "border-white/55 bg-black/36 text-white"
+          ? "border-[rgba(16,163,127,0.6)] bg-[rgba(16,163,127,0.92)] text-white"
+          : "border-[rgba(220,53,69,0.6)] bg-[rgba(220,53,69,0.92)] text-white"
       }`}
       style={{
         opacity: visible ? 1 : 0,
@@ -642,7 +668,7 @@ function PreviewVenueCard({
           </>
         )}
         <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.94))]" />
-        <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption text-text-secondary shadow-sm">
+        <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption text-[#6a4a3a] shadow-sm">
           <CategoryIcon category={venue.category} />
           {CATEGORY_LABELS[venue.category]}
         </div>
@@ -651,22 +677,22 @@ function PreviewVenueCard({
       <div className="space-y-4 px-5 py-5">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-body font-semibold text-text">{venue.name}</p>
-            <p className="mt-1 text-caption text-text-secondary">{venue.address}</p>
+            <p className="text-body font-semibold text-[#2a1a1c]">{venue.name}</p>
+            <p className="mt-1 text-caption text-[#6a4a3a]">{venue.address}</p>
           </div>
           <div className="scale-[0.92] origin-top-right opacity-88">
             <PriceBadge priceLevel={venue.priceLevel} />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-muted bg-white px-2.5 py-1 text-caption text-text-secondary">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#d9c7b5] bg-white px-2.5 py-1 text-caption text-[#6a4a3a]">
             <StarIcon />
             {venue.rating.toFixed(1)}
           </div>
-          {venue.tags.slice(0, 2).map((tag) => (
+          {getDisplayTags(venue.tags).slice(0, 2).map((tag) => (
             <div
               key={tag}
-              className="rounded-full border border-muted bg-white px-2.5 py-1 text-caption text-text-secondary"
+              className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-2.5 py-1 text-caption text-[#8a2346]"
             >
               {tag}
             </div>
@@ -677,9 +703,26 @@ function PreviewVenueCard({
   );
 }
 
+// Internal markers emitted by the scoring pipeline that should never reach the
+// user-facing venue card.
+const INTERNAL_TAGS = new Set<string>([
+  "unscored",
+  "ai-curated",
+  "top-rated",
+  "well-reviewed",
+  "restaurant",
+  "bar",
+  "activity",
+  "event",
+]);
+
+function getDisplayTags(tags: readonly string[]): readonly string[] {
+  return tags.filter((tag) => !INTERNAL_TAGS.has(tag.toLowerCase()));
+}
+
 function InfoPill({ children }: { readonly children: React.ReactNode }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-muted bg-white px-3 py-1.5 text-caption font-medium text-text-secondary">
+    <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(208,61,106,0.25)] bg-white px-3 py-1.5 text-caption font-medium text-[#8a2346]">
       {children}
     </div>
   );
@@ -696,25 +739,34 @@ function StarIcon() {
 function PassIcon() {
   return (
     <svg
-      className="h-5 w-5"
+      className="h-[22px] w-[22px]"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
+      <circle cx="12" cy="12" r="9.25" />
+      <path d="M8.5 8.5 15.5 15.5" />
+      <path d="M15.5 8.5 8.5 15.5" />
     </svg>
   );
 }
 
 function HeartIcon() {
   return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 21s-6.72-4.32-9.33-8.35C.96 10.01 1.53 6.5 4.43 4.84c2.35-1.35 4.85-.48 6.1 1.33 1.25-1.81 3.75-2.68 6.1-1.33 2.9 1.66 3.47 5.17 1.76 7.81C18.72 16.68 12 21 12 21Z" />
+    <svg
+      className="h-[22px] w-[22px]"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 20.5c-.5 0-.98-.19-1.35-.53-2.5-2.3-4.6-4.2-6.07-6.08C3.14 12.04 2.5 10.4 2.5 8.75c0-2.9 2.24-5.25 5-5.25 1.77 0 3.38.92 4.25 2.33.87-1.41 2.48-2.33 4.25-2.33 2.76 0 5 2.35 5 5.25 0 1.65-.64 3.29-2.08 5.14-1.47 1.88-3.57 3.78-6.07 6.08-.37.34-.85.53-1.35.53Z" />
     </svg>
   );
 }
@@ -913,8 +965,8 @@ function getActionButtonStyle(
     transform: `translateY(${translateY}px) scale(${emphasis > 0 ? activeScale : restingScale})`,
     boxShadow:
       direction === "right"
-        ? `0 16px 34px rgba(224,116,104,${shadowAlpha})`
-        : `0 14px 30px rgba(45,42,38,${shadowAlpha})`,
+        ? `0 16px 34px rgba(16,163,127,${shadowAlpha})`
+        : `0 14px 30px rgba(220,53,69,${shadowAlpha})`,
     transition:
       "transform 180ms cubic-bezier(0.18, 0.86, 0.24, 1), box-shadow 180ms ease, background-color 180ms ease",
   };
@@ -922,4 +974,34 @@ function getActionButtonStyle(
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+export function formatRatingWithCount(
+  rating: number,
+  reviewCount: number | undefined,
+): string {
+  const ratingLabel = `${rating.toFixed(1)}`;
+  if (typeof reviewCount !== "number" || reviewCount <= 0) {
+    return `${ratingLabel} rating`;
+  }
+  const reviewLabel = reviewCount === 1 ? "review" : "reviews";
+  return `${ratingLabel} · ${formatReviewCount(reviewCount)} ${reviewLabel}`;
+}
+
+function formatReviewCount(count: number): string {
+  if (count >= 1_000) {
+    const thousands = count / 1_000;
+    const rounded =
+      thousands >= 10 ? Math.round(thousands) : Math.round(thousands * 10) / 10;
+    return `${rounded}k`;
+  }
+  return String(count);
+}
+
+export function formatDistance(meters: number): string {
+  const miles = meters / 1609.344;
+  if (miles < 0.1) {
+    return "<0.1 mi away";
+  }
+  return `${miles.toFixed(1)} mi away`;
 }

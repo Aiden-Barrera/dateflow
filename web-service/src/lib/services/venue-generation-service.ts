@@ -6,7 +6,8 @@ import type {
 import type { BudgetLevel, Category, Preference } from "../types/preference";
 import { toVenue, type Venue, type VenueRow } from "../types/venue";
 import { getBothPreferences } from "./preference-service";
-import { calculateMidpoint } from "./midpoint-calculator";
+import { calculateMidpoint, distanceBetween } from "./midpoint-calculator";
+import { buildWhyPicked } from "./venue-why-picked";
 import { searchNearbyWithCache } from "./places-api-cached";
 import {
   buildGooglePlacePhotoUrl,
@@ -100,6 +101,14 @@ type InsertVenueRow = {
   readonly score_time_of_day_fit: number;
   readonly generation_batch_id: string;
   readonly surfaced_cycle: number;
+  readonly editorial_summary: string | null;
+  readonly user_rating_count: number | null;
+  readonly opening_hours:
+    | { readonly open_now: boolean; readonly weekday_text: readonly string[] }
+    | null;
+  readonly distance_meters: number | null;
+  readonly website: string | null;
+  readonly why_picked: string | null;
 };
 
 async function insertVenues(rows: readonly InsertVenueRow[]): Promise<void> {
@@ -247,6 +256,11 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
       const roundPicks = curated.slice(0, 4);
 
       roundPicks.forEach((venue, index) => {
+        const distanceMeters = Math.round(
+          distanceBetween(midpoint, venue.location),
+        );
+        const whyPicked =
+          venue.whyPicked ?? buildWhyPicked(venue, distanceMeters);
         selectedRows.push({
           session_id: sessionId,
           place_id: venue.placeId,
@@ -269,6 +283,18 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           score_time_of_day_fit: venue.score.timeOfDayFit,
           generation_batch_id: generationBatchId,
           surfaced_cycle: 1,
+          editorial_summary: venue.editorialSummary ?? null,
+          user_rating_count:
+            typeof venue.reviewCount === "number" ? venue.reviewCount : null,
+          opening_hours: venue.openingHours
+            ? {
+                open_now: venue.openingHours.openNow,
+                weekday_text: venue.openingHours.weekdayText,
+              }
+            : null,
+          distance_meters: distanceMeters,
+          website: venue.website ?? null,
+          why_picked: whyPicked ?? null,
         });
       });
 

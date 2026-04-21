@@ -74,6 +74,11 @@ export function computeVenueComposite(
  * **rating, priceLevel:** From Google Places. Rating is 0–5 (decimal).
  *   priceLevel is 1–4 ($ to $$$$).
  */
+export type VenueOpeningHours = {
+  readonly openNow: boolean;
+  readonly weekdayText: readonly string[];
+};
+
 export type Venue = {
   readonly id: string;
   readonly sessionId: string;
@@ -91,6 +96,12 @@ export type Venue = {
   readonly round: number;
   readonly position: number;
   readonly score: VenueScore;
+  readonly editorialSummary?: string;
+  readonly userRatingCount?: number;
+  readonly openingHours?: VenueOpeningHours;
+  readonly distanceMeters?: number;
+  readonly website?: string;
+  readonly whyPicked?: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -123,7 +134,30 @@ export type VenueRow = {
   readonly score_first_date_suitability: number;
   readonly score_quality_signal: number;
   readonly score_time_of_day_fit: number;
+  readonly editorial_summary?: string | null;
+  readonly user_rating_count?: number | null;
+  readonly opening_hours?: VenueOpeningHoursRow | null;
+  readonly distance_meters?: number | null;
+  readonly website?: string | null;
+  readonly why_picked?: string | null;
 };
+
+export type VenueOpeningHoursRow = {
+  readonly open_now?: boolean;
+  readonly openNow?: boolean;
+  readonly weekday_text?: readonly string[];
+  readonly weekdayText?: readonly string[];
+};
+
+function toOpeningHours(
+  raw: VenueOpeningHoursRow | null | undefined,
+): VenueOpeningHours | undefined {
+  if (!raw) return undefined;
+  const openNow = raw.openNow ?? raw.open_now;
+  const weekdayText = raw.weekdayText ?? raw.weekday_text ?? [];
+  if (typeof openNow !== "boolean") return undefined;
+  return { openNow, weekdayText };
+}
 
 function resolvePhotoUrls(row: Pick<VenueRow, "photo_url" | "photo_urls">): readonly string[] {
   if (Array.isArray(row.photo_urls) && row.photo_urls.length > 0) {
@@ -139,6 +173,7 @@ function resolvePhotoUrls(row: Pick<VenueRow, "photo_url" | "photo_urls">): read
  */
 export function toVenue(row: VenueRow): Venue {
   const photoUrls = resolvePhotoUrls(row);
+  const openingHours = toOpeningHours(row.opening_hours);
 
   return {
     id: row.id,
@@ -170,6 +205,16 @@ export function toVenue(row: VenueRow): Venue {
         timeOfDayFit: row.score_time_of_day_fit,
       }),
     },
+    ...(row.editorial_summary ? { editorialSummary: row.editorial_summary } : {}),
+    ...(typeof row.user_rating_count === "number"
+      ? { userRatingCount: row.user_rating_count }
+      : {}),
+    ...(openingHours ? { openingHours } : {}),
+    ...(typeof row.distance_meters === "number"
+      ? { distanceMeters: row.distance_meters }
+      : {}),
+    ...(row.website ? { website: row.website } : {}),
+    ...(row.why_picked ? { whyPicked: row.why_picked } : {}),
   };
 }
 
@@ -200,6 +245,9 @@ export type PlaceCandidate = {
   readonly photoReferences: readonly string[];
   readonly photoReference: string | null;
   readonly photoUrls: readonly string[];
+  readonly editorialSummary?: string;
+  readonly openingHours?: VenueOpeningHours;
+  readonly website?: string;
 };
 
 /**
@@ -224,4 +272,5 @@ export type CuratedVenueCandidate = PlaceCandidate & {
   readonly category: Category;
   readonly score: VenueScore;
   readonly tags: readonly string[];
+  readonly whyPicked?: string;
 };
