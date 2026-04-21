@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
 import { PriceBadge } from "../../../../components/price-badge";
 import type { Category } from "../../../../lib/types/preference";
@@ -550,33 +549,30 @@ export function SwipeDeckCard({
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Button
-              variant="secondary"
+            <button
+              type="button"
               onClick={() => {
                 void triggerSwipe(false);
               }}
               disabled={submitting || Boolean(animatingSwipe)}
-              className="h-14 rounded-2xl border-[rgba(220,53,69,0.35)] bg-[rgba(220,53,69,0.08)] text-[#b22233] shadow-[0_12px_28px_rgba(220,53,69,0.15)] hover:bg-[rgba(220,53,69,0.14)]"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#dc3545] bg-[#dc3545] text-body font-semibold text-white transition-all duration-200 hover:bg-[#c42a3c] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
               style={getActionButtonStyle("left", dragRatio, neutralReturnStrength)}
             >
-              <span className="flex items-center gap-2">
-                <PassIcon />
-                Pass
-              </span>
-            </Button>
-            <Button
+              <PassIcon />
+              Pass
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 void triggerSwipe(true);
               }}
               disabled={submitting || Boolean(animatingSwipe)}
-              className="h-14 rounded-2xl border-transparent bg-[#10a37f] text-white shadow-[0_14px_30px_rgba(16,163,127,0.32)] hover:bg-[#0e8e6f]"
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#10a37f] bg-[#10a37f] text-body font-semibold text-white transition-all duration-200 hover:bg-[#0e8e6f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
               style={getActionButtonStyle("right", dragRatio, neutralReturnStrength)}
             >
-              <span className="flex items-center gap-2">
-                <HeartIcon />
-                Like
-              </span>
-            </Button>
+              <HeartIcon />
+              Like
+            </button>
           </div>
         </div>
       </article>
