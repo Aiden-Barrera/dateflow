@@ -36,7 +36,7 @@ export class VenueCache {
    * Categories are sorted alphabetically so different orderings produce the same key.
    * Price level is included so different budget tiers cache separately.
    *
-   * Example: `venue:cache:30.27:-97.74:BAR:RESTAURANT:2`
+   * Example: `venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:2`
    */
   buildKey(
     location: Location,

@@ -98,7 +98,7 @@ function roundBonus(category: Category, round: number): number {
   return 0;
 }
 
-const BUDGET_ROMANTIC_PRIMARY_TYPES = new Set<string>([
+const BUDGET_ROMANTIC_TYPES = new Set<string>([
   "park",
   "botanical_garden",
   "tourist_attraction",
@@ -121,14 +121,14 @@ function budgetRomanticBonus(
 
   const hasBudgetPrimaryType =
     candidate.primaryType !== null &&
-    BUDGET_ROMANTIC_PRIMARY_TYPES.has(candidate.primaryType);
+    BUDGET_ROMANTIC_TYPES.has(candidate.primaryType);
   const hasBudgetFriendlyType = candidate.types.some((type) =>
-    BUDGET_ROMANTIC_PRIMARY_TYPES.has(type),
+    BUDGET_ROMANTIC_TYPES.has(type),
   );
 
   const baseMultiplier = budgetPreferenceCount === 2 ? 1 : 0.65;
 
-  if ((hasBudgetPrimaryType || hasBudgetFriendlyType) && candidate.priceLevel === 0) {
+  if (hasBudgetPrimaryType || hasBudgetFriendlyType) {
     return 0.28 * baseMultiplier;
   }
 
