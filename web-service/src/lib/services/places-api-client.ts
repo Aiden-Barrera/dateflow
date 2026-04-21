@@ -176,10 +176,14 @@ function isFastFoodChainName(name: string): boolean {
   return FAST_FOOD_CHAIN_PATTERNS.some((pattern) => pattern.test(name));
 }
 
-function isDeniedFirstDateVenue(
-  place: Pick<GooglePlace, "displayName" | "types" | "primaryType">,
-): boolean {
-  if (isFastFoodChainName(place.displayName.text)) {
+type FirstDateVenueLike = {
+  readonly name: string;
+  readonly types: readonly string[];
+  readonly primaryType?: string | null;
+};
+
+export function isDeniedFirstDateVenue(place: FirstDateVenueLike): boolean {
+  if (isFastFoodChainName(place.name)) {
     return true;
   }
 
@@ -188,6 +192,12 @@ function isDeniedFirstDateVenue(
   }
 
   return place.types.some((type) => DENY_LISTED_PLACE_TYPES.has(type));
+}
+
+export function filterDeniedFirstDateVenues<T extends FirstDateVenueLike>(
+  places: readonly T[],
+): readonly T[] {
+  return places.filter((place) => !isDeniedFirstDateVenue(place));
 }
 
 /**
@@ -342,9 +352,12 @@ export async function searchNearby(
   }
 
   const data = await response.json();
-  const places: readonly GooglePlace[] = (data.places ?? []).filter(
-    (place: GooglePlace) => !isDeniedFirstDateVenue(place),
-  );
+  const places: readonly GooglePlace[] = filterDeniedFirstDateVenues(
+    ((data.places ?? []) as readonly GooglePlace[]).map((place) => ({
+      ...place,
+      name: place.displayName.text,
+    })),
+  ).map(({ name: _name, ...place }) => place);
 
   const candidates: readonly PlaceCandidate[] = places.map((place) => {
     const photoReferences = (place.photos ?? []).map((photo) => photo.name);

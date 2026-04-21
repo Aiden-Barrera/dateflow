@@ -58,7 +58,7 @@ describe("searchNearbyWithCache", () => {
     vi.clearAllMocks();
     // Get the mock cache instance that VenueCache constructor returns
     mockCache = new VenueCache() as unknown as typeof mockCache;
-    mockCache.buildKey.mockReturnValue("venue:cache:30.27:-97.74:BAR:RESTAURANT:3");
+    mockCache.buildKey.mockReturnValue("venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:3");
   });
 
   it("returns cached results on cache hit (no API call)", async () => {
@@ -67,7 +67,7 @@ describe("searchNearbyWithCache", () => {
     const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
 
     expect(results).toEqual(fakeCandidates);
-    expect(mockCache.get).toHaveBeenCalledWith("venue:cache:30.27:-97.74:BAR:RESTAURANT:3:radius=2000");
+    expect(mockCache.get).toHaveBeenCalledWith("venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:3:radius=2000");
     expect(searchNearby).not.toHaveBeenCalled();
   });
 
@@ -83,10 +83,41 @@ describe("searchNearbyWithCache", () => {
     const expectedGoogleTypes = ["restaurant", "cafe", "bakery", "bar", "night_club"];
     expect(searchNearby).toHaveBeenCalledWith(location, radius, expectedGoogleTypes, maxPrice);
     expect(mockCache.set).toHaveBeenCalledWith(
-      "venue:cache:30.27:-97.74:BAR:RESTAURANT:3:radius=2000",
+      "venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:3:radius=2000",
       fakeCandidates,
       CACHE_TTL_SECONDS
     );
+  });
+
+  it("filters stale cached candidates on cache hit before returning them", async () => {
+    mockCache.get.mockResolvedValueOnce([
+      {
+        ...fakeCandidates[0],
+        placeId: "chain-1",
+        name: "McDonald's",
+        types: ["restaurant", "food"],
+        primaryType: "restaurant",
+      },
+      {
+        ...fakeCandidates[0],
+        placeId: "gym-1",
+        name: "City Gym",
+        types: ["gym", "point_of_interest"],
+        primaryType: "gym",
+      },
+      {
+        ...fakeCandidates[0],
+        placeId: "good-1",
+        name: "Neighborhood Cafe",
+        types: ["cafe", "restaurant"],
+        primaryType: "cafe",
+      },
+    ] satisfies readonly PlaceCandidate[]);
+
+    const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
+
+    expect(results.map((candidate) => candidate.placeId)).toEqual(["good-1"]);
+    expect(searchNearby).not.toHaveBeenCalled();
   });
 
   it("passes correct TTL to cache (6 hours)", () => {

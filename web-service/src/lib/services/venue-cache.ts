@@ -15,6 +15,7 @@ import type { Location } from "../types/preference";
  */
 export class VenueCache {
   private redis = getRedisClient();
+  private static readonly KEY_VERSION = "v2";
 
   private getValuePreview(value: unknown): string {
     if (typeof value === "string") {
@@ -49,7 +50,7 @@ export class VenueCache {
     // Sort categories so order doesn't matter
     const sortedCategories = [...categories].sort().join(":");
 
-    return `venue:cache:${lat}:${lng}:${sortedCategories}:${priceLevel}`;
+    return `venue:cache:${VenueCache.KEY_VERSION}:${lat}:${lng}:${sortedCategories}:${priceLevel}`;
   }
 
   /**
