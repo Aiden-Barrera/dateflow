@@ -61,6 +61,46 @@ describe("places-api-client", () => {
     it("returns ACTIVITY as fallback for unknown types", () => {
       expect(mapGoogleTypeToCategory(["unknown_type"])).toBe("ACTIVITY");
     });
+
+    it("prefers primaryType over secondary tags for a skating rink with a concession bar", () => {
+      // Regression: roller skating rinks with a food/restaurant secondary
+      // tag were being classified as RESTAURANT before primaryType was used.
+      const types = [
+        "roller_skating_rink",
+        "point_of_interest",
+        "food",
+        "restaurant",
+        "establishment",
+      ];
+      expect(mapGoogleTypeToCategory(types, "roller_skating_rink")).toBe("ACTIVITY");
+    });
+
+    it("uses primaryType=restaurant for an actual restaurant", () => {
+      expect(
+        mapGoogleTypeToCategory(["restaurant", "food", "point_of_interest"], "restaurant"),
+      ).toBe("RESTAURANT");
+    });
+
+    it("falls back to the priority scan when primaryType is unknown", () => {
+      expect(
+        mapGoogleTypeToCategory(["bar", "night_club"], "some_future_unknown_type"),
+      ).toBe("BAR");
+    });
+
+    it("falls back to the priority scan when primaryType is omitted", () => {
+      expect(mapGoogleTypeToCategory(["restaurant", "bar"])).toBe("RESTAURANT");
+    });
+
+    it("maps newly-supported activity types", () => {
+      expect(mapGoogleTypeToCategory([], "escape_room")).toBe("ACTIVITY");
+      expect(mapGoogleTypeToCategory([], "arcade")).toBe("ACTIVITY");
+      expect(mapGoogleTypeToCategory([], "axe_throwing")).toBe("ACTIVITY");
+    });
+
+    it("maps newly-supported event types", () => {
+      expect(mapGoogleTypeToCategory([], "concert_hall")).toBe("EVENT");
+      expect(mapGoogleTypeToCategory([], "comedy_club")).toBe("EVENT");
+    });
   });
 
   describe("buildGooglePlacePhotoUrl", () => {
@@ -123,6 +163,7 @@ describe("places-api-client", () => {
         address: "1816 E 6th St, Austin, TX",
         location: { lat: 30.2609, lng: -97.7267, label: "Whisler's" },
         types: ["bar", "night_club"],
+        primaryType: null,
         priceLevel: 2,
         rating: 4.5,
         reviewCount: 1200,
