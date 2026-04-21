@@ -984,7 +984,8 @@ export function formatRatingWithCount(
   if (typeof reviewCount !== "number" || reviewCount <= 0) {
     return `${ratingLabel} rating`;
   }
-  return `${ratingLabel} · ${formatReviewCount(reviewCount)} reviews`;
+  const reviewLabel = reviewCount === 1 ? "review" : "reviews";
+  return `${ratingLabel} · ${formatReviewCount(reviewCount)} ${reviewLabel}`;
 }
 
 function formatReviewCount(count: number): string {
