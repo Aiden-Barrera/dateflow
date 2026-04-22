@@ -158,6 +158,9 @@ const DENY_LISTED_PLACE_TYPES = new Set<string>([
   "gas_station",
   "funeral_home",
   "car_wash",
+  "fast_food_restaurant",
+  "chicken_restaurant",
+  "hamburger_restaurant",
 ]);
 
 const FAST_FOOD_CHAIN_PATTERNS: readonly RegExp[] = [
@@ -167,6 +170,7 @@ const FAST_FOOD_CHAIN_PATTERNS: readonly RegExp[] = [
   /\bburger king\b/i,
   /\bwendy'?s\b/i,
   /\bchick-?fil-?a\b/i,
+  /\bjollibee\b/i,
   /\bsubway\b/i,
   /\bdomino'?s\b/i,
   /\bpizza hut\b/i,
@@ -357,7 +361,11 @@ export async function searchNearby(
       ...place,
       name: place.displayName.text,
     })),
-  ).map(({ name: _name, ...place }) => place);
+  ).map((place) => {
+    const { name, ...rest } = place;
+    void name;
+    return rest;
+  });
 
   const candidates: readonly PlaceCandidate[] = places.map((place) => {
     const photoReferences = (place.photos ?? []).map((photo) => photo.name);

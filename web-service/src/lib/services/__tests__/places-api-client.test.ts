@@ -441,5 +441,46 @@ describe("places-api-client", () => {
 
       expect(results.map((result) => result.placeId)).toEqual(["cafe-1"]);
     });
+
+    it("excludes fast-food venues by Google type even when they also look like restaurants", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          places: [
+            {
+              id: "fast-food-2",
+              displayName: { text: "Jollibee" },
+              formattedAddress: "6 Chain Ln",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: [
+                "chicken_restaurant",
+                "fast_food_restaurant",
+                "restaurant",
+                "food",
+              ],
+              primaryType: "fast_food_restaurant",
+              rating: 4.4,
+              userRatingCount: 900,
+              photos: [],
+            },
+            {
+              id: "restaurant-1",
+              displayName: { text: "Cafe Magnolia" },
+              formattedAddress: "7 Date St",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["restaurant", "cafe", "food"],
+              primaryType: "restaurant",
+              rating: 4.6,
+              userRatingCount: 320,
+              photos: [],
+            },
+          ],
+        }),
+      });
+
+      const results = await searchNearby(location, 2000, ["restaurant"], 4);
+
+      expect(results.map((result) => result.placeId)).toEqual(["restaurant-1"]);
+    });
   });
 });
