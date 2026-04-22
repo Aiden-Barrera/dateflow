@@ -1,7 +1,11 @@
 import type { Location, Category } from "../types/preference";
 import type { PlaceCandidate } from "../types/venue";
 import { VenueCache } from "./venue-cache";
-import { searchNearby, categoriesToGoogleTypes } from "./places-api-client";
+import {
+  searchNearby,
+  categoriesToGoogleTypes,
+  filterDeniedFirstDateVenues,
+} from "./places-api-client";
 
 /**
  * Cache TTL: 6 hours in seconds.
@@ -48,15 +52,16 @@ export async function searchNearbyWithCache(
     try {
       const cached = await cache.get(cacheKey);
       if (cached) {
+        const filteredCached = filterDeniedFirstDateVenues(cached);
         console.info("[searchNearbyWithCache] cache hit", {
           cacheKey,
-          candidateCount: cached.length,
+          candidateCount: filteredCached.length,
           locationLabel: location.label,
           radius,
           categories,
           maxPrice,
         });
-        return cached;
+        return filteredCached;
       }
 
       console.info("[searchNearbyWithCache] cache miss", {

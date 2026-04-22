@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildSessionRoleCookieValue } from "../../../../../../lib/session-role-access";
 
 const mockAcceptFallbackSuggestion = vi.fn();
@@ -39,9 +39,16 @@ const rerankedSession = {
 };
 
 describe("POST /api/sessions/[id]/fallback", () => {
+  const originalSessionRoleCookieSecret =
+    process.env.SESSION_ROLE_COOKIE_SECRET;
+
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.SESSION_ROLE_COOKIE_SECRET = "test-secret";
+  });
+
+  afterEach(() => {
+    process.env.SESSION_ROLE_COOKIE_SECRET = originalSessionRoleCookieSecret;
   });
 
   it("accepts the suggested fallback venue", async () => {

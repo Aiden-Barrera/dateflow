@@ -41,8 +41,12 @@ const readySession = {
 };
 
 describe("GET /api/sessions/[id]/status", () => {
+  const originalSessionRoleCookieSecret =
+    process.env.SESSION_ROLE_COOKIE_SECRET;
+
   afterEach(() => {
     vi.useRealTimers();
+    process.env.SESSION_ROLE_COOKIE_SECRET = originalSessionRoleCookieSecret;
   });
 
   beforeEach(() => {

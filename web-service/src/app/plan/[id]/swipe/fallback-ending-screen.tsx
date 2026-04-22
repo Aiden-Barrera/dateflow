@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { Button } from "../../../../components/button";
 import { CategoryIcon } from "../../../../components/category-icon";
 import type { BudgetLevel, Category } from "../../../../lib/types/preference";
 
@@ -85,9 +84,11 @@ export function FallbackEndingScreen({
     ? "You can keep your current vibe selections as-is or update them before you confirm the refresh."
     : `If ${venueName} is not the move, tighten the vibe below and Dateflow will reshuffle the shortlist around a fresh direction.`;
   const retryButtonLabel = isPartnerConfirmStep ? "Confirm new mix" : "Try a new mix";
+  const retryDisabled =
+    submittingAction !== null || selectedCategories.length === 0;
 
   return (
-    <section className="mx-auto max-w-3xl rounded-[2.25rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,244,246,0.96))] px-6 py-8 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-xl sm:px-8 sm:py-10">
+    <section className="mx-auto max-w-3xl rounded-[2.25rem] border border-white/12 bg-white/[0.05] px-6 py-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-8 sm:py-10">
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div>
           <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
@@ -99,14 +100,14 @@ export function FallbackEndingScreen({
           <p className="mt-4 max-w-2xl text-body text-text-secondary">
             {introCopy}
           </p>
-          <p className="mt-4 max-w-2xl text-body text-text-secondary">
+          <p className="mt-4 max-w-2xl text-body text-white/75">
             {explanation}
           </p>
         </div>
 
-        <div className="rounded-[1.75rem] border border-white/80 bg-white/88 p-5 shadow-[0_18px_40px_rgba(45,42,38,0.08)]">
+        <div className="rounded-[1.75rem] border border-white/15 bg-white/[0.07] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-md">
           {venuePhotoUrl ? (
-            <div className="mb-4 overflow-hidden rounded-[1.35rem] border border-white/70">
+            <div className="mb-4 overflow-hidden rounded-[1.35rem] border border-white/15">
               <Image
                 src={venuePhotoUrl}
                 alt={venueName}
@@ -117,24 +118,24 @@ export function FallbackEndingScreen({
               />
             </div>
           ) : null}
-          <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
+          <p className="text-caption font-semibold uppercase tracking-[0.2em] text-[#ff8da8]">
             Suggested venue
           </p>
-          <h2 className="mt-3 text-[1.8rem] font-semibold leading-tight tracking-[-0.03em] text-text">
+          <h2 className="mt-3 text-[1.8rem] font-semibold leading-tight tracking-[-0.03em] text-white">
             {venueName}
           </h2>
-          <p className="mt-2 inline-flex rounded-full border border-muted bg-bg px-3 py-1 text-caption font-medium text-text-secondary">
+          <p className="mt-3 inline-flex rounded-full border border-[rgba(208,61,106,0.4)] bg-[rgba(208,61,106,0.14)] px-3 py-1 text-caption font-medium text-[#ffb3c5]">
             {venueCategoryLabel}
           </p>
-          <p className="mt-4 text-body text-text-secondary">{venueAddress}</p>
+          <p className="mt-4 text-body text-white/70">{venueAddress}</p>
         </div>
       </div>
 
-      <div className="mt-8 rounded-[1.75rem] border border-white/80 bg-white/88 p-5 shadow-[0_18px_40px_rgba(45,42,38,0.08)]">
-        <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
+      <div className="mt-8 rounded-[1.75rem] border border-white/15 bg-white/[0.07] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-md">
+        <p className="text-caption font-semibold uppercase tracking-[0.2em] text-[#ff8da8]">
           {retryEyebrow}
         </p>
-        <p className="mt-3 max-w-2xl text-body text-text-secondary">
+        <p className="mt-3 max-w-2xl text-body text-white/75">
           {retryIntro}
         </p>
 
@@ -150,8 +151,8 @@ export function FallbackEndingScreen({
                 onClick={() => toggleCategory(value)}
                 className={`flex cursor-pointer items-center gap-3 rounded-[1.35rem] border px-4 py-3 text-left transition-colors duration-200 ${
                   isSelected
-                    ? "border-primary bg-primary text-white"
-                    : "border-muted bg-bg text-text-secondary hover:border-text-secondary"
+                    ? "border-[rgba(208,61,106,0.75)] bg-[rgba(208,61,106,0.25)] text-white"
+                    : "border-white/15 bg-white/[0.04] text-white/75 hover:border-white/35 hover:text-white"
                 }`}
               >
                 <CategoryIcon category={value} className="h-5 w-5" />
@@ -178,8 +179,8 @@ export function FallbackEndingScreen({
                 onClick={() => setSelectedBudget(value)}
                 className={`flex cursor-pointer flex-col items-center justify-center rounded-[1.25rem] border px-3 py-3 transition-colors duration-200 ${
                   isSelected
-                    ? "border-secondary bg-secondary-muted text-secondary"
-                    : "border-muted bg-bg text-text-secondary hover:border-text-secondary"
+                    ? "border-[rgba(208,61,106,0.75)] bg-[rgba(208,61,106,0.22)] text-white"
+                    : "border-white/15 bg-white/[0.04] text-white/70 hover:border-white/35 hover:text-white"
                 }`}
               >
                 <span className="text-body font-bold">{symbol}</span>
@@ -192,36 +193,39 @@ export function FallbackEndingScreen({
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
         {!isPartnerConfirmStep ? (
-          <Button
+          <button
+            type="button"
             onClick={onAccept}
             disabled={submittingAction !== null}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#10a37f] bg-[#10a37f] text-body font-semibold text-white shadow-[0_14px_30px_rgba(16,163,127,0.35)] transition-all duration-200 hover:bg-[#0e8e6f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submittingAction === "accept" ? "Locking it in..." : "Lock in this plan"}
-          </Button>
+          </button>
         ) : null}
-        <Button
-          variant="secondary"
+        <button
+          type="button"
           onClick={() =>
             onRetry({
               categories: selectedCategories,
               budget: selectedBudget,
             })
           }
-          disabled={submittingAction !== null || selectedCategories.length === 0}
+          disabled={retryDisabled}
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[rgba(208,61,106,0.55)] bg-[rgba(208,61,106,0.14)] text-body font-semibold text-white transition-all duration-200 hover:bg-[rgba(208,61,106,0.22)] hover:border-[rgba(208,61,106,0.8)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-45"
         >
           {submittingAction === "retry" ? "Refreshing picks..." : retryButtonLabel}
-        </Button>
+        </button>
       </div>
 
       {errorMessage ? (
-        <p className="mt-4 text-body font-medium text-secondary">{errorMessage}</p>
+        <p className="mt-4 text-body font-medium text-[#ffb3c5]">{errorMessage}</p>
       ) : null}
 
       <div className="mt-4">
         <button
           type="button"
           onClick={onStartOver}
-          className="cursor-pointer text-body font-medium text-text-secondary transition-colors duration-200 hover:text-text"
+          className="cursor-pointer text-body font-medium text-white/60 transition-colors duration-200 hover:text-white"
         >
           Start over
         </button>

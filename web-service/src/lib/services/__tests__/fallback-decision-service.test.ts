@@ -162,7 +162,6 @@ describe("fallback-decision-service", () => {
         status: "retry_pending",
         retry_initiator_role: "a",
         retry_a_confirmed_at: expect.any(String),
-        retry_b_confirmed_at: null,
       }),
     );
     expect(mockRerankStoredCandidates).not.toHaveBeenCalled();

@@ -39,6 +39,7 @@ export async function requestFallbackRetry(
 ): Promise<Session> {
   const session = await getFallbackRetrySession(sessionId);
   const confirmedAt = new Date().toISOString();
+  const roleConfirmationUpdate = buildRoleConfirmationUpdate(role, confirmedAt);
 
   await updatePreferenceVibes(sessionId, role, {
     budget: preferences.budget,
@@ -49,28 +50,14 @@ export async function requestFallbackRetry(
     return updateSession(sessionId, {
       status: "retry_pending",
       retry_initiator_role: session.retryInitiatorRole ?? role,
-      retry_a_confirmed_at:
-        role === "a"
-          ? confirmedAt
-          : toNullableIsoString(session.retryAConfirmedAt ?? null),
-      retry_b_confirmed_at:
-        role === "b"
-          ? confirmedAt
-          : toNullableIsoString(session.retryBConfirmedAt ?? null),
+      ...roleConfirmationUpdate,
     });
   }
 
   await updateSession(sessionId, {
     status: "reranking",
     retry_initiator_role: session.retryInitiatorRole ?? getOppositeRole(role),
-    retry_a_confirmed_at:
-      role === "a"
-        ? confirmedAt
-        : toNullableIsoString(session.retryAConfirmedAt ?? null),
-    retry_b_confirmed_at:
-      role === "b"
-        ? confirmedAt
-        : toNullableIsoString(session.retryBConfirmedAt ?? null),
+    ...roleConfirmationUpdate,
   });
 
   try {
@@ -101,14 +88,7 @@ export async function requestFallbackRetry(
     await updateSession(sessionId, {
       status: "retry_pending",
       retry_initiator_role: session.retryInitiatorRole ?? getOppositeRole(role),
-      retry_a_confirmed_at:
-        role === "a"
-          ? confirmedAt
-          : toNullableIsoString(session.retryAConfirmedAt ?? null),
-      retry_b_confirmed_at:
-        role === "b"
-          ? confirmedAt
-          : toNullableIsoString(session.retryBConfirmedAt ?? null),
+      ...roleConfirmationUpdate,
     });
     throw error;
   }
@@ -146,7 +126,9 @@ async function getFallbackRetrySession(sessionId: string): Promise<RetrySession>
     session.status !== "fallback_pending" &&
     session.status !== "retry_pending"
   ) {
-    throw new Error("Session must be in fallback_pending to resolve fallback");
+    throw new Error(
+      "Session must be in fallback_pending or retry_pending to resolve fallback or retry",
+    );
   }
 
   return session;
@@ -218,6 +200,11 @@ function getOppositeRole(role: Role): Role {
   return role === "a" ? "b" : "a";
 }
 
-function toNullableIsoString(value: Date | null): string | null {
-  return value ? value.toISOString() : null;
+function buildRoleConfirmationUpdate(role: Role, confirmedAt: string): {
+  readonly retry_a_confirmed_at?: string;
+  readonly retry_b_confirmed_at?: string;
+} {
+  return role === "a"
+    ? { retry_a_confirmed_at: confirmedAt }
+    : { retry_b_confirmed_at: confirmedAt };
 }

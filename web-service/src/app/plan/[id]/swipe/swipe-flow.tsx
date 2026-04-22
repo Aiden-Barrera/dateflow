@@ -35,8 +35,8 @@ type SessionStatusPayload = {
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
   readonly retryState?: {
-    readonly initiatorRole: string;
-    readonly viewerRole: string;
+    readonly initiatorRole: Role;
+    readonly viewerRole: Role;
     readonly viewerHasConfirmed: boolean;
     readonly partnerHasConfirmed: boolean;
     readonly initiatedByPartner: boolean;
@@ -86,6 +86,8 @@ export function SwipeFlow({
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
+  const loadedFallbackVenueIdRef = useRef<string | null>(null);
+  const loadingFallbackRef = useRef(false);
   const roundSwipesRef = useRef<Record<number, DemoRoundSwipe[]>>({});
   const demoRoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toast, setToast] = useState<string | null>(
@@ -130,28 +132,52 @@ export function SwipeFlow({
     matchedVenueId: string | null,
     retryState: SessionStatusPayload["retryState"] | null = null,
   ) => {
+    // Skip if we've already loaded this exact fallback venue, or a load is in
+    // flight. Prevents the status-sync polling loop from flashing the loading
+    // screen every few seconds while the user is on the fallback pick screen.
+    if (loadingFallbackRef.current) {
+      return;
+    }
+    if (
+      loadedFallbackVenueIdRef.current !== null &&
+      loadedFallbackVenueIdRef.current === (matchedVenueId ?? "")
+    ) {
+      // Callers (e.g. bootstrap) may have flipped status to "loading" before
+      // dispatching here. Restore the fallback view so the UI doesn't stall
+      // on the loading screen.
+      setStatus("fallback");
+      setStatusMessage("");
+      return;
+    }
+
+    loadingFallbackRef.current = true;
     setStatus("loading");
     setStatusMessage("Preparing your fallback pick...");
     setFallbackRetryState(retryState);
 
-    const response = await fetch(`/api/sessions/${sessionId}/venues`);
+    try {
+      const response = await fetch(`/api/sessions/${sessionId}/venues`);
 
-    if (!response.ok) {
-      throw new Error("Failed to load the fallback suggestion.");
+      if (!response.ok) {
+        throw new Error("Failed to load the fallback suggestion.");
+      }
+
+      const body = (await response.json()) as { venues: Venue[] };
+      const resolvedVenue = resolveFallbackVenue(matchedVenueId, body.venues);
+
+      if (!resolvedVenue) {
+        throw new Error("We couldn't find the fallback venue for this session.");
+      }
+
+      setVenues(body.venues);
+      logVenuePhotoSnapshot("fallback", null, body.venues);
+      setFallbackVenue(resolvedVenue);
+      loadedFallbackVenueIdRef.current = matchedVenueId ?? "";
+      setStatus("fallback");
+      setStatusMessage("");
+    } finally {
+      loadingFallbackRef.current = false;
     }
-
-    const body = (await response.json()) as { venues: Venue[] };
-    const resolvedVenue = resolveFallbackVenue(matchedVenueId, body.venues);
-
-    if (!resolvedVenue) {
-      throw new Error("We couldn't find the fallback venue for this session.");
-    }
-
-    setVenues(body.venues);
-    logVenuePhotoSnapshot("fallback", null, body.venues);
-    setFallbackVenue(resolvedVenue);
-    setStatus("fallback");
-    setStatusMessage("");
   }, [logVenuePhotoSnapshot, sessionId]);
 
   const shouldShowPartnerRetryConfirm = useCallback(
@@ -251,8 +277,12 @@ export function SwipeFlow({
       }
 
       if (snapshot.status === "retry_pending" || snapshot.status === "reranking") {
-        void fetchStatus()
-          .then((nextSnapshot) => {
+        const nextSnapshotPromise = snapshot.retryState
+          ? Promise.resolve(snapshot)
+          : fetchStatus();
+
+        void nextSnapshotPromise
+          .then((nextSnapshot: SessionStatusPayload) => {
             if (shouldShowPartnerRetryConfirm(nextSnapshot)) {
               return loadFallback(
                 nextSnapshot.matchedVenueId,
@@ -449,6 +479,7 @@ export function SwipeFlow({
       const result = await requestFallbackRetryDecision(sessionId, preferences);
       setFallbackVenue(null);
       setFallbackRetryState(null);
+      loadedFallbackVenueIdRef.current = null;
 
       if (result.status === "ready_to_swipe") {
         loadedRoundRef.current = null;
