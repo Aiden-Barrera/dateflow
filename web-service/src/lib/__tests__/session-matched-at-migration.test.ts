@@ -13,14 +13,14 @@ const migrationPath = join(
   "..",
   "supabase",
   "migrations",
-  "008_add_matched_at_to_sessions.sql",
+  "20260403175154_create_swipes.sql",
 );
 
 function readMigration(): string {
   return readFileSync(migrationPath, "utf8");
 }
 
-describe("008_add_matched_at_to_sessions.sql", () => {
+describe("20260403175154_create_swipes.sql matched_at changes", () => {
   it("adds a persisted matched_at column to sessions", () => {
     const migration = readMigration();
 

@@ -73,8 +73,8 @@ dateflow-2/
 │   │
 │   ├── supabase/
 │   │   └── migrations/                  # Database migrations
-│   │       ├── 001_create_sessions.sql
-│   │       └── 002_create_preferences.sql
+│   │       ├── 20260402232644_create_sessions.sql
+│   │       └── 20260402233103_create_preferences.sql
 │   │
 │   ├── package.json
 │   ├── bun.lock
@@ -544,8 +544,8 @@ Follow OWASP top 10 guidelines. Validate inputs, parameterize queries, never exp
 - `web-service/src/components/vibe-screen.tsx` — Category selection
 
 **Database:**
-- `web-service/supabase/migrations/001_create_sessions.sql`
-- `web-service/supabase/migrations/002_create_preferences.sql`
+- `web-service/supabase/migrations/20260402232644_create_sessions.sql`
+- `web-service/supabase/migrations/20260402233103_create_preferences.sql`
 
 ---
 

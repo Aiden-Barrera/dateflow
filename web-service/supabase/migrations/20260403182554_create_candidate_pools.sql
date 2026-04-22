@@ -1,4 +1,4 @@
--- 005_create_candidate_pools.sql
+-- 20260403182554_create_candidate_pools.sql
 -- DS-03A: Candidate Pool Persistence — stores reusable venue candidates and
 -- the surfaced generation batches built from them.
 
