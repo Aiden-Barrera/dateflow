@@ -1,4 +1,4 @@
--- 001_create_sessions.sql
+-- 20260402232644_create_sessions.sql
 -- DS-01: Session Management — creates the core sessions table.
 --
 -- This is the first table in the system. Every other feature (preferences,

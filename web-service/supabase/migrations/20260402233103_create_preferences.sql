@@ -1,4 +1,4 @@
--- 002_create_preferences.sql
+-- 20260402233103_create_preferences.sql
 -- DS-02: Preference Input — stores each person's date preferences.
 --
 -- Each session has exactly two preference rows: one for role 'a' (Person A)

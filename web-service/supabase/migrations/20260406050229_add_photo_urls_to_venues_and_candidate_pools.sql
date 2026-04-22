@@ -17,3 +17,4 @@ set photo_urls = case
   else array[photo_url]
 end
 where coalesce(array_length(photo_urls, 1), 0) = 0;
+-- 20260406050229_add_photo_urls_to_venues_and_candidate_pools.sql

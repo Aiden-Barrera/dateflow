@@ -113,13 +113,13 @@ dateflow/
 │   │   │       └── candidate-pool.ts
 │   ├── supabase/
 │   │   └── migrations/
-│   │       ├── 001_create_sessions.sql
-│   │       ├── 002_create_preferences.sql
-│   │       ├── 003_create_venues.sql
-│   │       ├── 004_create_swipes.sql
-│   │       ├── 005_create_candidate_pools.sql
-│   │       ├── 006_extend_sessions_statuses.sql
-│   │       └── 007_fix_record_swipe_match_function.sql
+│   │       ├── 20260402232644_create_sessions.sql
+│   │       ├── 20260402233103_create_preferences.sql
+│   │       ├── 20260402233323_create_venues.sql
+│   │       ├── 20260403175154_create_swipes.sql
+│   │       ├── 20260403182554_create_candidate_pools.sql
+│   │       ├── 20260421151535_enrich_venues.sql
+│   │       └── 20260421202552_add_retry_coordination_fields.sql
 │   ├── package.json
 │   ├── bun.lock
 │   ├── next.config.ts
@@ -263,13 +263,17 @@ Current schema is no longer just `sessions` and `preferences`.
 
 ### Migration order
 
-1. `001_create_sessions.sql`
-2. `002_create_preferences.sql`
-3. `003_create_venues.sql`
-4. `004_create_swipes.sql`
-5. `005_create_candidate_pools.sql`
-6. `006_extend_sessions_statuses.sql`
-7. `007_fix_record_swipe_match_function.sql`
+1. `20260402232644_create_sessions.sql`
+2. `20260402233103_create_preferences.sql`
+3. `20260402233323_create_venues.sql`
+4. `20260403175154_create_swipes.sql`
+5. `20260403182554_create_candidate_pools.sql`
+6. `20260406050229_add_photo_urls_to_venues_and_candidate_pools.sql`
+7. `20260406054524_add_invitee_display_name_to_sessions.sql`
+8. `20260413235224_create_accounts_and_session_accounts.sql`
+9. `20260414154220_secure_accounts_and_session_accounts.sql`
+10. `20260421151535_enrich_venues.sql`
+11. `20260421202552_add_retry_coordination_fields.sql`
 
 ---
 

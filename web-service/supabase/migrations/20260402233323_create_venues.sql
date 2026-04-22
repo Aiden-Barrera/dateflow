@@ -1,4 +1,4 @@
--- 003_create_venues.sql
+-- 20260402233323_create_venues.sql
 -- DS-03: Venue Generation — stores venues generated for each session.
 --
 -- A session has up to 12 venues across 3 rounds (4 per round). Each venue is

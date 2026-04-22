@@ -1,6 +1,7 @@
--- 008_add_matched_at_to_sessions.sql
--- Persist the actual time a session became matched instead of inferring it
--- from sessions.created_at.
+-- 20260403175154_create_swipes.sql
+-- DS-04: Swipe & Match — stores per-role swipe decisions, persists
+-- matched_at, and provides an atomic RPC to record a swipe and detect a
+-- mutual match.
 
 ALTER TABLE sessions
 ADD COLUMN matched_at timestamptz;
@@ -19,7 +20,21 @@ SET matched_at = null
 WHERE status = 'ready_to_swipe'
   AND matched_at IS NOT NULL;
 
-DROP FUNCTION IF EXISTS record_swipe_and_check_match(uuid, uuid, text, boolean);
+CREATE TABLE swipes (
+  id                           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id                   uuid        NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+  venue_id                     uuid        NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
+  role                         text        NOT NULL CHECK (role IN ('a', 'b')),
+  liked                        boolean     NOT NULL,
+  created_at                   timestamptz NOT NULL DEFAULT now(),
+
+  UNIQUE (session_id, venue_id, role)
+);
+
+CREATE INDEX idx_swipes_session_role
+  ON swipes (session_id, role);
+
+ALTER TABLE swipes ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION record_swipe_and_check_match(
   input_session_id uuid,

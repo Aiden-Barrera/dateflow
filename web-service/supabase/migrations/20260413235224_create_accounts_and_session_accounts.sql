@@ -17,3 +17,4 @@ CREATE TABLE session_accounts (
 
 CREATE INDEX idx_session_accounts_account
   ON session_accounts (account_id);
+-- 20260413235224_create_accounts_and_session_accounts.sql

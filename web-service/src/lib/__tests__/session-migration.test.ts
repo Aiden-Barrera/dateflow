@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-describe("001_create_sessions.sql", () => {
+describe("20260402232644_create_sessions.sql", () => {
   const migration = readFileSync(
-    resolve(process.cwd(), "supabase/migrations/001_create_sessions.sql"),
+    resolve(
+      process.cwd(),
+      "supabase/migrations/20260402232644_create_sessions.sql",
+    ),
     "utf8",
   );
 
