@@ -73,7 +73,16 @@ describe("searchNearbyWithCache", () => {
 
   it("calls API and caches results on cache miss", async () => {
     mockCache.get.mockResolvedValueOnce(null);
-    vi.mocked(searchNearby).mockResolvedValueOnce(fakeCandidates);
+    vi.mocked(searchNearby).mockResolvedValueOnce([
+      fakeCandidates[0],
+      {
+        ...fakeCandidates[0],
+        placeId: "chain-1",
+        name: "Jollibee",
+        types: ["restaurant", "food"],
+        primaryType: "restaurant",
+      },
+    ]);
     mockCache.set.mockResolvedValueOnce(undefined);
 
     const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
