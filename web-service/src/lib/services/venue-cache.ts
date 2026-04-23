@@ -15,7 +15,7 @@ import type { Location } from "../types/preference";
  */
 export class VenueCache {
   private redis = getRedisClient();
-  private static readonly KEY_VERSION = "v2";
+  private static readonly KEY_VERSION = "v3";
 
   private getValuePreview(value: unknown): string {
     if (typeof value === "string") {
@@ -36,7 +36,7 @@ export class VenueCache {
    * Categories are sorted alphabetically so different orderings produce the same key.
    * Price level is included so different budget tiers cache separately.
    *
-   * Example: `venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:2`
+   * Example: `venue:cache:v3:30.27:-97.74:BAR:RESTAURANT:2`
    */
   buildKey(
     location: Location,
