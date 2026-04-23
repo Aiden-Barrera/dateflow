@@ -394,6 +394,7 @@ export function InviteReadyState({
   errorMessage,
   onCopyInvite,
 }: InviteReadyStateProps) {
+  const showLiveSessionAction = sessionStatus !== "pending_b";
   const liveSessionLabel =
     sessionStatus === "matched"
       ? "View your result"
@@ -433,12 +434,14 @@ export function InviteReadyState({
         <Button onClick={onCopyInvite}>
           {copyState === "copied" ? "Copied invite link" : "Copy invite link"}
         </Button>
-        <a
-          href={liveSessionHref}
-          className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.04] text-body font-semibold text-white transition-colors hover:bg-white/10"
-        >
-          {liveSessionLabel}
-        </a>
+        {showLiveSessionAction ? (
+          <a
+            href={liveSessionHref}
+            className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.04] text-body font-semibold text-white transition-colors hover:bg-white/10"
+          >
+            {liveSessionLabel}
+          </a>
+        ) : null}
       </div>
 
       {errorMessage ? <p className="text-body text-error">{errorMessage}</p> : null}
