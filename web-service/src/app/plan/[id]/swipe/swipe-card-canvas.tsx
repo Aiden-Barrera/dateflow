@@ -265,6 +265,8 @@ export function SwipeCardCanvas({
     }
   }
 
+  const isAnimating = Boolean(animatingSwipe);
+
   // ── Animated overlay values derived from spring (no React state) ──────────
   // These use @react-spring/web's .to() — they update the DOM directly,
   // bypassing React's render cycle entirely.
@@ -302,8 +304,6 @@ export function SwipeCardCanvas({
     const s = Math.min(Math.abs(dragRatioFromX(x)), 1);
     return 0.94 + s * 0.12;
   });
-
-  const isAnimating = Boolean(animatingSwipe);
 
   return (
     <div className="relative min-h-[640px]">
