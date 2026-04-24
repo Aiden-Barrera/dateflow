@@ -12,7 +12,7 @@ import {
   type SwipeAnimation,
   type DragIntent,
 } from "./use-swipe-physics";
-import { VenueCardContent, PreviewVenueCard } from "./venue-card-content";
+import { VenueCardContent } from "./venue-card-content";
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
@@ -308,10 +308,10 @@ export function SwipeCardCanvas({
   return (
     <div className="relative min-h-[640px]">
 
-      {/* Card 3 — deepest, only visible during drag/swipe */}
-      {(nextVenue || thirdVenue) ? (
+      {/* Card 3 — deepest, only visible during drag/swipe, same layout as top card */}
+      {thirdVenue ? (
         <animated.div
-          className="pointer-events-none absolute inset-x-5 top-0 bottom-0 overflow-hidden rounded-[2.2rem] border border-white/20 bg-white"
+          className="pointer-events-none absolute inset-x-5 top-0 bottom-0 overflow-hidden rounded-[2.2rem] border border-white/20 bg-white shadow-[0_10px_28px_rgba(45,42,38,0.10)]"
           style={{
             y: card3Spring.y,
             scale: card3Spring.scale,
@@ -319,14 +319,21 @@ export function SwipeCardCanvas({
           }}
           aria-hidden="true"
         >
-          {thirdVenue ? <PreviewVenueCard venue={thirdVenue} /> : null}
+          <VenueCardContent
+            venue={thirdVenue}
+            cardIndex={cardIndex + 2}
+            totalCards={totalCards}
+            submitting={false}
+            isAnimating={false}
+            onSwipe={() => undefined}
+          />
         </animated.div>
       ) : null}
 
-      {/* Card 2 — peek card, hidden at rest, slides in as top card is dragged */}
+      {/* Card 2 — peek card, hidden at rest, slides in as top card is dragged, same layout as top card */}
       {nextVenue ? (
         <animated.div
-          className="pointer-events-none absolute inset-x-3 top-0 bottom-0 overflow-hidden rounded-[2rem] border border-white/40 bg-white shadow-[0_14px_36px_rgba(45,42,38,0.10)]"
+          className="pointer-events-none absolute inset-x-3 top-0 bottom-0 overflow-hidden rounded-[2rem] border border-white/40 bg-white shadow-[0_14px_36px_rgba(45,42,38,0.12)]"
           style={{
             y: card2Spring.y,
             scale: card2Spring.scale,
@@ -334,7 +341,14 @@ export function SwipeCardCanvas({
           }}
           aria-hidden="true"
         >
-          <PreviewVenueCard venue={nextVenue} />
+          <VenueCardContent
+            venue={nextVenue}
+            cardIndex={cardIndex + 1}
+            totalCards={totalCards}
+            submitting={false}
+            isAnimating={false}
+            onSwipe={() => undefined}
+          />
         </animated.div>
       ) : null}
 
