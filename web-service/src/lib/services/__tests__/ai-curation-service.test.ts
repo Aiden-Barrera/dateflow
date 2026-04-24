@@ -234,7 +234,7 @@ describe("scoreAndCurate", () => {
     expect(getAiCurationConfig()).toEqual({
       enabled: true,
       provider: "anthropic",
-      promptVersion: "v1",
+      promptVersion: "v2.1",
     });
   });
 
@@ -397,7 +397,7 @@ describe("scoreAndCurate", () => {
       venues: Array<{ placeId: string }>;
     };
 
-    expect(promptPayload.promptVersion).toBe("v1");
+    expect(promptPayload.promptVersion).toBe("v2.1");
     expect(promptPayload.venues).toHaveLength(10);
     expect(promptPayload.venues[0]?.placeId).toBe("candidate-1");
     expect(promoted?.score.firstDateSuitability).toBe(0.99);

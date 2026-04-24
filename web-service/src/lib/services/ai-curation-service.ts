@@ -11,7 +11,7 @@ import { scoreSafety } from "./safety-filter";
 
 const REVIEW_COUNT_CAP = 500;
 const DEFAULT_AI_FINALIST_COUNT = 10;
-const DEFAULT_PROMPT_VERSION = "v1";
+const DEFAULT_PROMPT_VERSION = "v2.1";
 const DEFAULT_AI_CURATION_PROVIDER: AiCurationProvider = "gemini";
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
