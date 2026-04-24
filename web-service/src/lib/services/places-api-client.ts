@@ -158,12 +158,24 @@ const DENY_LISTED_PLACE_TYPES = new Set<string>([
   "gas_station",
   "funeral_home",
   "car_wash",
+  "fast_food_restaurant",
+  "chicken_restaurant",
+  "hamburger_restaurant",
+]);
+
+const FAST_FOOD_PLACE_TYPES = new Set<string>([
+  "fast_food_restaurant",
+  "food_court",
+  "hamburger_restaurant",
+  "chicken_restaurant",
+  "sandwich_shop",
 ]);
 
 const FAST_FOOD_CHAIN_PATTERNS: readonly RegExp[] = [
   /\bmcdonald'?s\b/i,
   /\btaco bell\b/i,
   /\bkfc\b/i,
+  /\bjollibee\b/i,
   /\bburger king\b/i,
   /\bwendy'?s\b/i,
   /\bchick-?fil-?a\b/i,
@@ -182,16 +194,40 @@ type FirstDateVenueLike = {
   readonly primaryType?: string | null;
 };
 
-export function isDeniedFirstDateVenue(place: FirstDateVenueLike): boolean {
-  if (isFastFoodChainName(place.name)) {
+function hasFastFoodType(place: FirstDateVenueLike): boolean {
+  if (place.primaryType && FAST_FOOD_PLACE_TYPES.has(place.primaryType)) {
     return true;
   }
 
+  return place.types.some((type) => FAST_FOOD_PLACE_TYPES.has(type));
+}
+
+function isGenericRestaurantLike(place: FirstDateVenueLike): boolean {
+  if (place.primaryType === "restaurant") {
+    return true;
+  }
+
+  return place.types.includes("restaurant") && !place.primaryType;
+}
+
+export function isDeniedFirstDateVenue(place: FirstDateVenueLike): boolean {
   if (place.primaryType && DENY_LISTED_PLACE_TYPES.has(place.primaryType)) {
     return true;
   }
 
-  return place.types.some((type) => DENY_LISTED_PLACE_TYPES.has(type));
+  if (place.types.some((type) => DENY_LISTED_PLACE_TYPES.has(type))) {
+    return true;
+  }
+
+  if (hasFastFoodType(place)) {
+    return true;
+  }
+
+  if (isGenericRestaurantLike(place) && isFastFoodChainName(place.name)) {
+    return true;
+  }
+
+  return false;
 }
 
 export function filterDeniedFirstDateVenues<T extends FirstDateVenueLike>(
@@ -357,7 +393,11 @@ export async function searchNearby(
       ...place,
       name: place.displayName.text,
     })),
-  ).map(({ name: _name, ...place }) => place);
+  ).map((place) => {
+    const { name, ...rest } = place;
+    void name;
+    return rest;
+  });
 
   const candidates: readonly PlaceCandidate[] = places.map((place) => {
     const photoReferences = (place.photos ?? []).map((photo) => photo.name);

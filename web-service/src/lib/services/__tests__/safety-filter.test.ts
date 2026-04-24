@@ -85,6 +85,27 @@ describe("safety-filter", () => {
       expect(result).toHaveLength(0);
     });
 
+    it("rejects fast-food venues even when they also carry restaurant tags", () => {
+      const fastFoodVenue = makeCandidate({
+        placeId: "fastfood_1",
+        name: "Jollibee",
+        types: [
+          "chicken_restaurant",
+          "fast_food_restaurant",
+          "restaurant",
+          "food",
+        ],
+        primaryType: "fast_food_restaurant",
+        rating: 4.5,
+        reviewCount: 900,
+      });
+
+      const result = applySafetyFilter([fastFoodVenue]);
+
+      expect(result).toHaveLength(0);
+      expect(scoreSafety(fastFoodVenue)).toBe(0);
+    });
+
     it("keeps safe venues and removes unsafe ones from the same list", () => {
       const good = makeCandidate({ placeId: "good_1" });
       const bad = makeCandidate({ placeId: "bad_1", rating: 1.0 });

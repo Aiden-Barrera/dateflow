@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { InviteReadyState } from "../person-a-flow";
 
 describe("InviteReadyState", () => {
-  it("renders a production-ready waiting state with share and re-entry actions", () => {
+  it("renders a production-ready waiting state without a redundant re-entry action", () => {
     const html = renderToStaticMarkup(
       <InviteReadyState
         sessionId="session-1"
@@ -20,11 +20,11 @@ describe("InviteReadyState", () => {
     );
     expect(html).toContain("https://dateflow.app/plan/session-1");
     expect(html).toContain("Copy invite link");
-    expect(html).toContain("Open live session");
+    expect(html).not.toContain("Open live session");
     expect(html).not.toContain("Person B can jump in now");
     expect(html).not.toContain("Run full demo as Person B");
     expect(html).not.toContain("?demo=1");
-    expect(html).not.toContain("<a href=\"/plan/session-1\" class=\"block\"><button");
+    expect(html).not.toContain('href="/plan/session-1"');
   });
 
   it("promotes re-entry once the session is ready or matched", () => {

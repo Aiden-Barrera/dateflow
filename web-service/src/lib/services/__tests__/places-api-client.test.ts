@@ -406,7 +406,7 @@ describe("places-api-client", () => {
       expect(results.map((result) => result.placeId)).toEqual(["rink-1"]);
     });
 
-    it("excludes fast-food chains by name while keeping cafes", async () => {
+    it("excludes fast-food venues by type first, then by generic chain-name fallback", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -423,6 +423,28 @@ describe("places-api-client", () => {
               photos: [],
             },
             {
+              id: "fast-food-typed",
+              displayName: { text: "Quick Bites" },
+              formattedAddress: "4 Food Ct",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["fast_food_restaurant", "restaurant", "food"],
+              primaryType: "fast_food_restaurant",
+              rating: 4.2,
+              userRatingCount: 430,
+              photos: [],
+            },
+            {
+              id: "fast-food-2",
+              displayName: { text: "Jollibee" },
+              formattedAddress: "4 Joy Ave",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["restaurant", "food", "point_of_interest"],
+              primaryType: "restaurant",
+              rating: 4.1,
+              userRatingCount: 980,
+              photos: [],
+            },
+            {
               id: "cafe-1",
               displayName: { text: "Morning Bloom Cafe" },
               formattedAddress: "5 Slow Date St",
@@ -433,13 +455,68 @@ describe("places-api-client", () => {
               userRatingCount: 210,
               photos: [],
             },
+            {
+              id: "bistro-1",
+              displayName: { text: "Corner Bistro" },
+              formattedAddress: "6 Slow Date St",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["restaurant", "food"],
+              primaryType: "restaurant",
+              rating: 4.5,
+              userRatingCount: 340,
+              photos: [],
+            },
           ],
         }),
       });
 
       const results = await searchNearby(location, 2000, ["restaurant"], 2);
 
-      expect(results.map((result) => result.placeId)).toEqual(["cafe-1"]);
+      expect(results.map((result) => result.placeId)).toEqual([
+        "cafe-1",
+        "bistro-1",
+      ]);
+    });
+
+    it("excludes fast-food venues by Google type even when they also look like restaurants", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          places: [
+            {
+              id: "fast-food-2",
+              displayName: { text: "Jollibee" },
+              formattedAddress: "6 Chain Ln",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: [
+                "chicken_restaurant",
+                "fast_food_restaurant",
+                "restaurant",
+                "food",
+              ],
+              primaryType: "fast_food_restaurant",
+              rating: 4.4,
+              userRatingCount: 900,
+              photos: [],
+            },
+            {
+              id: "restaurant-1",
+              displayName: { text: "Cafe Magnolia" },
+              formattedAddress: "7 Date St",
+              location: { latitude: 30.0, longitude: -97.0 },
+              types: ["restaurant", "cafe", "food"],
+              primaryType: "restaurant",
+              rating: 4.6,
+              userRatingCount: 320,
+              photos: [],
+            },
+          ],
+        }),
+      });
+
+      const results = await searchNearby(location, 2000, ["restaurant"], 4);
+
+      expect(results.map((result) => result.placeId)).toEqual(["restaurant-1"]);
     });
   });
 });

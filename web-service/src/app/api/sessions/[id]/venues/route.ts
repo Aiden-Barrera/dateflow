@@ -42,7 +42,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     if (
       session.status !== "ready_to_swipe" &&
       session.status !== "matched" &&
-      session.status !== "fallback_pending"
+      session.status !== "fallback_pending" &&
+      session.status !== "retry_pending"
     ) {
       return NextResponse.json(
         { error: "Venues are not ready yet" },

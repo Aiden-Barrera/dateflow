@@ -58,7 +58,7 @@ describe("venue-retry-service contract", () => {
     expect(selected.map((candidate) => candidate.placeId)).not.toContain("place-3");
   });
 
-  it("reuses surfaced venues when excluding them would leave too few options", () => {
+  it("stops at the remaining unique venues instead of reusing surfaced ones", () => {
     const candidates = Array.from({ length: 12 }, (_, index) =>
       makeCandidatePoolItem(index + 1),
     );
@@ -69,8 +69,19 @@ describe("venue-retry-service contract", () => {
       "place-3",
     ]);
 
-    expect(selected).toHaveLength(12);
-    expect(selected.map((candidate) => candidate.placeId)).toContain("place-1");
+    expect(selected).toHaveLength(9);
+    expect(selected.map((candidate) => candidate.placeId)).not.toContain("place-1");
+    expect(selected.map((candidate) => candidate.placeId)).toEqual([
+      "place-4",
+      "place-5",
+      "place-6",
+      "place-7",
+      "place-8",
+      "place-9",
+      "place-10",
+      "place-11",
+      "place-12",
+    ]);
   });
 });
 

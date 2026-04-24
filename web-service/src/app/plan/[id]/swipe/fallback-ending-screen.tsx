@@ -14,6 +14,7 @@ type FallbackEndingScreenProps = {
   readonly initialRetryBudget: BudgetLevel;
   readonly venueAddress: string;
   readonly explanation: string;
+  readonly retryStep?: "default" | "partner_confirm";
   readonly onAccept: () => void;
   readonly onRetry: (preferences: {
     categories: readonly Category[];
@@ -46,6 +47,7 @@ export function FallbackEndingScreen({
   initialRetryBudget,
   venueAddress,
   explanation,
+  retryStep = "default",
   onAccept,
   onRetry,
   onStartOver,
@@ -67,6 +69,21 @@ export function FallbackEndingScreen({
     );
   }
 
+  const isPartnerConfirmStep = retryStep === "partner_confirm";
+  const eyebrow = isPartnerConfirmStep
+    ? "New mix request"
+    : "Dateflow fallback pick";
+  const title = isPartnerConfirmStep
+    ? "Your partner wants a new mix"
+    : "No mutual match this time";
+  const introCopy = isPartnerConfirmStep
+    ? "Keep your current vibes or tweak them below, then confirm the retry together."
+    : `You and ${creatorName} did not land on the same venue, so Dateflow pulled forward the best next option instead of ending the night flat.`;
+  const retryEyebrow = isPartnerConfirmStep ? "Confirm the new mix" : "Try a new mix";
+  const retryIntro = isPartnerConfirmStep
+    ? "You can keep your current vibe selections as-is or update them before you confirm the refresh."
+    : `If ${venueName} is not the move, tighten the vibe below and Dateflow will reshuffle the shortlist around a fresh direction.`;
+  const retryButtonLabel = isPartnerConfirmStep ? "Confirm new mix" : "Try a new mix";
   const retryDisabled =
     submittingAction !== null || selectedCategories.length === 0;
 
@@ -74,14 +91,14 @@ export function FallbackEndingScreen({
     <section className="mx-auto max-w-3xl rounded-[2.25rem] border border-white/12 bg-white/[0.05] px-6 py-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:px-8 sm:py-10">
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <div>
-          <p className="text-caption font-semibold uppercase tracking-[0.24em] text-[#ff8da8]">
-            Dateflow fallback pick
+          <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
+            {eyebrow}
           </p>
-          <h1 className="mt-3 max-w-xl text-[clamp(2.5rem,6vw,4.5rem)] font-semibold leading-[0.94] tracking-[-0.05em] text-white">
-            No mutual match this time
+          <h1 className="mt-3 max-w-xl text-[clamp(2.5rem,6vw,4.5rem)] font-semibold leading-[0.94] tracking-[-0.05em] text-text">
+            {title}
           </h1>
-          <p className="mt-4 max-w-2xl text-body text-white/75">
-            You and {creatorName} did not land on the same venue, so Dateflow pulled forward the best next option instead of ending the night flat.
+          <p className="mt-4 max-w-2xl text-body text-text-secondary">
+            {introCopy}
           </p>
           <p className="mt-4 max-w-2xl text-body text-white/75">
             {explanation}
@@ -116,10 +133,10 @@ export function FallbackEndingScreen({
 
       <div className="mt-8 rounded-[1.75rem] border border-white/15 bg-white/[0.07] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-md">
         <p className="text-caption font-semibold uppercase tracking-[0.2em] text-[#ff8da8]">
-          Try a new mix
+          {retryEyebrow}
         </p>
         <p className="mt-3 max-w-2xl text-body text-white/75">
-          If {venueName} is not the move, tighten the vibe below and Dateflow will reshuffle the shortlist around a fresh direction.
+          {retryIntro}
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -175,14 +192,16 @@ export function FallbackEndingScreen({
       </div>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={onAccept}
-          disabled={submittingAction !== null}
-          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#10a37f] bg-[#10a37f] text-body font-semibold text-white shadow-[0_14px_30px_rgba(16,163,127,0.35)] transition-all duration-200 hover:bg-[#0e8e6f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {submittingAction === "accept" ? "Locking it in..." : "Lock in this plan"}
-        </button>
+        {!isPartnerConfirmStep ? (
+          <button
+            type="button"
+            onClick={onAccept}
+            disabled={submittingAction !== null}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#10a37f] bg-[#10a37f] text-body font-semibold text-white shadow-[0_14px_30px_rgba(16,163,127,0.35)] transition-all duration-200 hover:bg-[#0e8e6f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submittingAction === "accept" ? "Locking it in..." : "Lock in this plan"}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={() =>
@@ -194,7 +213,7 @@ export function FallbackEndingScreen({
           disabled={retryDisabled}
           className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[rgba(208,61,106,0.55)] bg-[rgba(208,61,106,0.14)] text-body font-semibold text-white transition-all duration-200 hover:bg-[rgba(208,61,106,0.22)] hover:border-[rgba(208,61,106,0.8)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {submittingAction === "retry" ? "Refreshing picks..." : "Try a new mix"}
+          {submittingAction === "retry" ? "Refreshing picks..." : retryButtonLabel}
         </button>
       </div>
 

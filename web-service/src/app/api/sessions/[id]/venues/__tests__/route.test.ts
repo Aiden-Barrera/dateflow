@@ -131,4 +131,19 @@ describe("GET /api/sessions/[id]/venues", () => {
     expect(body.venues).toEqual(fakeVenues);
     expect(mockGetVenues).toHaveBeenCalledWith("session-123", undefined);
   });
+
+  it("returns venues for retry-pending sessions so the partner confirmation screen can reopen the fallback pick", async () => {
+    mockGetSession.mockResolvedValueOnce({
+      ...readySession,
+      status: "retry_pending",
+      matchedVenueId: "venue-1",
+    });
+
+    const response = await GET(makeRequest(), makeParams());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.venues).toEqual(fakeVenues);
+    expect(mockGetVenues).toHaveBeenCalledWith("session-123", undefined);
+  });
 });

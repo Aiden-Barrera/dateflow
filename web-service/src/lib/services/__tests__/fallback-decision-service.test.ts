@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acceptFallbackSuggestion,
   requestFallbackRetry,
+  shouldWaitForPartnerRetryConfirmation,
 } from "../fallback-decision-service";
 import type { SessionRow } from "../../types/session";
 import type { RetryPreferencesInput } from "../venue-retry-service";
@@ -48,10 +49,16 @@ const baseRow: SessionRow = {
   id: "session-1",
   status: "fallback_pending",
   creator_display_name: "Alex",
+  invitee_display_name: null,
   created_at: "2026-04-02T12:00:00Z",
   expires_at: "2026-04-04T12:00:00Z",
   matched_venue_id: "venue-12",
   matched_at: null,
+  retry_initiator_role: null,
+  retry_a_confirmed_at: null,
+  retry_b_confirmed_at: null,
+  retry_a_preferences: null,
+  retry_b_preferences: null,
 };
 
 describe("fallback-decision-service", () => {
@@ -91,13 +98,17 @@ describe("fallback-decision-service", () => {
     expect(session.matchedAt?.toISOString()).toBe("2026-04-03T16:00:00.000Z");
   });
 
-  it("moves a fallback session into retry_pending when users request retry", async () => {
+  it("stores the first retry confirmation and waits for the partner", async () => {
     mockUpdateSingle.mockResolvedValue({
       data: {
         ...baseRow,
-        status: "ready_to_swipe",
-        matched_venue_id: null,
-        matched_at: null,
+        retry_initiator_role: "a",
+        retry_a_confirmed_at: "2026-04-03T16:00:00Z",
+        retry_a_preferences: {
+          categories: ["BAR", "ACTIVITY"],
+          budget: "UPSCALE",
+          radiusMeters: null,
+        },
       },
       error: null,
     });
@@ -106,26 +117,103 @@ describe("fallback-decision-service", () => {
       categories: ["BAR", "ACTIVITY"],
       budget: "UPSCALE",
     };
-    const session = await requestFallbackRetry("session-1", retryPreferences);
+    const session = await requestFallbackRetry("session-1", "a", retryPreferences);
 
-    expect(mockUpdate).toHaveBeenNthCalledWith(1, { status: "reranking" });
-    expect(mockRerankStoredCandidates).toHaveBeenCalledWith(
-      "session-1",
-      retryPreferences,
-    );
-    expect(mockUpdate).toHaveBeenNthCalledWith(2, {
-      status: "ready_to_swipe",
-      matched_venue_id: null,
-      matched_at: null,
+    expect(mockUpdate).toHaveBeenNthCalledWith(1, {
+      retry_initiator_role: "a",
+      retry_a_confirmed_at: expect.any(String),
+      retry_a_preferences: {
+        categories: ["BAR", "ACTIVITY"],
+        budget: "UPSCALE",
+        radiusMeters: null,
+      },
     });
-    expect(mockDelete).toHaveBeenCalledTimes(1);
-    expect(mockDeleteEq).toHaveBeenCalledWith("session_id", "session-1");
-    expect(session.status).toBe("ready_to_swipe");
-    expect(session.matchedVenueId).toBeNull();
-    expect(session.matchedAt).toBeNull();
+    expect(mockRerankStoredCandidates).not.toHaveBeenCalled();
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(session.status).toBe("fallback_pending");
   });
 
-  it("moves a fallback session to retry_pending when rerank requires full regeneration", async () => {
+  it("reranks only after both users confirm retry preferences", async () => {
+    mockSelectSingle.mockResolvedValue({
+      data: {
+        ...baseRow,
+        retry_initiator_role: "a",
+        retry_a_confirmed_at: "2026-04-03T15:55:00Z",
+        retry_a_preferences: {
+          categories: ["BAR"],
+          budget: "UPSCALE",
+          radiusMeters: null,
+        },
+      },
+      error: null,
+    });
+    mockUpdateSingle
+      .mockResolvedValueOnce({
+        data: {
+          ...baseRow,
+          retry_initiator_role: "a",
+          retry_a_confirmed_at: "2026-04-03T15:55:00Z",
+          retry_a_preferences: {
+            categories: ["BAR"],
+            budget: "UPSCALE",
+            radiusMeters: null,
+          },
+          retry_b_confirmed_at: "2026-04-03T16:00:00Z",
+          retry_b_preferences: {
+            categories: ["ACTIVITY"],
+            budget: "MODERATE",
+            radiusMeters: null,
+          },
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { ...baseRow, status: "reranking" },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          ...baseRow,
+          status: "ready_to_swipe",
+          matched_venue_id: null,
+          matched_at: null,
+          retry_initiator_role: null,
+          retry_a_confirmed_at: null,
+          retry_b_confirmed_at: null,
+          retry_a_preferences: null,
+          retry_b_preferences: null,
+        },
+        error: null,
+      });
+
+    const session = await requestFallbackRetry("session-1", "b", {
+      categories: ["ACTIVITY"],
+      budget: "MODERATE",
+    });
+
+    expect(mockRerankStoredCandidates).toHaveBeenCalledWith("session-1", {
+      categories: ["BAR", "ACTIVITY"],
+      budget: "MODERATE",
+      radiusMeters: undefined,
+    });
+    expect(mockDeleteEq).toHaveBeenCalledWith("session_id", "session-1");
+    expect(session.status).toBe("ready_to_swipe");
+  });
+
+  it("moves a fully confirmed retry into retry_pending when rerank requires full regeneration", async () => {
+    mockSelectSingle.mockResolvedValue({
+      data: {
+        ...baseRow,
+        retry_initiator_role: "a",
+        retry_a_confirmed_at: "2026-04-03T15:55:00Z",
+        retry_a_preferences: {
+          categories: ["BAR"],
+          budget: "UPSCALE",
+          radiusMeters: null,
+        },
+      },
+      error: null,
+    });
     mockRerankStoredCandidates.mockResolvedValue({
       strategy: "full_regeneration",
       generationBatchId: "",
@@ -135,45 +223,120 @@ describe("fallback-decision-service", () => {
     });
     mockUpdateSingle
       .mockResolvedValueOnce({
+        data: {
+          ...baseRow,
+          retry_initiator_role: "a",
+          retry_a_confirmed_at: "2026-04-03T15:55:00Z",
+          retry_a_preferences: {
+            categories: ["BAR"],
+            budget: "UPSCALE",
+            radiusMeters: null,
+          },
+          retry_b_confirmed_at: "2026-04-03T16:00:00Z",
+          retry_b_preferences: {
+            categories: ["ACTIVITY"],
+            budget: "MODERATE",
+            radiusMeters: null,
+          },
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
         data: { ...baseRow, status: "reranking" },
         error: null,
       })
       .mockResolvedValueOnce({
-        data: { ...baseRow, status: "retry_pending" },
+        data: {
+          ...baseRow,
+          status: "retry_pending",
+          matched_venue_id: null,
+          matched_at: null,
+          retry_initiator_role: null,
+          retry_a_confirmed_at: null,
+          retry_b_confirmed_at: null,
+          retry_a_preferences: null,
+          retry_b_preferences: null,
+        },
         error: null,
       });
 
-    const session = await requestFallbackRetry("session-1", {
-      categories: ["BAR"],
+    const session = await requestFallbackRetry("session-1", "b", {
+      categories: ["ACTIVITY"],
       budget: "MODERATE",
     });
 
-    expect(mockUpdate).toHaveBeenNthCalledWith(2, { status: "retry_pending" });
     expect(session.status).toBe("retry_pending");
   });
 
-  it("reverts reranking back to fallback_pending when rerank throws", async () => {
+  it("reverts to fallback_pending and clears retry coordination when rerank throws", async () => {
+    mockSelectSingle.mockResolvedValue({
+      data: {
+        ...baseRow,
+        retry_initiator_role: "a",
+        retry_a_confirmed_at: "2026-04-03T15:55:00Z",
+        retry_a_preferences: {
+          categories: ["BAR"],
+          budget: "UPSCALE",
+          radiusMeters: null,
+        },
+      },
+      error: null,
+    });
     mockRerankStoredCandidates.mockRejectedValue(new Error("rerank failed"));
     mockUpdateSingle
+      .mockResolvedValueOnce({
+        data: {
+          ...baseRow,
+          retry_initiator_role: "a",
+          retry_a_confirmed_at: "2026-04-03T15:55:00Z",
+          retry_a_preferences: {
+            categories: ["BAR"],
+            budget: "UPSCALE",
+            radiusMeters: null,
+          },
+          retry_b_confirmed_at: "2026-04-03T16:00:00Z",
+          retry_b_preferences: {
+            categories: ["ACTIVITY"],
+            budget: "MODERATE",
+            radiusMeters: null,
+          },
+        },
+        error: null,
+      })
       .mockResolvedValueOnce({
         data: { ...baseRow, status: "reranking" },
         error: null,
       })
       .mockResolvedValueOnce({
-        data: { ...baseRow, status: "fallback_pending" },
+        data: {
+          ...baseRow,
+          status: "fallback_pending",
+          retry_initiator_role: null,
+          retry_a_confirmed_at: null,
+          retry_b_confirmed_at: null,
+          retry_a_preferences: null,
+          retry_b_preferences: null,
+        },
         error: null,
       });
 
     await expect(
-      requestFallbackRetry("session-1", {
-        categories: ["BAR"],
+      requestFallbackRetry("session-1", "b", {
+        categories: ["ACTIVITY"],
         budget: "MODERATE",
       }),
     ).rejects.toThrow("rerank failed");
 
-    expect(mockUpdate).toHaveBeenNthCalledWith(1, { status: "reranking" });
-    expect(mockUpdate).toHaveBeenNthCalledWith(2, { status: "fallback_pending" });
     expect(mockDelete).not.toHaveBeenCalled();
+    expect(mockUpdate).toHaveBeenNthCalledWith(2, { status: "reranking" });
+    expect(mockUpdate).toHaveBeenNthCalledWith(3, {
+      status: "fallback_pending",
+      retry_initiator_role: null,
+      retry_a_confirmed_at: null,
+      retry_b_confirmed_at: null,
+      retry_a_preferences: null,
+      retry_b_preferences: null,
+    });
   });
 
   it("rejects fallback decisions unless the session is in fallback_pending", async () => {
@@ -198,5 +361,28 @@ describe("fallback-decision-service", () => {
       "Session not found",
     );
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("marks a confirmed user as waiting for their partner", () => {
+    expect(
+      shouldWaitForPartnerRetryConfirmation(
+        {
+          id: "session-1",
+          status: "fallback_pending",
+          creatorDisplayName: "Alex",
+          inviteeDisplayName: null,
+          createdAt: new Date("2026-04-02T12:00:00Z"),
+          expiresAt: new Date("2026-04-04T12:00:00Z"),
+          matchedVenueId: "venue-12",
+          matchedAt: null,
+          retryInitiatorRole: "a",
+          retryAConfirmedAt: new Date("2026-04-03T16:00:00Z"),
+          retryBConfirmedAt: null,
+          retryAPreferences: { categories: ["BAR"], budget: "MODERATE" },
+          retryBPreferences: null,
+        },
+        "a",
+      ),
+    ).toBe(true);
   });
 });

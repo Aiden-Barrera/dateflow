@@ -40,6 +40,9 @@ const UNSAFE_TYPES = new Set([
   "convenience_store",
   "grocery_store",
   "supermarket",
+  "fast_food_restaurant",
+  "chicken_restaurant",
+  "hamburger_restaurant",
 ]);
 
 const DATE_WORTHY_TYPES = new Set([

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockGetSession = vi.fn();
 const mockGetCurrentRound = vi.fn();
 const mockGetRoundCompletion = vi.fn();
+const mockReadBoundSessionRole = vi.fn();
+const mockShouldWaitForPartnerRetryConfirmation = vi.fn();
 
 vi.mock("../../../../../../lib/services/session-service", () => ({
   getSession: (...args: unknown[]) => mockGetSession(...args),
@@ -16,11 +18,21 @@ vi.mock("../../../../../../lib/services/swipe-service", () => ({
   getRoundCompletion: (...args: unknown[]) => mockGetRoundCompletion(...args),
 }));
 
+vi.mock("../../../../../../lib/session-role-access", () => ({
+  readBoundSessionRole: (...args: unknown[]) => mockReadBoundSessionRole(...args),
+}));
+
+vi.mock("../../../../../../lib/services/fallback-decision-service", () => ({
+  shouldWaitForPartnerRetryConfirmation: (...args: unknown[]) =>
+    mockShouldWaitForPartnerRetryConfirmation(...args),
+}));
+
 import { GET } from "../route";
 
 function makeGetRequest(): Request {
   return new Request("http://localhost:3000/api/sessions/session-1/status", {
     method: "GET",
+    headers: { cookie: "test-cookie=value" },
   });
 }
 
@@ -28,9 +40,16 @@ const readySession = {
   id: "session-1",
   status: "ready_to_swipe" as const,
   creatorDisplayName: "Alex",
+  inviteeDisplayName: null,
   createdAt: new Date("2026-04-02T12:00:00Z"),
   expiresAt: new Date("2026-04-04T12:00:00Z"),
   matchedVenueId: null,
+  matchedAt: null,
+  retryInitiatorRole: null,
+  retryAConfirmedAt: null,
+  retryBConfirmedAt: null,
+  retryAPreferences: null,
+  retryBPreferences: null,
 };
 
 describe("GET /api/sessions/[id]/status", () => {
@@ -42,6 +61,8 @@ describe("GET /api/sessions/[id]/status", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-03T12:00:00Z"));
+    mockReadBoundSessionRole.mockReturnValue("a");
+    mockShouldWaitForPartnerRetryConfirmation.mockReturnValue(false);
     mockGetSession.mockResolvedValue(readySession);
     mockGetCurrentRound.mockResolvedValue(2);
     mockGetRoundCompletion.mockResolvedValue({
@@ -120,6 +141,27 @@ describe("GET /api/sessions/[id]/status", () => {
     expect(body).toEqual({
       status: "generating",
       matchedVenueId: null,
+    });
+  });
+
+  it("returns fallback_pending plus a retry-waiting flag for the confirming user", async () => {
+    mockGetSession.mockResolvedValue({
+      ...readySession,
+      status: "fallback_pending",
+      matchedVenueId: "venue-12",
+    });
+    mockShouldWaitForPartnerRetryConfirmation.mockReturnValue(true);
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      status: "fallback_pending",
+      matchedVenueId: "venue-12",
+      retryWaitingForPartner: true,
     });
   });
 

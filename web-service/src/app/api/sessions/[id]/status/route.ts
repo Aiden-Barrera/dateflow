@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { readBoundSessionRole } from "../../../../../lib/session-role-access";
+import { shouldWaitForPartnerRetryConfirmation } from "../../../../../lib/services/fallback-decision-service";
 import { getSession } from "../../../../../lib/services/session-service";
 import { getCurrentRound } from "../../../../../lib/services/round-manager";
 import { getRoundCompletion } from "../../../../../lib/services/swipe-service";
@@ -8,8 +10,9 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const boundRole = readBoundSessionRole(id, request.headers.get("cookie"));
 
   try {
     const session = await getSession(id);
@@ -30,7 +33,6 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
     if (
       session.status === "matched" ||
-      session.status === "fallback_pending" ||
       session.status === "retry_pending" ||
       session.status === "reranking" ||
       session.status === "pending_b" ||
@@ -41,6 +43,17 @@ export async function GET(_request: Request, { params }: RouteParams) {
       return NextResponse.json({
         status: session.status,
         matchedVenueId: session.matchedVenueId,
+      });
+    }
+
+    if (session.status === "fallback_pending") {
+      return NextResponse.json({
+        status: session.status,
+        matchedVenueId: session.matchedVenueId,
+        retryWaitingForPartner: shouldWaitForPartnerRetryConfirmation(
+          session,
+          boundRole,
+        ),
       });
     }
 

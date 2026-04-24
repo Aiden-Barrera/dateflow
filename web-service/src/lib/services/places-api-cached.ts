@@ -89,24 +89,26 @@ export async function searchNearbyWithCache(
     locationLabel: location.label,
   });
   const candidates = await searchNearby(location, radius, googleTypes, maxPrice);
+  const filteredCandidates = filterDeniedFirstDateVenues(candidates);
 
   console.info("[searchNearbyWithCache] Google Places returned candidates", {
     cacheKey,
     candidateCount: candidates.length,
+    filteredCandidateCount: filteredCandidates.length,
   });
 
   // Write to cache (fire-and-forget — don't block on this)
   if (cache && cacheKey) {
-    cache.set(cacheKey, candidates, CACHE_TTL_SECONDS).catch((err) => {
+    cache.set(cacheKey, filteredCandidates, CACHE_TTL_SECONDS).catch((err) => {
       console.error("[searchNearbyWithCache] Cache write failed:", err);
     });
 
     console.info("[searchNearbyWithCache] scheduled cache write", {
       cacheKey,
-      candidateCount: candidates.length,
+      candidateCount: filteredCandidates.length,
       ttlSeconds: CACHE_TTL_SECONDS,
     });
   }
 
-  return candidates;
+  return filteredCandidates;
 }
