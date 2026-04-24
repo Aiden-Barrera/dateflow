@@ -1,4 +1,9 @@
-export type WaitingStage = "preferences" | "generation" | "round" | "session";
+export type WaitingStage =
+  | "preferences"
+  | "generation"
+  | "round"
+  | "retry_confirmation"
+  | "session";
 
 export type SwipeFlowStatusState =
   | {

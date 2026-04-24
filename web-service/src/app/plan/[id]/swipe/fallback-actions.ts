@@ -6,6 +6,7 @@ type FallbackActionResponse = {
     readonly status: SessionStatus;
     readonly matchedVenueId: string | null;
   };
+  readonly retryWaitingForPartner?: boolean;
   readonly error?: string;
 };
 
@@ -47,6 +48,7 @@ export async function requestFallbackRetryDecision(
 ): Promise<{
   readonly status: SessionStatus;
   readonly matchedVenueId: string | null;
+  readonly retryWaitingForPartner: boolean;
 }> {
   const response = await fetch(`/api/sessions/${sessionId}/fallback`, {
     method: "POST",
@@ -70,6 +72,7 @@ export async function requestFallbackRetryDecision(
   return {
     status: body.session.status,
     matchedVenueId: body.session.matchedVenueId,
+    retryWaitingForPartner: body.retryWaitingForPartner ?? false,
   };
 }
 

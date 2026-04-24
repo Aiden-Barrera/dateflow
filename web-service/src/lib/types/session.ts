@@ -34,6 +34,11 @@ export type Session = {
   readonly expiresAt: Date;
   readonly matchedVenueId: string | null;
   readonly matchedAt: Date | null;
+  readonly retryInitiatorRole: "a" | "b" | null;
+  readonly retryAConfirmedAt: Date | null;
+  readonly retryBConfirmedAt: Date | null;
+  readonly retryAPreferences: Record<string, unknown> | null;
+  readonly retryBPreferences: Record<string, unknown> | null;
 };
 
 /**
@@ -66,6 +71,11 @@ export type SessionRow = {
   readonly expires_at: string;
   readonly matched_venue_id: string | null;
   readonly matched_at: string | null;
+  readonly retry_initiator_role?: "a" | "b" | null;
+  readonly retry_a_confirmed_at?: string | null;
+  readonly retry_b_confirmed_at?: string | null;
+  readonly retry_a_preferences?: Record<string, unknown> | null;
+  readonly retry_b_preferences?: Record<string, unknown> | null;
 };
 
 /**
@@ -84,5 +94,14 @@ export function toSession(row: SessionRow): Session {
     expiresAt: new Date(row.expires_at),
     matchedVenueId: row.matched_venue_id,
     matchedAt: row.matched_at ? new Date(row.matched_at) : null,
+    retryInitiatorRole: row.retry_initiator_role ?? null,
+    retryAConfirmedAt: row.retry_a_confirmed_at
+      ? new Date(row.retry_a_confirmed_at)
+      : null,
+    retryBConfirmedAt: row.retry_b_confirmed_at
+      ? new Date(row.retry_b_confirmed_at)
+      : null,
+    retryAPreferences: row.retry_a_preferences ?? null,
+    retryBPreferences: row.retry_b_preferences ?? null,
   };
 }
