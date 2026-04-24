@@ -625,6 +625,7 @@ export function SwipeFlow({
           totalCards={venues.length}
           submitting={submitting}
           onSwipe={handleSwipe}
+          venues={venues}
         />
 
         {toast ? (

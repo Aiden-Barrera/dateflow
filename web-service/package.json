@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@react-spring/web": "^10.0.3",
     "@supabase/supabase-js": "^2.100.1",
     "@upstash/qstash": "^2.10.1",
     "@upstash/redis": "^1.37.0",

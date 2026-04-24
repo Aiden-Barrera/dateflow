@@ -6,6 +6,8 @@ import { Button } from "./button";
 import { BudgetIcon } from "./budget-icon";
 import { CategoryIcon } from "./category-icon";
 import { createSessionStatusSync } from "../lib/session-status-sync";
+import { WaitingForPartnerScreen } from "./waiting-for-partner-screen";
+import type { WaitingStatus } from "./waiting-for-partner-screen";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
 type CreatedSession = {
@@ -24,6 +26,8 @@ type InviteReadyStateProps = {
 
 type InviteReadySessionState =
   | "pending_b"
+  | "both_ready"
+  | "generating"
   | "ready_to_swipe"
   | "matched"
   | "generation_failed"
@@ -229,24 +233,16 @@ export function PersonAFlow() {
   }, [createdSession, createdSessionStatus, router]);
 
   if (createdSession) {
+    const waitingStatus = toWaitingStatus(createdSessionStatus);
     return (
-      <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,_#4a302a_0%,_#2a1a15_60%,_#1a0f0c_100%)] px-6 pb-12 pt-8 text-white">
-        <div className="mx-auto w-full max-w-md">
-          <p className="text-caption font-semibold uppercase tracking-[0.24em] text-white/70">
-            Dateflow
-          </p>
-          <div className="mt-10 rounded-[2rem] border border-white/10 bg-white/5 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.35)] backdrop-blur-sm">
-            <InviteReadyState
-              sessionId={createdSession.id}
-              shareUrl={createdSession.shareUrl}
-              sessionStatus={createdSessionStatus}
-              copyState={copyState}
-              errorMessage={error}
-              onCopyInvite={handleCopyInvite}
-            />
-          </div>
-        </div>
-      </main>
+      <WaitingForPartnerScreen
+        creatorName={name}
+        shareUrl={createdSession.shareUrl}
+        status={waitingStatus}
+        copyState={copyState}
+        errorMessage={error}
+        onCopyInvite={handleCopyInvite}
+      />
     );
   }
 
@@ -453,19 +449,20 @@ export function getInviteReadySessionStatus(status: string): InviteReadySessionS
   if (status === "ready_to_swipe" || status === "fallback_pending") {
     return "ready_to_swipe";
   }
+  if (status === "matched") return "matched";
+  if (status === "both_ready") return "both_ready";
+  if (status === "generating") return "generating";
+  if (status === "generation_failed") return "generation_failed";
+  if (status === "expired") return "expired";
+  return "pending_b";
+}
 
-  if (status === "matched") {
-    return "matched";
-  }
-
-  if (status === "generation_failed") {
-    return "generation_failed";
-  }
-
-  if (status === "expired") {
-    return "expired";
-  }
-
+export function toWaitingStatus(status: InviteReadySessionState): WaitingStatus {
+  if (status === "both_ready") return "both_ready";
+  if (status === "generating") return "generating";
+  if (status === "generation_failed") return "generation_failed";
+  if (status === "expired") return "expired";
+  // ready_to_swipe / matched trigger redirect before this is called — treat as pending
   return "pending_b";
 }
 

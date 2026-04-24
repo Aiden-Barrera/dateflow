@@ -11,7 +11,7 @@ import { scoreSafety } from "./safety-filter";
 
 const REVIEW_COUNT_CAP = 500;
 const DEFAULT_AI_FINALIST_COUNT = 10;
-const DEFAULT_PROMPT_VERSION = "v1";
+const DEFAULT_PROMPT_VERSION = "v2.1";
 const DEFAULT_AI_CURATION_PROVIDER: AiCurationProvider = "gemini";
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
@@ -23,6 +23,7 @@ type AiVenueAdjustment = {
   readonly firstDateSuitability: number;
   readonly tags: readonly string[];
   readonly rerankAdjustment: number;
+  readonly whyPicked: string;
 };
 
 type AiCurationProvider = "gemini" | "anthropic";
@@ -315,6 +316,7 @@ export function mergeAiAdjustments(
             composite,
           },
           tags: [...adjustment.tags],
+          whyPicked: adjustment.whyPicked,
         },
       };
     })
@@ -370,6 +372,7 @@ export function parseAiVenueAdjustments(
     const firstDateSuitability = candidate.firstDateSuitability;
     const tags = candidate.tags;
     const rerankAdjustment = candidate.rerankAdjustment;
+    const whyPicked = candidate.whyPicked;
 
     if (typeof placeId !== "string" || placeId.length === 0) {
       throw new Error(`AI response venues[${index}].placeId must be a non-empty string`);
@@ -403,11 +406,16 @@ export function parseAiVenueAdjustments(
       );
     }
 
+    if (typeof whyPicked !== "string" || whyPicked.trim().length === 0) {
+      throw new Error(`AI response venues[${index}].whyPicked must be a non-empty string`);
+    }
+
     return {
       placeId,
       firstDateSuitability,
       tags,
       rerankAdjustment,
+      whyPicked: whyPicked.trim(),
     };
   });
 }
@@ -487,13 +495,13 @@ async function callGeminiForVenueAdjustments(
           parts: [
             {
               text:
-                "Return strict JSON only. Rank first-date venue finalists using only provided fields.",
+                "Return strict JSON only. Rank first-date venue finalists using only provided fields. For each venue include a whyPicked field: 1-2 casual, warm sentences explaining why this spot is great for a first date given the two users' preferences. Sound like a friend recommending it — specific, upbeat, not generic.",
             },
           ],
         },
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 800,
+          maxOutputTokens: 1200,
           responseMimeType: "application/json",
         },
         contents: [

@@ -182,6 +182,7 @@ describe("scoreAndCurate", () => {
         firstDateSuitability: 0.97,
         tags: ["cozy", "easy conversation"],
         rerankAdjustment: 0.08,
+        whyPicked: "Great energy and easy to talk — perfect for getting to know each other.",
       },
     ]);
 
@@ -233,7 +234,7 @@ describe("scoreAndCurate", () => {
     expect(getAiCurationConfig()).toEqual({
       enabled: true,
       provider: "anthropic",
-      promptVersion: "v1",
+      promptVersion: "v2.1",
     });
   });
 
@@ -260,6 +261,7 @@ describe("scoreAndCurate", () => {
               firstDateSuitability: 0.91,
               tags: ["cozy", "easy conversation"],
               rerankAdjustment: 0.05,
+              whyPicked: "A fantastic spot for a first date with a great vibe.",
             },
           ],
         },
@@ -271,6 +273,7 @@ describe("scoreAndCurate", () => {
         firstDateSuitability: 0.91,
         tags: ["cozy", "easy conversation"],
         rerankAdjustment: 0.05,
+        whyPicked: "A fantastic spot for a first date with a great vibe.",
       },
     ]);
 
@@ -365,6 +368,7 @@ describe("scoreAndCurate", () => {
                         firstDateSuitability: 0.99,
                         tags: ["cozy", "great conversation"],
                         rerankAdjustment: 0.08,
+                        whyPicked: "Buzzy atmosphere and great drinks — you'll find plenty to talk about.",
                       },
                     ],
                   }),
@@ -393,7 +397,7 @@ describe("scoreAndCurate", () => {
       venues: Array<{ placeId: string }>;
     };
 
-    expect(promptPayload.promptVersion).toBe("v1");
+    expect(promptPayload.promptVersion).toBe("v2.1");
     expect(promptPayload.venues).toHaveLength(10);
     expect(promptPayload.venues[0]?.placeId).toBe("candidate-1");
     expect(promoted?.score.firstDateSuitability).toBe(0.99);
@@ -458,6 +462,7 @@ describe("scoreAndCurate", () => {
                           firstDateSuitability: 0.95,
                           tags: ["cozy"],
                           rerankAdjustment: 0.02,
+                          whyPicked: "Intimate setting with great food — sets a relaxed tone.",
                         },
                       ],
                     }),
