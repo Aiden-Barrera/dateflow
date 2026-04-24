@@ -48,7 +48,11 @@ function resolveSteps(
 }
 
 function isPartnerJoined(status: WaitingStatus) {
-  return status === "both_ready" || status === "generating";
+  return (
+    status === "both_ready" ||
+    status === "generating" ||
+    status === "generation_failed"
+  );
 }
 
 export function WaitingForPartnerScreen({

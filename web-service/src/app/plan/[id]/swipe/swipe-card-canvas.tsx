@@ -318,6 +318,7 @@ export function SwipeCardCanvas({
             opacity: card3Spring.opacity,
           }}
           aria-hidden="true"
+          inert
         >
           <VenueCardContent
             venue={thirdVenue}
@@ -340,6 +341,7 @@ export function SwipeCardCanvas({
             opacity: card2Spring.opacity,
           }}
           aria-hidden="true"
+          inert
         >
           <VenueCardContent
             venue={nextVenue}

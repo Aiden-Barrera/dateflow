@@ -31,7 +31,8 @@ export function SwipeDeckCard({
   onSwipe,
   venues,
 }: SwipeDeckCardProps) {
-  const thirdVenue = venues?.[2] ?? null;
+  // cardIndex is 1-based; venues[cardIndex+1] is the card two positions ahead
+  const thirdVenue = venues?.[cardIndex + 1] ?? null;
 
   return (
     <SwipeCardCanvas

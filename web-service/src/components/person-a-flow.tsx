@@ -7,6 +7,7 @@ import { BudgetIcon } from "./budget-icon";
 import { CategoryIcon } from "./category-icon";
 import { createSessionStatusSync } from "../lib/session-status-sync";
 import { WaitingForPartnerScreen } from "./waiting-for-partner-screen";
+import type { WaitingStatus } from "./waiting-for-partner-screen";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
 type CreatedSession = {
@@ -455,8 +456,6 @@ export function getInviteReadySessionStatus(status: string): InviteReadySessionS
   if (status === "expired") return "expired";
   return "pending_b";
 }
-
-import type { WaitingStatus } from "./waiting-for-partner-screen";
 
 export function toWaitingStatus(status: InviteReadySessionState): WaitingStatus {
   if (status === "both_ready") return "both_ready";
