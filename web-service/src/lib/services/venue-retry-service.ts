@@ -52,11 +52,7 @@ export function selectRetryCandidates(
     (candidate) => !surfaced.has(candidate.placeId),
   );
 
-  if (unsurfacedCandidates.length >= 12) {
-    return unsurfacedCandidates.slice(0, 12);
-  }
-
-  return [...candidates].slice(0, 12);
+  return unsurfacedCandidates.slice(0, 12);
 }
 
 type SurfacedVenueHistoryRow = {

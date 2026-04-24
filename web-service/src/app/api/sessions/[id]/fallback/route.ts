@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { readBoundSessionRole } from "../../../../../lib/session-role-access";
 import {
   acceptFallbackSuggestion,
   requestFallbackRetry,
+  shouldWaitForPartnerRetryConfirmation,
 } from "../../../../../lib/services/fallback-decision-service";
 import { serializeSession } from "../../../../../lib/services/session-serializer";
-import { readBoundSessionRole } from "../../../../../lib/session-role-access";
-import type { BudgetLevel, Category } from "../../../../../lib/types/preference";
+import type { BudgetLevel, Category, Role } from "../../../../../lib/types/preference";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -29,6 +30,7 @@ const VALID_CATEGORIES: readonly Category[] = [
   "ACTIVITY",
   "EVENT",
 ];
+const VALID_ROLES: readonly Role[] = ["a", "b"];
 
 function isFallbackAction(value: unknown): value is FallbackAction {
   return value === "accept" || value === "retry";
@@ -130,6 +132,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       : null;
 
   try {
+    if (!boundRole || !VALID_ROLES.includes(boundRole)) {
+      return NextResponse.json(
+        { error: "This session requires role-bound access before resolving fallback" },
+        { status: 403 },
+      );
+    }
+
     if (body.action === "accept") {
       const session = await acceptFallbackSuggestion(id);
 
@@ -143,16 +152,15 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    if (!boundRole) {
-      return NextResponse.json(
-        { error: "This session requires role-bound access before retrying fallback" },
-        { status: 403 },
-      );
-    }
-
     const session = await requestFallbackRetry(id, boundRole, retryPreferences);
 
-    return NextResponse.json({ session: serializeSession(session) });
+    return NextResponse.json({
+      session: serializeSession(session),
+      retryWaitingForPartner: shouldWaitForPartnerRetryConfirmation(
+        session,
+        boundRole,
+      ),
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
 

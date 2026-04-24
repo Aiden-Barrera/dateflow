@@ -1,21 +1,31 @@
 import { getSupabaseServerClient } from "../supabase-server";
 import { toSession, type Session, type SessionRow } from "../types/session";
-import type { Role } from "../types/preference";
+import type { BudgetLevel, Category, Role } from "../types/preference";
 import {
   rerankStoredCandidates,
   type RetryPreferencesInput,
 } from "./venue-retry-service";
-import { updatePreferenceVibes } from "./preference-service";
 
 const NOT_FOUND_CODE = "PGRST116";
 
-type RetrySessionRow = SessionRow & {
-  readonly retry_initiator_role: Role | null;
-  readonly retry_a_confirmed_at: string | null;
-  readonly retry_b_confirmed_at: string | null;
+type StoredRetryPreferences = {
+  readonly categories: readonly Category[];
+  readonly budget: BudgetLevel;
+  readonly radiusMeters: number | null;
 };
 
-type RetrySession = Session;
+const CATEGORY_ORDER: readonly Category[] = [
+  "RESTAURANT",
+  "BAR",
+  "ACTIVITY",
+  "EVENT",
+];
+
+const BUDGET_ORDER: readonly BudgetLevel[] = [
+  "BUDGET",
+  "MODERATE",
+  "UPSCALE",
+];
 
 export async function acceptFallbackSuggestion(
   sessionId: string,
@@ -37,40 +47,33 @@ export async function requestFallbackRetry(
   role: Role,
   preferences: RetryPreferencesInput,
 ): Promise<Session> {
-  const session = await getFallbackRetrySession(sessionId);
-  const confirmedAt = new Date().toISOString();
-  const roleConfirmationUpdate = buildRoleConfirmationUpdate(role, confirmedAt);
-
-  await updatePreferenceVibes(sessionId, role, {
-    budget: preferences.budget,
-    categories: preferences.categories,
+  const session = await getFallbackPendingSession(sessionId);
+  const confirmedSession = await updateSession(sessionId, {
+    retry_initiator_role: session.retryInitiatorRole ?? role,
+    ...buildRetryConfirmationUpdates(role, preferences),
   });
 
-  if (shouldWaitForOtherParticipant(session, role)) {
-    return updateSession(sessionId, {
-      status: "retry_pending",
-      retry_initiator_role: session.retryInitiatorRole ?? role,
-      ...roleConfirmationUpdate,
-    });
+  if (!hasBothRetryConfirmations(confirmedSession)) {
+    return confirmedSession;
   }
 
-  await updateSession(sessionId, {
-    status: "reranking",
-    retry_initiator_role: session.retryInitiatorRole ?? getOppositeRole(role),
-    ...roleConfirmationUpdate,
-  });
+  await updateSessionStatus(sessionId, "reranking");
 
   try {
-    const result = await rerankStoredCandidates(sessionId);
+    const result = await rerankStoredCandidates(
+      sessionId,
+      mergeRetryPreferences(
+        confirmedSession.retryAPreferences,
+        confirmedSession.retryBPreferences,
+      ),
+    );
 
     if (result.requiresFullRegeneration) {
       return updateSession(sessionId, {
-        status: "both_ready",
+        status: "retry_pending",
         matched_venue_id: null,
         matched_at: null,
-        retry_initiator_role: null,
-        retry_a_confirmed_at: null,
-        retry_b_confirmed_at: null,
+        ...clearRetryCoordination(),
       });
     }
 
@@ -80,37 +83,37 @@ export async function requestFallbackRetry(
       status: "ready_to_swipe",
       matched_venue_id: null,
       matched_at: null,
-      retry_initiator_role: null,
-      retry_a_confirmed_at: null,
-      retry_b_confirmed_at: null,
+      ...clearRetryCoordination(),
     });
   } catch (error) {
     await updateSession(sessionId, {
-      status: "retry_pending",
-      retry_initiator_role: session.retryInitiatorRole ?? getOppositeRole(role),
-      ...roleConfirmationUpdate,
+      status: "fallback_pending",
+      ...clearRetryCoordination(),
     });
     throw error;
   }
 }
 
-async function getFallbackPendingSession(sessionId: string): Promise<Session> {
-  const session = await getFallbackRetrySession(sessionId);
-
-  if (session.status !== "fallback_pending") {
-    throw new Error("Session must be in fallback_pending to resolve fallback");
+export function shouldWaitForPartnerRetryConfirmation(
+  session: Session,
+  role: Role | null,
+): boolean {
+  if (session.status !== "fallback_pending" || !role) {
+    return false;
   }
 
-  return session;
+  return role === "a"
+    ? session.retryAConfirmedAt !== null && session.retryBConfirmedAt === null
+    : session.retryBConfirmedAt !== null && session.retryAConfirmedAt === null;
 }
 
-async function getFallbackRetrySession(sessionId: string): Promise<RetrySession> {
+async function getFallbackPendingSession(sessionId: string): Promise<Session> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("sessions")
     .select("*")
     .eq("id", sessionId)
-    .single<RetrySessionRow>();
+    .single<SessionRow>();
 
   if (error) {
     if (error.code === NOT_FOUND_CODE) {
@@ -122,16 +125,18 @@ async function getFallbackRetrySession(sessionId: string): Promise<RetrySession>
 
   const session = toSession(data);
 
-  if (
-    session.status !== "fallback_pending" &&
-    session.status !== "retry_pending"
-  ) {
-    throw new Error(
-      "Session must be in fallback_pending or retry_pending to resolve fallback or retry",
-    );
+  if (session.status !== "fallback_pending") {
+    throw new Error("Session must be in fallback_pending to resolve fallback");
   }
 
   return session;
+}
+
+async function updateSessionStatus(
+  sessionId: string,
+  status: "matched" | "retry_pending" | "reranking" | "fallback_pending",
+): Promise<Session> {
+  return updateSession(sessionId, { status });
 }
 
 async function clearSessionSwipes(sessionId: string): Promise<void> {
@@ -146,17 +151,156 @@ async function clearSessionSwipes(sessionId: string): Promise<void> {
   }
 }
 
+function hasBothRetryConfirmations(session: Session): boolean {
+  return (
+    session.retryAConfirmedAt !== null &&
+    session.retryBConfirmedAt !== null &&
+    session.retryAPreferences !== null &&
+    session.retryBPreferences !== null
+  );
+}
+
+function buildRetryConfirmationUpdates(
+  role: Role,
+  preferences: RetryPreferencesInput,
+): Pick<
+  SessionRow,
+  | "retry_a_confirmed_at"
+  | "retry_b_confirmed_at"
+  | "retry_a_preferences"
+  | "retry_b_preferences"
+> {
+  const storedPreferences: StoredRetryPreferences = {
+    categories: [...preferences.categories],
+    budget: preferences.budget,
+    radiusMeters: preferences.radiusMeters ?? null,
+  };
+  const confirmedAt = new Date().toISOString();
+
+  if (role === "a") {
+    return {
+      retry_a_confirmed_at: confirmedAt,
+      retry_a_preferences: storedPreferences,
+    };
+  }
+
+  return {
+    retry_b_confirmed_at: confirmedAt,
+    retry_b_preferences: storedPreferences,
+  };
+}
+
+function clearRetryCoordination(): Pick<
+  SessionRow,
+  | "retry_initiator_role"
+  | "retry_a_confirmed_at"
+  | "retry_b_confirmed_at"
+  | "retry_a_preferences"
+  | "retry_b_preferences"
+> {
+  return {
+    retry_initiator_role: null,
+    retry_a_confirmed_at: null,
+    retry_b_confirmed_at: null,
+    retry_a_preferences: null,
+    retry_b_preferences: null,
+  };
+}
+
+function mergeRetryPreferences(
+  preferenceA: Record<string, unknown> | null,
+  preferenceB: Record<string, unknown> | null,
+): RetryPreferencesInput {
+  const normalizedA = normalizeStoredRetryPreferences(preferenceA);
+  const normalizedB = normalizeStoredRetryPreferences(preferenceB);
+
+  if (!normalizedA || !normalizedB) {
+    throw new Error("Both retry preferences are required before reranking");
+  }
+
+  return {
+    categories: CATEGORY_ORDER.filter(
+      (category) =>
+        normalizedA.categories.includes(category) ||
+        normalizedB.categories.includes(category),
+    ),
+    budget: mergeBudget(normalizedA.budget, normalizedB.budget),
+    radiusMeters: mergeRadius(
+      normalizedA.radiusMeters,
+      normalizedB.radiusMeters,
+    ),
+  };
+}
+
+function normalizeStoredRetryPreferences(
+  value: Record<string, unknown> | null,
+): StoredRetryPreferences | null {
+  if (!value) {
+    return null;
+  }
+
+  const categories = Array.isArray(value.categories)
+    ? value.categories.filter((category): category is Category =>
+        CATEGORY_ORDER.includes(category as Category),
+      )
+    : [];
+  const budget = BUDGET_ORDER.includes(value.budget as BudgetLevel)
+    ? (value.budget as BudgetLevel)
+    : null;
+  const radiusMeters =
+    typeof value.radiusMeters === "number" ? value.radiusMeters : null;
+
+  if (categories.length === 0 || !budget) {
+    return null;
+  }
+
+  return {
+    categories,
+    budget,
+    radiusMeters,
+  };
+}
+
+function mergeBudget(
+  budgetA: BudgetLevel,
+  budgetB: BudgetLevel,
+): BudgetLevel {
+  const mergedIndex = Math.min(
+    BUDGET_ORDER.indexOf(budgetA),
+    BUDGET_ORDER.indexOf(budgetB),
+  );
+
+  return BUDGET_ORDER[mergedIndex] ?? "MODERATE";
+}
+
+function mergeRadius(
+  radiusA: number | null,
+  radiusB: number | null,
+): number | undefined {
+  if (radiusA === null) {
+    return radiusB ?? undefined;
+  }
+
+  if (radiusB === null) {
+    return radiusA;
+  }
+
+  return Math.min(radiusA, radiusB);
+}
+
 async function updateSession(
   sessionId: string,
   updates: Partial<
     Pick<
-      RetrySessionRow,
+      SessionRow,
       | "status"
       | "matched_venue_id"
       | "matched_at"
       | "retry_initiator_role"
       | "retry_a_confirmed_at"
       | "retry_b_confirmed_at"
+      | "retry_a_preferences"
+      | "retry_b_preferences"
     >
   >,
 ): Promise<Session> {
@@ -173,38 +317,4 @@ async function updateSession(
   }
 
   return toSession(data);
-}
-
-function shouldWaitForOtherParticipant(
-  session: RetrySession,
-  role: Role,
-): boolean {
-  if (session.status === "fallback_pending") {
-    return true;
-  }
-
-  const oppositeRole = getOppositeRole(role);
-  return getConfirmedAt(session, oppositeRole) === null;
-}
-
-function getConfirmedAt(
-  session: RetrySession,
-  role: Role,
-): Date | null {
-  return role === "a"
-    ? session.retryAConfirmedAt ?? null
-    : session.retryBConfirmedAt ?? null;
-}
-
-function getOppositeRole(role: Role): Role {
-  return role === "a" ? "b" : "a";
-}
-
-function buildRoleConfirmationUpdate(role: Role, confirmedAt: string): {
-  readonly retry_a_confirmed_at?: string;
-  readonly retry_b_confirmed_at?: string;
-} {
-  return role === "a"
-    ? { retry_a_confirmed_at: confirmedAt }
-    : { retry_b_confirmed_at: confirmedAt };
 }

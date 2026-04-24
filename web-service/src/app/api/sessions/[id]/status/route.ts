@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
+import { readBoundSessionRole } from "../../../../../lib/session-role-access";
+import { shouldWaitForPartnerRetryConfirmation } from "../../../../../lib/services/fallback-decision-service";
 import { getSession } from "../../../../../lib/services/session-service";
 import { getCurrentRound } from "../../../../../lib/services/round-manager";
 import { getRoundCompletion } from "../../../../../lib/services/swipe-service";
 import { isExpired } from "../../../../../lib/services/session-helpers";
-import { readBoundSessionRole } from "../../../../../lib/session-role-access";
-import { getPreferences } from "../../../../../lib/services/preference-service";
-import type { Role } from "../../../../../lib/types/preference";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const viewerRole = readBoundSessionRole(id, request.headers.get("cookie"));
+  const boundRole = readBoundSessionRole(id, _request.headers.get("cookie"));
 
   try {
     const session = await getSession(id);
@@ -34,7 +33,6 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     if (
       session.status === "matched" ||
-      session.status === "fallback_pending" ||
       session.status === "retry_pending" ||
       session.status === "reranking" ||
       session.status === "pending_b" ||
@@ -45,7 +43,17 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({
         status: session.status,
         matchedVenueId: session.matchedVenueId,
-        retryState: await buildRetryState(session, viewerRole),
+      });
+    }
+
+    if (session.status === "fallback_pending") {
+      return NextResponse.json({
+        status: session.status,
+        matchedVenueId: session.matchedVenueId,
+        retryWaitingForPartner: shouldWaitForPartnerRetryConfirmation(
+          session,
+          boundRole,
+        ),
       });
     }
 
@@ -65,52 +73,4 @@ export async function GET(request: Request, { params }: RouteParams) {
       { status: 500 },
     );
   }
-}
-
-async function buildRetryState(
-  session: Awaited<ReturnType<typeof getSession>>,
-  viewerRole: Role | null,
-) {
-  if (!session) {
-    return undefined;
-  }
-
-  if (
-    session.status !== "retry_pending" &&
-    session.status !== "reranking" &&
-    session.status !== "fallback_pending"
-  ) {
-    return undefined;
-  }
-
-  if (!viewerRole || !session.retryInitiatorRole) {
-    return undefined;
-  }
-
-  const viewerHasConfirmed =
-    viewerRole === "a"
-      ? (session.retryAConfirmedAt ?? null) !== null
-      : (session.retryBConfirmedAt ?? null) !== null;
-  const partnerHasConfirmed =
-    viewerRole === "a"
-      ? (session.retryBConfirmedAt ?? null) !== null
-      : (session.retryAConfirmedAt ?? null) !== null;
-  const preferences = await getPreferences(session.id);
-  const viewerPreference = preferences.find(
-    (preference) => preference.role === viewerRole,
-  );
-
-  return {
-    initiatorRole: session.retryInitiatorRole,
-    viewerRole,
-    viewerHasConfirmed,
-    partnerHasConfirmed,
-    initiatedByPartner: session.retryInitiatorRole !== viewerRole,
-    viewerPreferences: viewerPreference
-      ? {
-          categories: [...viewerPreference.categories],
-          budget: viewerPreference.budget,
-        }
-      : undefined,
-  };
 }

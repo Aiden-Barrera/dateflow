@@ -13,14 +13,14 @@ const migrationPath = join(
   "..",
   "supabase",
   "migrations",
-  "011_create_accounts_and_session_accounts.sql",
+  "20260413235224_create_accounts_and_session_accounts.sql",
 );
 
 function readMigration(): string {
   return readFileSync(migrationPath, "utf8");
 }
 
-describe("011_create_accounts_and_session_accounts.sql", () => {
+describe("20260413235224_create_accounts_and_session_accounts.sql", () => {
   it("creates the accounts table keyed by Supabase auth user id", () => {
     const migration = readMigration();
 

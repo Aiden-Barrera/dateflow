@@ -13,14 +13,14 @@ const migrationPath = join(
   "..",
   "supabase",
   "migrations",
-  "012_secure_accounts_and_session_accounts.sql",
+  "20260414154220_secure_accounts_and_session_accounts.sql",
 );
 
 function readMigration(): string {
   return readFileSync(migrationPath, "utf8");
 }
 
-describe("012_secure_accounts_and_session_accounts.sql", () => {
+describe("20260414154220_secure_accounts_and_session_accounts.sql", () => {
   it("enables RLS on account history tables", () => {
     const migration = readMigration();
 

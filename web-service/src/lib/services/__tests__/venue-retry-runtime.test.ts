@@ -188,6 +188,35 @@ describe("rerankStoredCandidates", () => {
     });
   });
 
+  it("signals full regeneration once every unique venue has already been surfaced", async () => {
+    mockPoolItemsEq.mockResolvedValue({
+      data: Array.from({ length: 18 }, (_, index) => makePoolItemRow(index + 1)),
+      error: null,
+    });
+    mockVenuesEq.mockResolvedValue({
+      data: Array.from({ length: 12 }, (_, index) => ({
+        place_id: `place-${index + 1}`,
+        surfaced_cycle: 1,
+      })),
+      error: null,
+    });
+
+    const result = await rerankStoredCandidates("session-1", {
+      categories: ["RESTAURANT", "BAR"],
+      budget: "MODERATE",
+    });
+
+    expect(mockBatchInsert).not.toHaveBeenCalled();
+    expect(mockVenuesUpsert).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      strategy: "full_regeneration",
+      generationBatchId: "",
+      surfacedCycle: 2,
+      venueIds: [],
+      requiresFullRegeneration: true,
+    });
+  });
+
   it("keeps retry reranking deterministic even when AI curation exists", async () => {
     await rerankStoredCandidates("session-1", {
       categories: ["RESTAURANT", "BAR"],

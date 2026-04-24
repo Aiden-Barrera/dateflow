@@ -58,7 +58,7 @@ describe("searchNearbyWithCache", () => {
     vi.clearAllMocks();
     // Get the mock cache instance that VenueCache constructor returns
     mockCache = new VenueCache() as unknown as typeof mockCache;
-    mockCache.buildKey.mockReturnValue("venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:3");
+    mockCache.buildKey.mockReturnValue("venue:cache:v3:30.27:-97.74:BAR:RESTAURANT:3");
   });
 
   it("returns cached results on cache hit (no API call)", async () => {
@@ -67,13 +67,22 @@ describe("searchNearbyWithCache", () => {
     const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
 
     expect(results).toEqual(fakeCandidates);
-    expect(mockCache.get).toHaveBeenCalledWith("venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:3:radius=2000");
+    expect(mockCache.get).toHaveBeenCalledWith("venue:cache:v3:30.27:-97.74:BAR:RESTAURANT:3:radius=2000");
     expect(searchNearby).not.toHaveBeenCalled();
   });
 
   it("calls API and caches results on cache miss", async () => {
     mockCache.get.mockResolvedValueOnce(null);
-    vi.mocked(searchNearby).mockResolvedValueOnce(fakeCandidates);
+    vi.mocked(searchNearby).mockResolvedValueOnce([
+      fakeCandidates[0],
+      {
+        ...fakeCandidates[0],
+        placeId: "chain-1",
+        name: "Jollibee",
+        types: ["restaurant", "food"],
+        primaryType: "restaurant",
+      },
+    ]);
     mockCache.set.mockResolvedValueOnce(undefined);
 
     const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
@@ -83,7 +92,7 @@ describe("searchNearbyWithCache", () => {
     const expectedGoogleTypes = ["restaurant", "cafe", "bakery", "bar", "night_club"];
     expect(searchNearby).toHaveBeenCalledWith(location, radius, expectedGoogleTypes, maxPrice);
     expect(mockCache.set).toHaveBeenCalledWith(
-      "venue:cache:v2:30.27:-97.74:BAR:RESTAURANT:3:radius=2000",
+      "venue:cache:v3:30.27:-97.74:BAR:RESTAURANT:3:radius=2000",
       fakeCandidates,
       CACHE_TTL_SECONDS
     );

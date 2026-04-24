@@ -1,4 +1,4 @@
--- 013_enrich_venues.sql
+-- 20260421151535_enrich_venues.sql
 -- DS-03: Enrich venues with editorial summary, review count, opening hours,
 -- distance from midpoint, website, and AI "why picked" reasoning.
 --

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildSessionRoleCookieValue } from "../../../../../../lib/session-role-access";
 
 const mockGetSession = vi.fn();
 const mockGetCurrentRound = vi.fn();
 const mockGetRoundCompletion = vi.fn();
-const mockGetPreferences = vi.fn();
+const mockReadBoundSessionRole = vi.fn();
+const mockShouldWaitForPartnerRetryConfirmation = vi.fn();
 
 vi.mock("../../../../../../lib/services/session-service", () => ({
   getSession: (...args: unknown[]) => mockGetSession(...args),
@@ -18,16 +18,21 @@ vi.mock("../../../../../../lib/services/swipe-service", () => ({
   getRoundCompletion: (...args: unknown[]) => mockGetRoundCompletion(...args),
 }));
 
-vi.mock("../../../../../../lib/services/preference-service", () => ({
-  getPreferences: (...args: unknown[]) => mockGetPreferences(...args),
+vi.mock("../../../../../../lib/session-role-access", () => ({
+  readBoundSessionRole: (...args: unknown[]) => mockReadBoundSessionRole(...args),
+}));
+
+vi.mock("../../../../../../lib/services/fallback-decision-service", () => ({
+  shouldWaitForPartnerRetryConfirmation: (...args: unknown[]) =>
+    mockShouldWaitForPartnerRetryConfirmation(...args),
 }));
 
 import { GET } from "../route";
 
-function makeGetRequest(cookie?: string): Request {
+function makeGetRequest(): Request {
   return new Request("http://localhost:3000/api/sessions/session-1/status", {
     method: "GET",
-    headers: cookie ? { cookie } : undefined,
+    headers: { cookie: "test-cookie=value" },
   });
 }
 
@@ -35,46 +40,30 @@ const readySession = {
   id: "session-1",
   status: "ready_to_swipe" as const,
   creatorDisplayName: "Alex",
+  inviteeDisplayName: null,
   createdAt: new Date("2026-04-02T12:00:00Z"),
   expiresAt: new Date("2026-04-04T12:00:00Z"),
   matchedVenueId: null,
+  matchedAt: null,
+  retryInitiatorRole: null,
+  retryAConfirmedAt: null,
+  retryBConfirmedAt: null,
+  retryAPreferences: null,
+  retryBPreferences: null,
 };
 
 describe("GET /api/sessions/[id]/status", () => {
-  const originalSessionRoleCookieSecret =
-    process.env.SESSION_ROLE_COOKIE_SECRET;
-
   afterEach(() => {
     vi.useRealTimers();
-    process.env.SESSION_ROLE_COOKIE_SECRET = originalSessionRoleCookieSecret;
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-03T12:00:00Z"));
-    process.env.SESSION_ROLE_COOKIE_SECRET = "test-secret";
+    mockReadBoundSessionRole.mockReturnValue("a");
+    mockShouldWaitForPartnerRetryConfirmation.mockReturnValue(false);
     mockGetSession.mockResolvedValue(readySession);
-    mockGetPreferences.mockResolvedValue([
-      {
-        id: "pref-a",
-        sessionId: "session-1",
-        role: "a",
-        location: { lat: 30.28, lng: -97.74, label: "North Austin" },
-        budget: "MODERATE",
-        categories: ["BAR"],
-        createdAt: new Date("2026-04-03T11:00:00Z"),
-      },
-      {
-        id: "pref-b",
-        sessionId: "session-1",
-        role: "b",
-        location: { lat: 30.25, lng: -97.75, label: "South Austin" },
-        budget: "UPSCALE",
-        categories: ["EVENT", "RESTAURANT"],
-        createdAt: new Date("2026-04-03T11:01:00Z"),
-      },
-    ]);
     mockGetCurrentRound.mockResolvedValue(2);
     mockGetRoundCompletion.mockResolvedValue({
       round: 2,
@@ -155,38 +144,24 @@ describe("GET /api/sessions/[id]/status", () => {
     });
   });
 
-  it("returns viewer-specific retry state so the other participant is not pushed forward prematurely", async () => {
+  it("returns fallback_pending plus a retry-waiting flag for the confirming user", async () => {
     mockGetSession.mockResolvedValue({
       ...readySession,
-      status: "retry_pending",
-      retryInitiatorRole: "a",
-      retryAConfirmedAt: new Date("2026-04-03T11:55:00Z"),
-      retryBConfirmedAt: null,
+      status: "fallback_pending",
+      matchedVenueId: "venue-12",
     });
+    mockShouldWaitForPartnerRetryConfirmation.mockReturnValue(true);
 
-    const cookie = buildSessionRoleCookieValue("session-1", "b").split(";")[0];
-    const response = await GET(makeGetRequest(cookie), {
+    const response = await GET(makeGetRequest(), {
       params: Promise.resolve({ id: "session-1" }),
     });
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(mockGetCurrentRound).not.toHaveBeenCalled();
-    expect(mockGetRoundCompletion).not.toHaveBeenCalled();
     expect(body).toEqual({
-      status: "retry_pending",
-      matchedVenueId: null,
-      retryState: {
-        initiatorRole: "a",
-        viewerRole: "b",
-        viewerHasConfirmed: false,
-        partnerHasConfirmed: true,
-        initiatedByPartner: true,
-        viewerPreferences: {
-          categories: ["EVENT", "RESTAURANT"],
-          budget: "UPSCALE",
-        },
-      },
+      status: "fallback_pending",
+      matchedVenueId: "venue-12",
+      retryWaitingForPartner: true,
     });
   });
 

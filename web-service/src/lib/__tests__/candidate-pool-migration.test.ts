@@ -6,14 +6,14 @@ const migrationPath = join(
   process.cwd(),
   "supabase",
   "migrations",
-  "005_create_candidate_pools.sql",
+  "20260403182554_create_candidate_pools.sql",
 );
 
 function readMigration(): string {
   return readFileSync(migrationPath, "utf8");
 }
 
-describe("005_create_candidate_pools.sql", () => {
+describe("20260403182554_create_candidate_pools.sql", () => {
   it("creates the session candidate pool tables", () => {
     const migration = readMigration();
 

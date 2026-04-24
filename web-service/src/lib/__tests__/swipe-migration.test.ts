@@ -6,14 +6,14 @@ const migrationPath = join(
   process.cwd(),
   "supabase",
   "migrations",
-  "004_create_swipes.sql",
+  "20260403175154_create_swipes.sql",
 );
 
 function readMigration(): string {
   return readFileSync(migrationPath, "utf8");
 }
 
-describe("004_create_swipes.sql", () => {
+describe("20260403175154_create_swipes.sql", () => {
   it("creates the swipes table with DS-04 required columns", () => {
     const migration = readMigration();
 
@@ -42,12 +42,15 @@ describe("004_create_swipes.sql", () => {
     );
     expect(migration).toContain("FOR UPDATE");
     expect(migration).toContain("matched boolean");
-    expect(migration).toContain("venue_id uuid");
+    expect(migration).toContain("matched_venue_id uuid");
     expect(migration).toContain("UPDATE sessions");
     expect(migration).toContain("matched_venue_id = input_venue_id");
     expect(migration).toContain("status = 'matched'");
-    expect(migration).toContain("current_matched_venue_id text");
-    expect(migration).toContain("current_matched_venue_id = input_venue_id::text");
+    expect(migration).toContain("matched_at = clock_timestamp()");
+    expect(migration).toContain("current_session_matched_venue_id text");
+    expect(migration).toContain(
+      "current_session_matched_venue_id = input_venue_id::text",
+    );
   });
 
   it("rejects swipes when the session is not ready and when the venue is from another session", () => {

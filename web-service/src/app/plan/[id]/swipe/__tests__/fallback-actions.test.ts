@@ -84,6 +84,7 @@ describe("requestFallbackRetryDecision", () => {
     expect(result).toEqual({
       status: "ready_to_swipe",
       matchedVenueId: null,
+      retryWaitingForPartner: false,
     });
   });
 });
