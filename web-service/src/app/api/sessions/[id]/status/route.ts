@@ -10,9 +10,9 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
-  const boundRole = readBoundSessionRole(id, _request.headers.get("cookie"));
+  const boundRole = readBoundSessionRole(id, request.headers.get("cookie"));
 
   try {
     const session = await getSession(id);

@@ -13,6 +13,7 @@ export type SessionStatusSnapshot = {
   readonly matchedVenueId: string | null;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
+  readonly retryWaitingForPartner?: boolean;
   readonly retryState?: {
     readonly initiatorRole: Role;
     readonly viewerRole: Role;

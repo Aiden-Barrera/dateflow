@@ -179,7 +179,6 @@ const FAST_FOOD_CHAIN_PATTERNS: readonly RegExp[] = [
   /\bburger king\b/i,
   /\bwendy'?s\b/i,
   /\bchick-?fil-?a\b/i,
-  /\bjollibee\b/i,
   /\bsubway\b/i,
   /\bdomino'?s\b/i,
   /\bpizza hut\b/i,
