@@ -18,17 +18,25 @@ function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
 }
 
+function dragRatioFromX(x: number) {
+  return clamp(x / SWIPE_TRIGGER_PX, -1.3, 1.3);
+}
+
+function dragStrengthFromX(x: number) {
+  return Math.min(Math.abs(dragRatioFromX(x)), 1);
+}
+
 type PointerTracking = {
-  readonly pointerId: number;
-  readonly startX: number;
-  readonly startY: number;
-  readonly startRegionY: number;
-  readonly lastX: number;
-  readonly lastTimestamp: number;
-  readonly intent: DragIntent;
-  readonly offsetX: number;
-  readonly offsetY: number;
-  readonly velocityX: number;
+  pointerId: number;
+  startX: number;
+  startY: number;
+  startRegionY: number;
+  lastX: number;
+  lastTimestamp: number;
+  intent: DragIntent;
+  offsetX: number;
+  offsetY: number;
+  velocityX: number;
 };
 
 type SwipeCardCanvasProps = {
@@ -52,12 +60,13 @@ export function SwipeCardCanvas({
 }: SwipeCardCanvasProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const pointerRef = useRef<PointerTracking | null>(null);
-  const [dragState, setDragState] = useState<SwipeDragState | null>(null);
+  const animatingSwipeRef = useRef<SwipeAnimation | null>(null);
   const [animatingSwipe, setAnimatingSwipe] = useState<SwipeAnimation | null>(null);
   const [isSettled, setIsSettled] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  const [springProps, springApi] = useSpring(() => ({
+  // ── Top card spring ───────────────────────────────────────────────────────
+  const [cardSpring, cardApi] = useSpring(() => ({
     x: 0,
     y: 28,
     rotation: 0,
@@ -66,19 +75,35 @@ export function SwipeCardCanvas({
     config: { tension: 280, friction: 26 },
   }));
 
+  // ── Back-card springs (opacity 0 at rest → animate in as top card drags) ─
+  const [card2Spring, card2Api] = useSpring(() => ({
+    y: 20,
+    scale: 0.96,
+    opacity: 0,
+    config: { tension: 220, friction: 24 },
+  }));
+
+  const [card3Spring, card3Api] = useSpring(() => ({
+    y: 36,
+    scale: 0.93,
+    opacity: 0,
+    config: { tension: 180, friction: 24 },
+  }));
+
+  // Settle animation on mount
   useEffect(() => {
     let second: ReturnType<typeof requestAnimationFrame> | null = null;
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => {
         setIsSettled(true);
-        springApi.start({ x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 });
+        cardApi.start({ x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 });
       });
     });
     return () => {
       cancelAnimationFrame(first);
       if (second !== null) cancelAnimationFrame(second);
     };
-  }, [springApi]);
+  }, [cardApi]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -88,24 +113,24 @@ export function SwipeCardCanvas({
     return () => media.removeEventListener("change", update);
   }, []);
 
+  // ── Swipe commit ──────────────────────────────────────────────────────────
   const triggerSwipe = useCallback(
     async (liked: boolean) => {
-      if (submitting || animatingSwipe) return;
+      if (submitting || animatingSwipeRef.current) return;
 
-      const snapshot = dragState;
+      const ptr = pointerRef.current;
       const anim: SwipeAnimation = {
         direction: liked ? "right" : "left",
-        offsetX: snapshot?.offsetX ?? 0,
-        offsetY: snapshot?.offsetY ?? 0,
-        velocityX: snapshot?.velocityX ?? 0,
+        offsetX: ptr?.offsetX ?? 0,
+        offsetY: ptr?.offsetY ?? 0,
+        velocityX: ptr?.velocityX ?? 0,
       };
-
+      animatingSwipeRef.current = anim;
       setAnimatingSwipe(anim);
-      setDragState(null);
       pointerRef.current = null;
 
       const flyTarget = computeSpringTarget(null, anim, prefersReducedMotion);
-      springApi.start({
+      cardApi.start({
         x: flyTarget.x,
         y: flyTarget.y,
         rotation: flyTarget.rotation,
@@ -113,20 +138,28 @@ export function SwipeCardCanvas({
         config: { tension: 200, friction: 22 },
       });
 
+      // Back card animates fully forward while top flies away
+      card2Api.start({ y: 0, scale: 1, opacity: 1, config: { tension: 220, friction: 22 } });
+      card3Api.start({ y: 20, scale: 0.96, opacity: 0.7, config: { tension: 180, friction: 22 } });
+
       if (!prefersReducedMotion) window.navigator?.vibrate?.(12);
 
       try {
         await onSwipe(liked);
       } catch {
+        animatingSwipeRef.current = null;
         setAnimatingSwipe(null);
-        springApi.start({ x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 });
+        cardApi.start({ x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 });
+        card2Api.start({ y: 20, scale: 0.96, opacity: 0 });
+        card3Api.start({ y: 36, scale: 0.93, opacity: 0 });
       }
     },
-    [animatingSwipe, dragState, onSwipe, prefersReducedMotion, springApi, submitting],
+    [cardApi, card2Api, card3Api, onSwipe, prefersReducedMotion, submitting],
   );
 
+  // ── Pointer handlers (NO React state — zero re-renders during drag) ───────
   function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (submitting || animatingSwipe) return;
+    if (submitting || animatingSwipeRef.current) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
 
     const bounds = event.currentTarget.getBoundingClientRect();
@@ -155,45 +188,47 @@ export function SwipeCardCanvas({
     const elapsed = Math.max(event.timeStamp - ptr.lastTimestamp, 1);
     const velocityX = (event.clientX - ptr.lastX) / elapsed;
 
-    let intent = ptr.intent;
-    if (intent === "idle") {
-      if (absY > 14 && absY > absX) intent = "scrolling";
-      else if (absX > 14 && absX >= absY) {
-        intent = "dragging";
+    // Resolve intent once
+    if (ptr.intent === "idle") {
+      if (absY > 12 && absY > absX) {
+        ptr.intent = "scrolling";
+      } else if (absX > 10 && absX >= absY) {
+        ptr.intent = "dragging";
         cardRef.current?.setPointerCapture(event.pointerId);
       }
     }
 
-    pointerRef.current = {
-      ...ptr,
-      intent,
-      offsetX,
-      offsetY,
-      velocityX,
-      lastX: event.clientX,
-      lastTimestamp: event.timeStamp,
-    };
+    ptr.offsetX = offsetX;
+    ptr.offsetY = offsetY;
+    ptr.velocityX = velocityX;
+    ptr.lastX = event.clientX;
+    ptr.lastTimestamp = event.timeStamp;
 
-    if (intent === "dragging") {
-      const drag: SwipeDragState = {
-        offsetX,
-        offsetY,
-        velocityX,
-        startRegionY: ptr.startRegionY,
-        intent: "dragging",
-      };
-      setDragState(drag);
+    if (ptr.intent !== "dragging") return;
 
-      const pivot = (ptr.startRegionY - 0.5) * -8;
-      springApi.start({
-        x: offsetX,
-        y: clamp(offsetY * 0.16, -26, 26) + Math.min(absX * 0.02, 12),
-        rotation: clamp(offsetX / 16 + pivot, -MAX_ROTATION_DEG, MAX_ROTATION_DEG),
-        opacity: 1,
-        scale: 1,
-        immediate: true,
-      });
-    }
+    // Update top card spring — immediate (no animation, follows finger exactly)
+    const pivot = (ptr.startRegionY - 0.5) * -8;
+    cardApi.start({
+      x: offsetX,
+      y: clamp(offsetY * 0.16, -26, 26) + Math.min(absX * 0.02, 12),
+      rotation: clamp(offsetX / 16 + pivot, -MAX_ROTATION_DEG, MAX_ROTATION_DEG),
+      opacity: 1,
+      scale: 1,
+      immediate: true,
+    });
+
+    // Update back cards imperatively — spring-animated (not immediate)
+    const strength = dragStrengthFromX(offsetX);
+    card2Api.start({
+      y: 20 - strength * 18,
+      scale: 0.96 + strength * 0.035,
+      opacity: strength,
+    });
+    card3Api.start({
+      y: 36 - strength * 10,
+      scale: 0.93 + strength * 0.02,
+      opacity: strength * 0.55,
+    });
   }
 
   function handlePointerEnd(event: React.PointerEvent<HTMLDivElement>) {
@@ -211,95 +246,113 @@ export function SwipeCardCanvas({
       startRegionY: ptr.startRegionY,
       intent: ptr.intent,
     };
-
     pointerRef.current = null;
-    setDragState(null);
 
     if (isSwipeCommitted(finalDrag)) {
       void triggerSwipe(finalDrag.offsetX > 0);
     } else {
-      springApi.start({
+      // Snap back
+      cardApi.start({
         x: 0,
         y: 0,
         rotation: 0,
         opacity: 1,
         scale: 1,
-        config: { tension: 320, friction: 28 },
+        config: { tension: 340, friction: 28 },
       });
+      card2Api.start({ y: 20, scale: 0.96, opacity: 0 });
+      card3Api.start({ y: 36, scale: 0.93, opacity: 0 });
     }
   }
 
-  const dragOffsetX = dragState?.offsetX ?? 0;
-  const dragOffsetY = dragState?.offsetY ?? 0;
-  const dragRatio = clamp(dragOffsetX / SWIPE_TRIGGER_PX, -1.3, 1.3);
-  const dragStrength = Math.min(Math.abs(dragRatio), 1);
-  const isDragging = dragState?.intent === "dragging";
-  const neutralReturnStrength = isDragging || animatingSwipe ? 0 : 1;
+  // ── Animated overlay values derived from spring (no React state) ──────────
+  // These use @react-spring/web's .to() — they update the DOM directly,
+  // bypassing React's render cycle entirely.
+  const overlayOpacity = cardSpring.x.to((x) => {
+    const s = dragStrengthFromX(x);
+    return isAnimating ? Math.max(s * 0.9, 0.45) : s * 0.9;
+  });
 
-  // Back-card opacity/transform driven by drag progress.
-  // At rest: card 2 peeks 18px below with 96% scale, card 3 peeks 36px at 93% scale.
-  // As top card is dragged, both cards animate forward (more visible + larger).
-  const card2YOffset = 18 - dragStrength * 14 - (animatingSwipe ? 20 : 0);
-  const card2Scale = 0.96 + dragStrength * 0.032 + (animatingSwipe ? 0.02 : 0);
-  const card2Opacity = 0.84 + dragStrength * 0.16 + (animatingSwipe ? 0.16 : 0);
+  const overlayBackground = cardSpring.x.to((x) => {
+    const ratio = dragRatioFromX(x);
+    const s = Math.min(Math.abs(ratio), 1);
+    return ratio >= 0
+      ? `linear-gradient(135deg, rgba(16,163,127,${0.14 + s * 0.26}), rgba(16,163,127,0) 60%)`
+      : `linear-gradient(225deg, rgba(220,53,69,${0.14 + s * 0.26}), rgba(220,53,69,0) 60%)`;
+  });
 
-  const card3YOffset = 36 - dragStrength * 8;
-  const card3Scale = 0.93 + dragStrength * 0.02;
-  const card3Opacity = 0.38 + dragStrength * 0.18;
+  const passOpacity = cardSpring.x.to((x) => {
+    const ratio = dragRatioFromX(x);
+    if (animatingSwipe?.direction === "left") return 1;
+    return ratio < -0.12 ? Math.min(Math.abs(ratio), 1) : 0;
+  });
+
+  const passScale = cardSpring.x.to((x) => {
+    const s = Math.min(Math.abs(dragRatioFromX(x)), 1);
+    return 0.94 + s * 0.12;
+  });
+
+  const likeOpacity = cardSpring.x.to((x) => {
+    const ratio = dragRatioFromX(x);
+    if (animatingSwipe?.direction === "right") return 1;
+    return ratio > 0.12 ? Math.min(ratio, 1) : 0;
+  });
+
+  const likeScale = cardSpring.x.to((x) => {
+    const s = Math.min(Math.abs(dragRatioFromX(x)), 1);
+    return 0.94 + s * 0.12;
+  });
+
+  const isAnimating = Boolean(animatingSwipe);
 
   return (
     <div className="relative min-h-[640px]">
-      {/* Card 3 — deepest layer; shows blurred preview when venue available */}
-      <div
-        className="pointer-events-none absolute inset-x-5 top-6 bottom-1 overflow-hidden rounded-[2.2rem] border border-white/25 bg-white/25"
-        style={{
-          opacity: card3Opacity,
-          transform: `translateY(${card3YOffset}px) scale(${card3Scale})`,
-          filter: thirdVenue ? "blur(2px)" : "blur(1px)",
-          boxShadow: "0 20px 56px rgba(45,42,38,0.06)",
-          transition: isDragging
-            ? "transform 70ms linear, opacity 70ms linear"
-            : "transform 360ms cubic-bezier(0.16,0.84,0.24,1), opacity 220ms ease",
-        }}
-        aria-hidden="true"
-      >
-        {thirdVenue ? <PreviewVenueCard venue={thirdVenue} /> : null}
-      </div>
 
-      {/* Card 2 — peek card with real venue content */}
-      {nextVenue ? (
-        <div
-          className="pointer-events-none absolute inset-x-2 top-2 bottom-2 overflow-hidden rounded-[2rem] border border-white/55 bg-white/72 shadow-[0_14px_36px_rgba(45,42,38,0.08)]"
+      {/* Card 3 — deepest, only visible during drag/swipe */}
+      {(nextVenue || thirdVenue) ? (
+        <animated.div
+          className="pointer-events-none absolute inset-x-5 top-0 bottom-0 overflow-hidden rounded-[2.2rem] border border-white/20 bg-white"
           style={{
-            transform: `translateY(${card2YOffset}px) scale(${card2Scale})`,
-            opacity: card2Opacity,
-            transition: isDragging
-              ? "transform 70ms linear, opacity 70ms linear"
-              : "transform 320ms cubic-bezier(0.18,0.86,0.24,1), opacity 220ms ease",
+            y: card3Spring.y,
+            scale: card3Spring.scale,
+            opacity: card3Spring.opacity,
+          }}
+          aria-hidden="true"
+        >
+          {thirdVenue ? <PreviewVenueCard venue={thirdVenue} /> : null}
+        </animated.div>
+      ) : null}
+
+      {/* Card 2 — peek card, hidden at rest, slides in as top card is dragged */}
+      {nextVenue ? (
+        <animated.div
+          className="pointer-events-none absolute inset-x-3 top-0 bottom-0 overflow-hidden rounded-[2rem] border border-white/40 bg-white shadow-[0_14px_36px_rgba(45,42,38,0.10)]"
+          style={{
+            y: card2Spring.y,
+            scale: card2Spring.scale,
+            opacity: card2Spring.opacity,
           }}
           aria-hidden="true"
         >
           <PreviewVenueCard venue={nextVenue} />
-        </div>
+        </animated.div>
       ) : null}
 
-      {/* Card 1 — top interactive card with spring physics */}
+      {/* Card 1 — top interactive card, fully opaque to prevent bleedthrough */}
       <animated.div
         ref={cardRef}
-        className={`relative overflow-hidden rounded-[2rem] border border-white/60 bg-white/95 shadow-[0_30px_80px_rgba(74,18,36,0.45)] backdrop-blur-sm ${
+        className={`relative overflow-hidden rounded-[2rem] border border-white/30 bg-white shadow-[0_24px_80px_rgba(45,42,38,0.18)] ${
           submitting ? "pointer-events-none" : "cursor-grab active:cursor-grabbing"
         }`}
         style={{
-          x: springProps.x,
-          y: springProps.y,
-          rotate: springProps.rotation,
-          opacity: !isSettled ? 0.78 : springProps.opacity,
-          scale: springProps.scale,
-          filter: !isSettled ? "blur(6px)" : animatingSwipe ? "blur(1.5px)" : "blur(0px)",
+          x: cardSpring.x,
+          y: cardSpring.y,
+          rotate: cardSpring.rotation,
+          opacity: !isSettled ? 0.78 : cardSpring.opacity,
+          scale: cardSpring.scale,
+          filter: !isSettled ? "blur(6px)" : "none",
           touchAction: "pan-y",
-          boxShadow: isDragging || animatingSwipe
-            ? "0 32px 110px rgba(45,42,38,0.26)"
-            : "0 24px 80px rgba(45,42,38,0.16)",
+          willChange: "transform",
         }}
         tabIndex={0}
         aria-label="Venue swipe card. Use left arrow to pass and right arrow to like."
@@ -308,26 +361,47 @@ export function SwipeCardCanvas({
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
         onKeyDown={(event) => {
-          if (submitting || animatingSwipe) return;
+          if (submitting || animatingSwipeRef.current) return;
           if (event.key === "ArrowLeft") { event.preventDefault(); void triggerSwipe(false); }
           if (event.key === "ArrowRight") { event.preventDefault(); void triggerSwipe(true); }
         }}
       >
+        {/* Venue content — no drag props, pure presentational */}
         <VenueCardContent
           venue={venue}
           cardIndex={cardIndex}
           totalCards={totalCards}
-          dragStrength={dragStrength}
-          dragRatio={dragRatio}
-          dragOffsetX={dragOffsetX}
-          dragOffsetY={dragOffsetY}
-          isDragging={isDragging}
-          isAnimating={Boolean(animatingSwipe)}
-          animatingDirection={animatingSwipe?.direction ?? null}
           submitting={submitting}
-          neutralReturnStrength={neutralReturnStrength}
+          isAnimating={isAnimating}
           onSwipe={(liked) => { void triggerSwipe(liked); }}
         />
+
+        {/* Drag direction tint — animated via spring interpolation, zero re-renders */}
+        <animated.div
+          className="pointer-events-none absolute inset-0 z-10"
+          style={{ opacity: overlayOpacity, background: overlayBackground }}
+        />
+
+        {/* Top gloss */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-28 bg-[linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0))]" />
+
+        {/* Pass badge */}
+        <animated.div
+          className="pointer-events-none absolute left-5 top-5 z-20 rounded-full border border-[rgba(220,53,69,0.6)] bg-[rgba(220,53,69,0.92)] px-4 py-2 text-caption font-semibold uppercase tracking-[0.18em] text-white shadow-sm backdrop-blur-sm"
+          style={{ opacity: passOpacity, scale: passScale }}
+          aria-hidden="true"
+        >
+          Pass
+        </animated.div>
+
+        {/* Like badge */}
+        <animated.div
+          className="pointer-events-none absolute right-5 top-5 z-20 rounded-full border border-[rgba(16,163,127,0.6)] bg-[rgba(16,163,127,0.92)] px-4 py-2 text-caption font-semibold uppercase tracking-[0.18em] text-white shadow-sm backdrop-blur-sm"
+          style={{ opacity: likeOpacity, scale: likeScale }}
+          aria-hidden="true"
+        >
+          Like
+        </animated.div>
       </animated.div>
     </div>
   );

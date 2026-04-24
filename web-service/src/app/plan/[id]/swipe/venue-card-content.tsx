@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import type { CSSProperties } from "react";
 import { CategoryIcon } from "../../../../components/category-icon";
 import { PriceBadge } from "../../../../components/price-badge";
 import type { Category } from "../../../../lib/types/preference";
@@ -73,48 +72,6 @@ export function formatDistance(meters: number): string {
   return `${miles.toFixed(1)} mi away`;
 }
 
-// ─── Swipe intent badge ───────────────────────────────────────────────────────
-
-export function SwipeIntentBadge({
-  label,
-  tone,
-  progress,
-  visible,
-}: {
-  readonly label: string;
-  readonly tone: "pass" | "like";
-  readonly progress: number;
-  readonly visible: boolean;
-}) {
-  const isCommitted = progress >= 0.95;
-  const glowColor =
-    tone === "like"
-      ? `rgba(16,163,127,${0.4 + progress * 0.4})`
-      : `rgba(220,53,69,${0.4 + progress * 0.4})`;
-
-  return (
-    <div
-      className={`rounded-full border px-4 py-2 text-caption font-semibold uppercase tracking-[0.18em] backdrop-blur-sm transition-all duration-150 ${
-        tone === "like"
-          ? "border-[rgba(16,163,127,0.6)] bg-[rgba(16,163,127,0.92)] text-white"
-          : "border-[rgba(220,53,69,0.6)] bg-[rgba(220,53,69,0.92)] text-white"
-      } ${isCommitted ? "animate-pulse" : ""}`}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible
-          ? `scale(${0.94 + progress * 0.12}) translateY(${-progress * 4}px)`
-          : "scale(0.88)",
-        boxShadow: visible && progress > 0.3
-          ? `0 0 ${8 + progress * 20}px ${progress * 8}px ${glowColor}`
-          : "none",
-      }}
-      aria-hidden={!visible}
-    >
-      {label}
-    </div>
-  );
-}
-
 // ─── Preview card for cards 2 & 3 in the stack ───────────────────────────────
 
 export function PreviewVenueCard({
@@ -179,20 +136,15 @@ export function PreviewVenueCard({
 }
 
 // ─── Main card content ────────────────────────────────────────────────────────
+// Purely presentational — no drag state. Overlays (tint, badges) are rendered
+// as animated.div siblings in SwipeCardCanvas using spring interpolation.
 
 type VenueCardContentProps = {
   readonly venue: Venue;
   readonly cardIndex: number;
   readonly totalCards: number;
-  readonly dragStrength: number;
-  readonly dragRatio: number;
-  readonly dragOffsetX: number;
-  readonly dragOffsetY: number;
-  readonly isDragging: boolean;
   readonly isAnimating: boolean;
-  readonly animatingDirection: "left" | "right" | null;
   readonly submitting: boolean;
-  readonly neutralReturnStrength: number;
   readonly onSwipe: (liked: boolean) => void;
 };
 
@@ -200,15 +152,8 @@ export function VenueCardContent({
   venue,
   cardIndex,
   totalCards,
-  dragStrength,
-  dragRatio,
-  dragOffsetX,
-  dragOffsetY,
-  isDragging,
   isAnimating,
-  animatingDirection,
   submitting,
-  neutralReturnStrength,
   onSwipe,
 }: VenueCardContentProps) {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -221,46 +166,7 @@ export function VenueCardContent({
   }
 
   return (
-    <div className="relative h-full overflow-hidden rounded-[2rem] border border-white/60 bg-white/95 shadow-[0_30px_80px_rgba(74,18,36,0.45)] backdrop-blur-sm">
-      {/* Direction tint overlay */}
-      <div
-        className="pointer-events-none absolute inset-0 z-10"
-        style={{
-          opacity: Math.max(dragStrength * 0.9, isAnimating ? 0.45 : 0),
-          background:
-            dragRatio >= 0
-              ? `linear-gradient(135deg, rgba(16,163,127,${0.14 + dragStrength * 0.26}), rgba(16,163,127,0) 60%)`
-              : `linear-gradient(225deg, rgba(220,53,69,${0.14 + dragStrength * 0.26}), rgba(220,53,69,0) 60%)`,
-          transition: isDragging ? "opacity 70ms linear" : "opacity 180ms ease",
-        }}
-      />
-
-      {/* Top gloss */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 z-10 h-28"
-        style={{
-          opacity: 0.42 + dragStrength * 0.26,
-          background: "linear-gradient(180deg, rgba(255,255,255,0.32), rgba(255,255,255,0))",
-          transform: `translateY(${dragOffsetY * 0.08}px)`,
-        }}
-      />
-
-      {/* Like / Pass badges */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between px-5 pt-5">
-        <SwipeIntentBadge
-          label="Pass"
-          tone="pass"
-          progress={dragRatio < 0 ? dragStrength : 0}
-          visible={dragRatio < -0.12 || animatingDirection === "left"}
-        />
-        <SwipeIntentBadge
-          label="Like"
-          tone="like"
-          progress={dragRatio > 0 ? dragStrength : 0}
-          visible={dragRatio > 0.12 || animatingDirection === "right"}
-        />
-      </div>
-
+    <div className="relative h-full overflow-hidden">
       {/* Photo area */}
       <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
         {activeSlide ? (
@@ -272,10 +178,6 @@ export function VenueCardContent({
             loading="eager"
             className="object-cover"
             unoptimized
-            style={{
-              transform: `scale(${1.02 + dragStrength * 0.03}) translateX(${dragOffsetX * 0.025}px) translateY(${dragOffsetY * 0.015}px)`,
-              transition: isDragging ? "none" : "transform 260ms ease",
-            }}
           />
         ) : (
           <div className="relative flex h-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.92),_transparent_42%),linear-gradient(135deg,var(--color-secondary),var(--color-primary))] p-6">
@@ -298,8 +200,7 @@ export function VenueCardContent({
           style={{
             background:
               "linear-gradient(115deg, rgba(255,255,255,0) 18%, rgba(255,255,255,0.22) 44%, rgba(255,255,255,0) 58%)",
-            opacity: 0.35 + dragStrength * 0.3,
-            transform: `translateX(${dragOffsetX * 0.12}px)`,
+            opacity: 0.35,
           }}
         />
 
@@ -460,7 +361,6 @@ export function VenueCardContent({
             onClick={() => onSwipe(false)}
             disabled={submitting || isAnimating}
             className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#dc3545] bg-[#dc3545] text-body font-semibold text-white transition-all duration-200 hover:bg-[#c42a3c] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
-            style={getActionButtonStyle("left", dragRatio, neutralReturnStrength)}
           >
             <PassIcon />
             Pass
@@ -470,7 +370,6 @@ export function VenueCardContent({
             onClick={() => onSwipe(true)}
             disabled={submitting || isAnimating}
             className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#10a37f] bg-[#10a37f] text-body font-semibold text-white transition-all duration-200 hover:bg-[#0e8e6f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
-            style={getActionButtonStyle("right", dragRatio, neutralReturnStrength)}
           >
             <HeartIcon />
             Like
@@ -525,26 +424,3 @@ function ChevronIcon({ direction }: { readonly direction: "left" | "right" }) {
   );
 }
 
-function getActionButtonStyle(
-  direction: "left" | "right",
-  dragRatio: number,
-  neutralReturnStrength: number,
-): CSSProperties {
-  const signedStrength =
-    direction === "right" ? Math.max(dragRatio, 0) : Math.max(-dragRatio, 0);
-  const emphasis = Math.min(signedStrength, 1);
-  const restingScale = 1 + neutralReturnStrength * 0.012;
-  const activeScale = 1 + emphasis * 0.045;
-  const translateY = emphasis > 0 ? -Math.round(emphasis * 4) : 0;
-  const shadowAlpha = direction === "right" ? 0.18 + emphasis * 0.2 : 0.08 + emphasis * 0.12;
-
-  return {
-    transform: `translateY(${translateY}px) scale(${emphasis > 0 ? activeScale : restingScale})`,
-    boxShadow:
-      direction === "right"
-        ? `0 16px 34px rgba(16,163,127,${shadowAlpha})`
-        : `0 14px 30px rgba(220,53,69,${shadowAlpha})`,
-    transition:
-      "transform 180ms cubic-bezier(0.18, 0.86, 0.24, 1), box-shadow 180ms ease, background-color 180ms ease",
-  };
-}
