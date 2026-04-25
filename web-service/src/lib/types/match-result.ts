@@ -5,6 +5,8 @@ export type MatchResult = {
   readonly sessionId: string;
   readonly venue: Venue;
   readonly matchedAt: Date;
+  /** Set when both users confirm a meeting time for a static venue (DS-07D). */
+  readonly confirmedDateTime?: Date | null;
 };
 
 export type MatchResultRow = {

@@ -39,6 +39,8 @@ export type Session = {
   readonly retryBConfirmedAt: Date | null;
   readonly retryAPreferences: Record<string, unknown> | null;
   readonly retryBPreferences: Record<string, unknown> | null;
+  /** Set when both users confirm a meeting time for a static venue (DS-07D). */
+  readonly confirmedDateTime: Date | null;
 };
 
 /**
@@ -76,6 +78,7 @@ export type SessionRow = {
   readonly retry_b_confirmed_at?: string | null;
   readonly retry_a_preferences?: Record<string, unknown> | null;
   readonly retry_b_preferences?: Record<string, unknown> | null;
+  readonly confirmed_date_time?: string | null;
 };
 
 /**
@@ -103,5 +106,8 @@ export function toSession(row: SessionRow): Session {
       : null,
     retryAPreferences: row.retry_a_preferences ?? null,
     retryBPreferences: row.retry_b_preferences ?? null,
+    confirmedDateTime: row.confirmed_date_time
+      ? new Date(row.confirmed_date_time)
+      : null,
   };
 }

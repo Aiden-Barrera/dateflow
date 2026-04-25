@@ -78,6 +78,7 @@ describe("result-service", () => {
     expect(result).toEqual({
       sessionId: "session-1",
       matchedAt: new Date("2026-04-03T20:45:00Z"),
+      confirmedDateTime: null,
       venue: expect.objectContaining({
         id: "venue-12",
         placeId: "place-12",

@@ -75,5 +75,8 @@ export async function getMatchResult(sessionId: string): Promise<MatchResult> {
     sessionId,
     venue,
     matchedAt: resolveMatchedAt(sessionRow),
+    confirmedDateTime: sessionRow.confirmed_date_time
+      ? new Date(sessionRow.confirmed_date_time)
+      : null,
   };
 }

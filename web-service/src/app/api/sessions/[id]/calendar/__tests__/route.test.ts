@@ -16,49 +16,50 @@ import { GET } from "../route";
 function makeRequest(query = ""): Request {
   return new Request(
     `http://localhost:3000/api/sessions/session-1/calendar${query}`,
-    {
-      method: "GET",
-    },
+    { method: "GET" },
   );
 }
+
+const BASE_MATCH_RESULT = {
+  sessionId: "session-1",
+  matchedAt: new Date("2026-04-02T18:30:00Z"),
+  confirmedDateTime: null,
+  venue: {
+    id: "venue-12",
+    sessionId: "session-1",
+    placeId: "place-12",
+    name: "Cafe Blue",
+    category: "RESTAURANT",
+    address: "12 Main St, Austin, TX",
+    lat: 30.26,
+    lng: -97.74,
+    priceLevel: 2,
+    rating: 4.6,
+    photoUrl: "https://example.com/photo.jpg",
+    photoUrls: [],
+    sourceType: "places",
+    tags: ["cozy", "patio"],
+    round: 3,
+    position: 4,
+    score: {
+      categoryOverlap: 0.9,
+      distanceToMidpoint: 0.8,
+      firstDateSuitability: 0.95,
+      qualitySignal: 0.85,
+      timeOfDayFit: 0.75,
+      composite: 0.875,
+    },
+  },
+};
 
 describe("GET /api/sessions/[id]/calendar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetMatchResult.mockResolvedValue({
-      sessionId: "session-1",
-      matchedAt: new Date("2026-04-02T18:30:00Z"),
-      directionsUrl:
-        "https://www.google.com/maps/dir/?api=1&destination=12%20Main%20St",
-      venue: {
-        id: "venue-12",
-        sessionId: "session-1",
-        placeId: "place-12",
-        name: "Cafe Blue",
-        category: "RESTAURANT",
-        address: "12 Main St, Austin, TX",
-        lat: 30.26,
-        lng: -97.74,
-        priceLevel: 2,
-        rating: 4.6,
-        photoUrl: "https://example.com/photo.jpg",
-        tags: ["cozy", "patio"],
-        round: 3,
-        position: 4,
-        score: {
-          categoryOverlap: 0.9,
-          distanceToMidpoint: 0.8,
-          firstDateSuitability: 0.95,
-          qualitySignal: 0.85,
-          timeOfDayFit: 0.75,
-          composite: 0.875,
-        },
-      },
-    });
+    mockGetMatchResult.mockResolvedValue(BASE_MATCH_RESULT);
     mockGenerateICS.mockReturnValue("BEGIN:VCALENDAR\r\nEND:VCALENDAR");
   });
 
-  it("returns a downloadable ICS file for a matched session", async () => {
+  it("returns a downloadable ICS file — calls generateICS with matchResult only", async () => {
     const response = await GET(makeRequest(), {
       params: Promise.resolve({ id: "session-1" }),
     });
@@ -66,9 +67,9 @@ describe("GET /api/sessions/[id]/calendar", () => {
 
     expect(response.status).toBe(200);
     expect(mockGetMatchResult).toHaveBeenCalledWith("session-1");
+    // No override arg — resolution happens inside generateICS
     expect(mockGenerateICS).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: "session-1" }),
-      undefined,
     );
     expect(response.headers.get("content-type")).toBe(
       "text/calendar; charset=utf-8",
@@ -79,41 +80,21 @@ describe("GET /api/sessions/[id]/calendar", () => {
     expect(body).toBe("BEGIN:VCALENDAR\r\nEND:VCALENDAR");
   });
 
-  it("passes an explicit dateTime query through to the export service", async () => {
-    const response = await GET(
-      makeRequest("?dateTime=2026-04-05T19:30:00.000Z"),
-      {
-        params: Promise.resolve({ id: "session-1" }),
-      },
-    );
+  it("passes confirmedDateTime from match result through to generateICS", async () => {
+    const confirmedAt = new Date("2026-05-04T20:00:00Z");
+    mockGetMatchResult.mockResolvedValue({
+      ...BASE_MATCH_RESULT,
+      confirmedDateTime: confirmedAt,
+    });
+
+    const response = await GET(makeRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
 
     expect(response.status).toBe(200);
     expect(mockGenerateICS).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: "session-1" }),
-      new Date("2026-04-05T19:30:00.000Z"),
+      expect.objectContaining({ confirmedDateTime: confirmedAt }),
     );
-  });
-
-  it("returns 400 for an invalid dateTime query", async () => {
-    const response = await GET(makeRequest("?dateTime=not-a-date"), {
-      params: Promise.resolve({ id: "session-1" }),
-    });
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body.error).toBe("dateTime must be a valid ISO 8601 string");
-    expect(mockGetMatchResult).not.toHaveBeenCalled();
-  });
-
-  it("returns 400 for a non-ISO dateTime string that Date would otherwise parse", async () => {
-    const response = await GET(makeRequest("?dateTime=2026-04-05 19:30:00"), {
-      params: Promise.resolve({ id: "session-1" }),
-    });
-    const body = await response.json();
-
-    expect(response.status).toBe(400);
-    expect(body.error).toBe("dateTime must be a valid ISO 8601 string");
-    expect(mockGetMatchResult).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the session does not exist", async () => {
