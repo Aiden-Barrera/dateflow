@@ -72,6 +72,23 @@ export function formatDistance(meters: number): string {
   return `${miles.toFixed(1)} mi away`;
 }
 
+export function getAgeRestrictionLabel(
+  ageRestriction: "18+" | "21+" | null | undefined,
+): string | null {
+  if (ageRestriction == null) return null;
+  return ageRestriction;
+}
+
+export function buildSwipeCardAriaLabel(
+  name: string,
+  category: Category,
+  ageRestriction: "18+" | "21+" | null | undefined,
+): string {
+  const base = `${name}, ${CATEGORY_LABELS[category]}`;
+  const restriction = getAgeRestrictionLabel(ageRestriction);
+  return restriction ? `${base}, ${restriction} only` : base;
+}
+
 // ─── Preview card for cards 2 & 3 in the stack ───────────────────────────────
 
 export function PreviewVenueCard({
@@ -80,6 +97,7 @@ export function PreviewVenueCard({
   readonly venue: Venue;
 }) {
   const slides = getVenueSlides(venue);
+  const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
 
   return (
     <div className="flex h-full flex-col bg-white/72">
@@ -129,6 +147,14 @@ export function PreviewVenueCard({
               {tag}
             </div>
           ))}
+          {ageLabel ? (
+            <span
+              aria-label={`Age restriction: ${ageLabel}`}
+              className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 text-caption font-semibold text-amber-700"
+            >
+              {ageLabel}
+            </span>
+          ) : null}
         </div>
       </div>
     </div>
@@ -159,6 +185,7 @@ export function VenueCardContent({
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const slides = getVenueSlides(venue);
   const activeSlide = slides[activeSlideIndex] ?? slides[0] ?? null;
+  const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
 
   function moveToSlide(nextIndex: number) {
     if (slides.length <= 1) return;
@@ -279,6 +306,14 @@ export function VenueCardContent({
                   </InfoPill>
                 ) : null}
                 <InfoPill>{`Round ${venue.round}`}</InfoPill>
+                {ageLabel ? (
+                  <span
+                    aria-label={`Age restriction: ${ageLabel}`}
+                    className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-3 py-1.5 text-caption font-semibold text-amber-700"
+                  >
+                    {ageLabel}
+                  </span>
+                ) : null}
               </div>
             </div>
             <div className="sm:hidden">
