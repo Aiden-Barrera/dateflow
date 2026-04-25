@@ -102,7 +102,7 @@ export type Venue = {
   readonly distanceMeters?: number;
   readonly website?: string;
   readonly whyPicked?: string;
-  readonly sourceType: "places" | "meetup" | "ticketmaster";
+  readonly sourceType: "places" | "ticketmaster";
   readonly scheduledAt?: Date;
   readonly eventUrl?: string;
   readonly durationMinutes?: number;
@@ -225,7 +225,7 @@ export function toVenue(row: VenueRow): Venue {
       : {}),
     ...(row.website ? { website: row.website } : {}),
     ...(row.why_picked ? { whyPicked: row.why_picked } : {}),
-    sourceType: (row.source_type as "places" | "meetup" | "ticketmaster" | null | undefined) ?? "places",
+    sourceType: (row.source_type as "places" | "ticketmaster" | null | undefined) ?? "places",
     ...(row.scheduled_at ? { scheduledAt: new Date(row.scheduled_at) } : {}),
     ...(row.event_url ? { eventUrl: row.event_url } : {}),
     ...(typeof row.duration_minutes === "number" ? { durationMinutes: row.duration_minutes } : {}),
@@ -266,9 +266,9 @@ export type PlaceCandidate = {
   readonly editorialSummary?: string;
   readonly openingHours?: VenueOpeningHours;
   readonly website?: string;
-  /** 'places' | 'meetup' | 'ticketmaster'. Defaults to 'places' for Google Places candidates. */
-  readonly sourceType: "places" | "meetup" | "ticketmaster";
-  /** Live event start time — present for meetup/ticketmaster candidates. */
+  /** 'places' | 'ticketmaster'. Defaults to 'places' for Google Places candidates. */
+  readonly sourceType: "places" | "ticketmaster";
+  /** Live event start time — present for ticketmaster candidates. */
   readonly scheduledAt?: Date;
   /** Deep link to the event page on Meetup or Ticketmaster. */
   readonly eventUrl?: string;

@@ -527,7 +527,7 @@ describe("scoreAndCurate", () => {
 describe("buildDeterministicRanking — live event scoring", () => {
   it("uses attendanceSignal for qualitySignal when rating and reviewCount are zero", () => {
     const liveEvent = makeCandidate("live-event", {
-      sourceType: "meetup" as const,
+      sourceType: "ticketmaster" as const,
       rating: 0,
       reviewCount: 0,
       attendanceSignal: 80,
@@ -553,7 +553,7 @@ describe("buildDeterministicRanking — live event scoring", () => {
 
   it("scores qualitySignal = 0 for a live event with zero attendanceSignal", () => {
     const liveEvent = makeCandidate("low-attendance-event", {
-      sourceType: "meetup" as const,
+      sourceType: "ticketmaster" as const,
       rating: 0,
       reviewCount: 0,
       attendanceSignal: 0,

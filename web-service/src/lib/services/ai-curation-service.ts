@@ -158,24 +158,11 @@ function distanceScore(candidate: PlaceCandidate, midpoint: Location): number {
   return Math.max(0, 1 - meters / 5_000);
 }
 
-/**
- * Maximum "going" count used to normalize Meetup attendance to 0–1.
- * A meetup with 200+ RSVPs is considered a full-quality signal.
- */
-const ATTENDANCE_SIGNAL_CAP = 200;
-
 function qualitySignal(candidate: PlaceCandidate): number {
-  // Live event candidates (Meetup / Ticketmaster) always have rating=0 and
-  // reviewCount=0 — use attendanceSignal instead.
-  const isLiveEvent = candidate.sourceType === "meetup" || candidate.sourceType === "ticketmaster";
-  if (isLiveEvent) {
-    const attendance = candidate.attendanceSignal ?? 0;
-    // Normalize: Meetup "going" count capped at ATTENDANCE_SIGNAL_CAP;
-    // Ticketmaster popularity is already 0–1.
-    const normalized = candidate.sourceType === "ticketmaster"
-      ? Math.min(1, attendance)
-      : Math.min(1, attendance / ATTENDANCE_SIGNAL_CAP);
-    return normalized;
+  // Live event candidates (Ticketmaster) always have rating=0 and reviewCount=0
+  // — use attendanceSignal (popularity score 0–1) instead.
+  if (candidate.sourceType === "ticketmaster") {
+    return Math.min(1, candidate.attendanceSignal ?? 0);
   }
 
   const ratingScore = candidate.rating / 5;
