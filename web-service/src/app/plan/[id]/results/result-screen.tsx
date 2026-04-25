@@ -11,7 +11,7 @@ import {
 import { Button } from "../../../../components/button";
 import { Logo } from "../../../../components/logo";
 import type { MatchResult } from "../../../../lib/types/match-result";
-import type { Category } from "../../../../lib/types/preference";
+import type { Category, DayOfWeek, Role } from "../../../../lib/types/preference";
 import {
   clearStoredSessionLink,
   loadStoredSessionLink,
@@ -33,6 +33,8 @@ import type { AuthDraft, AuthMode } from "../../../../components/auth-sheet-stat
 type ResultScreenProps = {
   readonly matchedWithName: string | null;
   readonly matchResult: MatchResult;
+  readonly viewerRole?: Role | null;
+  readonly intersectedDays?: readonly DayOfWeek[];
   readonly initialAuthStatus?: "idle" | "saved";
   readonly initialAccountEmail?: string | null;
 };
@@ -47,6 +49,8 @@ const CATEGORY_LABELS: Record<Category, string> = {
 export function ResultScreen({
   matchedWithName,
   matchResult,
+  viewerRole = null,
+  intersectedDays = [],
   initialAuthStatus = "idle",
   initialAccountEmail = null,
 }: ResultScreenProps) {
@@ -342,7 +346,8 @@ export function ResultScreen({
               <DateTimePlanner
                 sessionId={matchResult.sessionId}
                 venue={venue}
-                role="a"
+                role={viewerRole ?? "a"}
+                intersectedDays={intersectedDays}
                 initialConfirmedDateTime={matchResult.confirmedDateTime ?? null}
                 calendarHref={`/api/sessions/${matchResult.sessionId}/calendar`}
               />

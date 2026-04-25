@@ -1,45 +1,23 @@
 /**
- * Date/time proposal and confirmation service (DS-07D).
+ * Server-only date-proposal service (DS-07D).
  *
- * Handles the real-time coordination when both users agree on a meeting time
- * for a static venue match. Live events (Ticketmaster) already have a known
- * scheduledAt and do not need this flow.
+ * Exposes `confirmDate` which writes `confirmed_date_time` to the sessions table.
+ * This module imports `getSupabaseServerClient` and must NEVER be imported by
+ * client components.
  *
- * Real-time channel message types:
- *   DateProposedEvent  — Person A (or B) proposes a time
- *   DateConfirmedEvent — Both have agreed; written to the DB
- *
- * The channel name follows the same convention as session-status-sync:
- *   `session-date-proposal:<sessionId>`
+ * Shared types and the channel-name helper live in the client-safe module:
+ *   src/lib/date-proposal-channel.ts
  */
 
 import { getSupabaseServerClient } from "../supabase-server";
 
-// ─── Channel event shapes ─────────────────────────────────────────────────────
-
-/** Broadcast when one user proposes a meeting time. */
-export type DateProposedEvent = {
-  readonly type: "date_proposed";
-  /** Which role proposed ("a" | "b"). */
-  readonly proposedBy: "a" | "b";
-  /** ISO 8601 string for the proposed date/time. */
-  readonly dateTime: string;
-};
-
-/** Broadcast when both users have confirmed the same time. */
-export type DateConfirmedEvent = {
-  readonly type: "date_confirmed";
-  /** ISO 8601 string for the confirmed date/time. */
-  readonly confirmedAt: string;
-};
-
-export type DateProposalChannelEvent = DateProposedEvent | DateConfirmedEvent;
-
-// ─── Channel name helper ──────────────────────────────────────────────────────
-
-export function getDateProposalChannelName(sessionId: string): string {
-  return `session-date-proposal:${sessionId}`;
-}
+// Re-export the shared types so server-side callers can import from one place.
+export type {
+  DateProposedEvent,
+  DateConfirmedEvent,
+  DateProposalChannelEvent,
+} from "../date-proposal-channel";
+export { getDateProposalChannelName } from "../date-proposal-channel";
 
 // ─── Server-side: write confirmation to DB ───────────────────────────────────
 

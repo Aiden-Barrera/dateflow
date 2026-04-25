@@ -18,8 +18,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getSupabaseClient } from "../../../../lib/supabase";
-import { getDateProposalChannelName } from "../../../../lib/services/date-proposal-service";
-import type { DateProposalChannelEvent } from "../../../../lib/services/date-proposal-service";
+import { getDateProposalChannelName } from "../../../../lib/date-proposal-channel";
+import type { DateProposalChannelEvent } from "../../../../lib/date-proposal-channel";
+import type { DayOfWeek } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -28,8 +29,8 @@ type DateTimePlannerProps = {
   readonly sessionId: string;
   readonly venue: Venue;
   readonly role: "a" | "b";
-  /** ISO weekday strings available for both users (from schedule intersection). */
-  readonly intersectedDays?: readonly string[];
+  /** Days available for both users, from the schedule intersection (DayOfWeek abbreviations). */
+  readonly intersectedDays?: readonly DayOfWeek[];
   /** If already confirmed (e.g. page reload after agreement). */
   readonly initialConfirmedDateTime?: Date | null;
   readonly calendarHref: string;
@@ -37,14 +38,14 @@ type DateTimePlannerProps = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const WEEKDAY_LABELS: Record<string, string> = {
-  monday: "Mon",
-  tuesday: "Tue",
-  wednesday: "Wed",
-  thursday: "Thu",
-  friday: "Fri",
-  saturday: "Sat",
-  sunday: "Sun",
+const WEEKDAY_LABELS: Record<DayOfWeek, string> = {
+  mon: "Mon",
+  tue: "Tue",
+  wed: "Wed",
+  thu: "Thu",
+  fri: "Fri",
+  sat: "Sat",
+  sun: "Sun",
 };
 
 const TIME_SLOTS = ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM"];
@@ -83,7 +84,7 @@ export function DateTimePlanner({
   );
   const [proposedDateTime, setProposedDateTime] = useState<Date | null>(null);
   const [proposedBy, setProposedBy] = useState<"a" | "b" | null>(null);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +190,7 @@ export function DateTimePlanner({
         <div className="mt-4 space-y-4">
           <div className="rounded-[1.1rem] border border-white/20 bg-white/[0.08] px-4 py-3">
             <p className="text-caption text-white/65">
-              {proposedBy === "a" ? "They" : "They"} suggested:
+              Your match suggested:
             </p>
             <p className="mt-1 text-body font-semibold text-white">
               {formatEventTime(proposedDateTime)}
@@ -300,14 +301,12 @@ function CalendarButtonSection({
 }) {
   if (available) {
     return (
-      <a href={calendarHref} className="block w-full">
-        <button
-          type="button"
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-[1rem] border border-white/20 bg-white/[0.08] text-body font-semibold text-white transition hover:bg-white/[0.14]"
-        >
-          <CalendarIcon />
-          Add to Calendar
-        </button>
+      <a
+        href={calendarHref}
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-[1rem] border border-white/20 bg-white/[0.08] text-body font-semibold text-white transition hover:bg-white/[0.14]"
+      >
+        <CalendarIcon />
+        Add to Calendar
       </a>
     );
   }
@@ -335,9 +334,9 @@ function DatePickerForm({
   submitting,
   label,
 }: {
-  readonly intersectedDays: readonly string[];
-  readonly selectedDay: string | null;
-  readonly setSelectedDay: (d: string) => void;
+  readonly intersectedDays: readonly DayOfWeek[];
+  readonly selectedDay: DayOfWeek | null;
+  readonly setSelectedDay: (d: DayOfWeek) => void;
   readonly selectedTime: string | null;
   readonly setSelectedTime: (t: string) => void;
   readonly onPropose: () => void;
@@ -358,7 +357,7 @@ function DatePickerForm({
                 : "border border-white/20 bg-white/[0.06] text-white/70 hover:bg-white/[0.12]"
             }`}
           >
-            {WEEKDAY_LABELS[day.toLowerCase()] ?? day}
+            {WEEKDAY_LABELS[day] ?? day.toUpperCase()}
           </button>
         ))}
       </div>

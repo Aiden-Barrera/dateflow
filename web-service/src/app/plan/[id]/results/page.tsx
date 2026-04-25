@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getMatchResult } from "../../../../lib/services/result-service";
 import { getSession } from "../../../../lib/services/session-service";
+import { getBothPreferences } from "../../../../lib/services/preference-service";
+import { resolveSchedule } from "../../../../lib/services/schedule-intersection";
 import {
   getBoundSessionRole,
   getSessionRoleCookieName,
@@ -86,12 +88,20 @@ export default async function ResultPage({ params }: PageProps) {
       ? session.inviteeDisplayName
       : session.creatorDisplayName;
 
+  // Compute intersected days for the static-venue date picker (Case B).
+  // Silently fall back to empty array if preferences aren't available.
+  const intersectedDays = await getBothPreferences(id)
+    .then(([prefA, prefB]) => resolveSchedule(prefA, prefB).intersectedDays)
+    .catch(() => [] as const);
+
   return (
     <>
       <SessionLinkPlanter sessionId={id} role={viewerRole} />
       <ResultScreen
         matchedWithName={matchedWithName}
         matchResult={matchResult}
+        viewerRole={viewerRole}
+        intersectedDays={intersectedDays}
       />
     </>
   );
