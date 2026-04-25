@@ -16,5 +16,13 @@ export async function fetchLiveEventCandidates(
   location: Location,
   radiusMeters: number,
 ): Promise<readonly PlaceCandidate[]> {
-  return fetchTicketmasterEventCandidates(location, radiusMeters);
+  try {
+    return await fetchTicketmasterEventCandidates(location, radiusMeters);
+  } catch (err) {
+    console.warn(
+      "[fetchLiveEventCandidates] Ticketmaster fetch failed — continuing with Places-only candidates",
+      err,
+    );
+    return [];
+  }
 }

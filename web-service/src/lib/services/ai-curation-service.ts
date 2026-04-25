@@ -254,7 +254,14 @@ export function buildDeterministicRanking(
       const partialScore = {
         categoryOverlap: categoryOverlapScore(category, preferences),
         distanceToMidpoint: distanceScore(candidate, midpoint),
-        firstDateSuitability: scoreSafety(candidate),
+        // Live event candidates (Ticketmaster) have rating=0/reviewCount=0 and
+        // would always score 0 via scoreSafety's hard rating/review gates.
+        // Comedy shows and theater are inherently good first-date venues, so
+        // we assign a fixed high suitability score instead.
+        firstDateSuitability:
+          candidate.sourceType === "ticketmaster"
+            ? 0.85
+            : scoreSafety(candidate),
         qualitySignal: qualitySignal(candidate),
         timeOfDayFit: timeOfDayFit(category, round, candidate),
       };

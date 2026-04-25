@@ -61,9 +61,11 @@ describe("fetchLiveEventCandidates", () => {
     expect(mockFetchTicketmaster).toHaveBeenCalledWith(midpoint, 8000);
   });
 
-  it("propagates errors from Ticketmaster (caller handles failure)", async () => {
+  it("returns empty array and warns when Ticketmaster throws", async () => {
     mockFetchTicketmaster.mockRejectedValueOnce(new Error("TM down"));
 
-    await expect(fetchLiveEventCandidates(midpoint, 5000)).rejects.toThrow("TM down");
+    const result = await fetchLiveEventCandidates(midpoint, 5000);
+
+    expect(result).toEqual([]);
   });
 });

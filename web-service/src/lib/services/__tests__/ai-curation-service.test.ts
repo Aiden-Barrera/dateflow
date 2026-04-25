@@ -530,7 +530,7 @@ describe("buildDeterministicRanking — live event scoring", () => {
       sourceType: "ticketmaster" as const,
       rating: 0,
       reviewCount: 0,
-      attendanceSignal: 80,
+      attendanceSignal: 0.72,
       types: ["event"],
     });
     const placesVenue = makeCandidate("places-venue", {
@@ -577,14 +577,14 @@ describe("buildDeterministicRanking — live event scoring", () => {
       rating: 0,
       reviewCount: 0,
       types: ["event"],
-      scheduledAt: new Date("2026-05-15T19:00:00"),
+      scheduledAt: new Date("2026-05-15T19:00:00Z"),
     });
     const afternoonEvent = makeCandidate("afternoon-event", {
       sourceType: "ticketmaster" as const,
       rating: 0,
       reviewCount: 0,
       types: ["event"],
-      scheduledAt: new Date("2026-05-15T14:00:00"),
+      scheduledAt: new Date("2026-05-15T14:00:00Z"),
     });
 
     const ranked = buildDeterministicRanking(
