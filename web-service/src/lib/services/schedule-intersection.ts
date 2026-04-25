@@ -67,9 +67,7 @@ function resolveWindow(
   now: Date,
 ): { startDate: Date; endDate: Date } {
   if (!a && !b) {
-    const end = new Date(now);
-    end.setDate(now.getDate() + 30);
-    return { startDate: now, endDate: end };
+    return { startDate: now, endDate: addUTCDays(now, 30) };
   }
 
   const winner =
@@ -87,9 +85,11 @@ function resolveDays(
   a: readonly DayOfWeek[] | undefined,
   b: readonly DayOfWeek[] | undefined,
 ): DayOfWeek[] {
-  if (!a || !b) return [...ALL_DAYS];
-  const setB = new Set(b);
-  const intersection = a.filter((d) => setB.has(d));
+  // Treat undefined as "any day" (all 7) so one-sided input is preserved.
+  const daysA = a ?? ALL_DAYS;
+  const daysB = b ?? ALL_DAYS;
+  const setB = new Set(daysB);
+  const intersection = daysA.filter((d) => setB.has(d));
   return intersection.length > 0 ? intersection : [...ALL_DAYS];
 }
 
@@ -118,11 +118,9 @@ export function resolveSchedule(
 
   if (!hasAnyData) {
     const now = new Date();
-    const end = new Date(now);
-    end.setDate(now.getDate() + 30);
     return {
       startDate: now,
-      endDate: end,
+      endDate: addUTCDays(now, 30),
       timeRange: TIME_RANGES["any"],
       intersectedDays: [],
       hasIntersection: false,

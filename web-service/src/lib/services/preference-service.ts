@@ -31,6 +31,9 @@ export async function submitPreference(
       location: input.location,
       budget: input.budget,
       categories: [...input.categories],
+      ...(input.scheduleWindow !== undefined ? { schedule_window: input.scheduleWindow } : {}),
+      ...(input.availableDays !== undefined ? { available_days: [...input.availableDays] } : {}),
+      ...(input.timeOfDay !== undefined ? { time_of_day: input.timeOfDay } : {}),
     })
     .select()
     .single<PreferenceRow>();

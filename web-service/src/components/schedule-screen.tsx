@@ -16,8 +16,8 @@ type ScheduleScreenProps = {
 
 const WINDOWS: { value: ScheduleWindow; label: string; sub: string }[] = [
   { value: "this_week", label: "This week", sub: "Next 7 days" },
-  { value: "next_week", label: "Next week", sub: "Week after next" },
-  { value: "two_weeks", label: "Two weeks", sub: "Flexible window" },
+  { value: "next_week", label: "Next week", sub: "Upcoming week" },
+  { value: "two_weeks", label: "Two weeks", sub: "Next 14 days" },
   { value: "flexible", label: "Flexible", sub: "Whenever works" },
 ];
 
@@ -80,7 +80,7 @@ export function ScheduleScreen({
         </button>
 
         <h1 className="text-[clamp(2.2rem,7.5vw,3.4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
-          When works for you?
+          What works for you?
         </h1>
         <p className="mt-3 text-body text-text-secondary">
           All optional — skip anything you don&apos;t care about.
