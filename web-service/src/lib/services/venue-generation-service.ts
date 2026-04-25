@@ -15,6 +15,7 @@ import {
 } from "./places-api-client";
 import { applySafetyFilter } from "./safety-filter";
 import { scoreAndCurate } from "./ai-curation-service";
+import { fetchLiveEventCandidates } from "./event-enrichment-service";
 
 const SEARCH_RADIUS_METERS = 2_000;
 
@@ -109,6 +110,11 @@ type InsertVenueRow = {
   readonly distance_meters: number | null;
   readonly website: string | null;
   readonly why_picked: string | null;
+  readonly source_type: string;
+  readonly scheduled_at: string | null;
+  readonly event_url: string | null;
+  readonly duration_minutes: number | null;
+  readonly age_restriction: string | null;
 };
 
 async function insertVenues(rows: readonly InsertVenueRow[]): Promise<void> {
@@ -219,7 +225,20 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
       categories,
       maxPrice
     );
-    const safeCandidates = applySafetyFilter(candidates, categories);
+    const placeCandidates = applySafetyFilter(candidates, categories);
+
+    const wantsLiveEvents = categories.some(
+      (cat) => cat === "EVENT" || cat === "ACTIVITY",
+    );
+    // Live event candidates intentionally bypass applySafetyFilter: the rating
+    // and review-count gates are meaningless for Ticketmaster events (always 0),
+    // and the deny-listed type check is irrelevant since TM types are pre-scoped
+    // to Arts & Theatre + Comedy at the API level.
+    const liveEventCandidates = wantsLiveEvents
+      ? await fetchLiveEventCandidates(midpoint, SEARCH_RADIUS_METERS)
+      : [];
+
+    const safeCandidates = [...placeCandidates, ...liveEventCandidates];
     const poolId = await createCandidatePool(sessionId, "initial_generation");
 
     await insertCandidatePoolItems(
@@ -233,8 +252,8 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         lng: candidate.location.lng,
         price_level: candidate.priceLevel === 0 ? 1 : candidate.priceLevel,
         rating: candidate.rating,
-        photo_urls: candidate.photoUrls,
-        photo_url: buildGooglePlacePhotoUrl(candidate.photoReference),
+        photo_urls: candidate.photoUrls ?? [],
+        photo_url: buildGooglePlacePhotoUrl(candidate.photoReference ?? null),
         raw_types: candidate.types,
         raw_tags: [],
         source_rank: index + 1,
@@ -271,8 +290,8 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           lng: venue.location.lng,
           price_level: venue.priceLevel === 0 ? 1 : venue.priceLevel,
           rating: venue.rating,
-          photo_urls: venue.photoUrls,
-          photo_url: buildGooglePlacePhotoUrl(venue.photoReference),
+          photo_urls: venue.photoUrls ?? [],
+          photo_url: buildGooglePlacePhotoUrl(venue.photoReference ?? null),
           tags: venue.tags,
           round,
           position: index + 1,
@@ -295,6 +314,11 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           distance_meters: distanceMeters,
           website: venue.website ?? null,
           why_picked: whyPicked ?? null,
+          source_type: venue.sourceType ?? "places",
+          scheduled_at: venue.scheduledAt ? venue.scheduledAt.toISOString() : null,
+          event_url: venue.eventUrl ?? null,
+          duration_minutes: venue.durationMinutes ?? null,
+          age_restriction: venue.ageRestriction ?? null,
         });
       });
 

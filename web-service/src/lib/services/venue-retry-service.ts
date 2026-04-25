@@ -346,6 +346,7 @@ function toPlaceCandidate(
     photoReference: null,
     photoUrls: candidate.photoUrls,
     photoUrl: candidate.photoUrl,
+    sourceType: "places" as const,
     category: candidate.category,
     tags: candidate.rawTags,
     score: {

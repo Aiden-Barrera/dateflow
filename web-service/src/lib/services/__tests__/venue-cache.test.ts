@@ -25,6 +25,7 @@ describe("VenueCache", () => {
       rating: 4.0,
       reviewCount: 50,
       photoReference: null,
+      sourceType: "places" as const,
       photoReferences: [],
       photoUrls: [],
       ...overrides,
@@ -111,6 +112,7 @@ describe("VenueCache", () => {
           rating: 4.5,
           reviewCount: 150,
           photoReference: "photo123",
+      sourceType: "places" as const,
           photoReferences: ["photo123"],
         }),
       ];

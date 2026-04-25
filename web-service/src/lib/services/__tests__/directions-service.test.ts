@@ -17,6 +17,8 @@ const venue: Venue = {
   priceLevel: 2,
   rating: 4.6,
   photoUrl: "https://example.com/photo.jpg",
+  photoUrls: [],
+      sourceType: "places" as const,
   tags: ["cozy", "patio"],
   round: 3,
   position: 4,

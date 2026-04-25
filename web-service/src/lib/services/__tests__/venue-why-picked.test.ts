@@ -16,6 +16,7 @@ function baseCandidate(
     reviewCount: 1200,
     photoReferences: [],
     photoReference: null,
+      sourceType: "places" as const,
     photoUrls: [],
     category: "RESTAURANT",
     score: {

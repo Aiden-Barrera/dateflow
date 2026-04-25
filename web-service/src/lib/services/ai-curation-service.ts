@@ -121,7 +121,7 @@ function budgetRomanticBonus(
   }
 
   const hasBudgetPrimaryType =
-    candidate.primaryType !== null &&
+    candidate.primaryType != null &&
     BUDGET_ROMANTIC_TYPES.has(candidate.primaryType);
   const hasBudgetFriendlyType = candidate.types.some((type) =>
     BUDGET_ROMANTIC_TYPES.has(type),
@@ -159,13 +159,39 @@ function distanceScore(candidate: PlaceCandidate, midpoint: Location): number {
 }
 
 function qualitySignal(candidate: PlaceCandidate): number {
+  // Live event candidates (Ticketmaster) always have rating=0 and reviewCount=0
+  // — use attendanceSignal (popularity score 0–1) instead.
+  if (candidate.sourceType === "ticketmaster") {
+    return Math.min(1, candidate.attendanceSignal ?? 0);
+  }
+
   const ratingScore = candidate.rating / 5;
   const clampedReviews = Math.max(1, Math.min(candidate.reviewCount, REVIEW_COUNT_CAP));
   const reviewScore = Math.log(clampedReviews) / Math.log(REVIEW_COUNT_CAP);
   return ratingScore * 0.6 + reviewScore * 0.4;
 }
 
-function timeOfDayFit(category: Category, round: number): number {
+/**
+ * Returns the UTC hour (0–23) from a scheduledAt Date, or null if absent.
+ * Uses UTC to stay consistent with schedule-intersection logic elsewhere.
+ */
+function scheduledHour(candidate: PlaceCandidate): number | null {
+  if (!candidate.scheduledAt) return null;
+  return candidate.scheduledAt.getUTCHours();
+}
+
+function timeOfDayFit(category: Category, round: number, candidate: PlaceCandidate): number {
+  // Live events: boost when the event's start time matches the round's
+  // typical time-of-day window.
+  const hour = scheduledHour(candidate);
+  if (hour !== null) {
+    const isEvening = hour >= 17; // 5 PM or later
+    const isAfternoon = hour >= 12 && hour < 17;
+    if (round === 1) return isEvening ? 1 : 0.6;
+    if (round === 2) return isAfternoon ? 1 : 0.7;
+    return 0.8;
+  }
+
   if (round === 1) {
     return category === "RESTAURANT" || category === "BAR" ? 1 : 0.6;
   }
@@ -228,9 +254,16 @@ export function buildDeterministicRanking(
       const partialScore = {
         categoryOverlap: categoryOverlapScore(category, preferences),
         distanceToMidpoint: distanceScore(candidate, midpoint),
-        firstDateSuitability: scoreSafety(candidate),
+        // Live event candidates (Ticketmaster) have rating=0/reviewCount=0 and
+        // would always score 0 via scoreSafety's hard rating/review gates.
+        // Comedy shows and theater are inherently good first-date venues, so
+        // we assign a fixed high suitability score instead.
+        firstDateSuitability:
+          candidate.sourceType === "ticketmaster"
+            ? 0.85
+            : scoreSafety(candidate),
         qualitySignal: qualitySignal(candidate),
-        timeOfDayFit: timeOfDayFit(category, round),
+        timeOfDayFit: timeOfDayFit(category, round, candidate),
       };
 
       const baseComposite = computeVenueComposite(partialScore);

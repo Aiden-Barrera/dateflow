@@ -44,6 +44,7 @@ describe("searchNearbyWithCache", () => {
       reviewCount: 200,
       photoReferences: ["photo_ref_1"],
       photoReference: "photo_ref_1",
+      sourceType: "places" as const,
       photoUrls: [],
     },
   ];
