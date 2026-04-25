@@ -4,6 +4,9 @@ import type {
   Location,
   BudgetLevel,
   Category,
+  DayOfWeek,
+  ScheduleWindow,
+  TimeOfDay,
 } from "../types/preference";
 
 /**
@@ -18,6 +21,9 @@ export type SerializedPreference = {
   readonly budget: BudgetLevel;
   readonly categories: readonly Category[];
   readonly createdAt: string;
+  readonly scheduleWindow?: ScheduleWindow;
+  readonly availableDays?: readonly DayOfWeek[];
+  readonly timeOfDay?: TimeOfDay;
 };
 
 /**
@@ -33,5 +39,8 @@ export function serializePreference(pref: Preference): SerializedPreference {
     budget: pref.budget,
     categories: pref.categories,
     createdAt: pref.createdAt.toISOString(),
+    ...(pref.scheduleWindow !== undefined ? { scheduleWindow: pref.scheduleWindow } : {}),
+    ...(pref.availableDays !== undefined ? { availableDays: pref.availableDays } : {}),
+    ...(pref.timeOfDay !== undefined ? { timeOfDay: pref.timeOfDay } : {}),
   };
 }

@@ -17,6 +17,19 @@ export type BudgetLevel = "BUDGET" | "MODERATE" | "UPSCALE";
  */
 export type Category = "RESTAURANT" | "BAR" | "ACTIVITY" | "EVENT";
 
+// ---------------------------------------------------------------------------
+// Schedule preference types (DS-07A)
+// ---------------------------------------------------------------------------
+
+/** Rough time window for when the date should happen. */
+export type ScheduleWindow = "this_week" | "next_week" | "two_weeks" | "flexible";
+
+/** Days of the week a user is available. */
+export type DayOfWeek = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+/** Preferred block of the day. */
+export type TimeOfDay = "afternoon" | "evening" | "night" | "any";
+
 /**
  * A geographic coordinate with a human-readable label.
  * The label is what the user sees ("Downtown Austin", "Current Location")
@@ -40,6 +53,9 @@ export type Preference = {
   readonly budget: BudgetLevel;
   readonly categories: readonly Category[];
   readonly createdAt: Date;
+  readonly scheduleWindow?: ScheduleWindow;
+  readonly availableDays?: readonly DayOfWeek[];
+  readonly timeOfDay?: TimeOfDay;
 };
 
 /**
@@ -51,6 +67,9 @@ export type PreferenceInput = {
   readonly location: Location;
   readonly budget: BudgetLevel;
   readonly categories: readonly Category[];
+  readonly scheduleWindow?: ScheduleWindow;
+  readonly availableDays?: readonly DayOfWeek[];
+  readonly timeOfDay?: TimeOfDay;
 };
 
 // ---------------------------------------------------------------------------
@@ -71,6 +90,9 @@ export type PreferenceRow = {
   readonly budget: BudgetLevel;
   readonly categories: Category[];
   readonly created_at: string;
+  readonly schedule_window: ScheduleWindow | null;
+  readonly available_days: DayOfWeek[] | null;
+  readonly time_of_day: TimeOfDay | null;
 };
 
 /**
@@ -85,6 +107,9 @@ export function toPreference(row: PreferenceRow): Preference {
     budget: row.budget,
     categories: row.categories,
     createdAt: new Date(row.created_at),
+    ...(row.schedule_window ? { scheduleWindow: row.schedule_window } : {}),
+    ...(row.available_days ? { availableDays: row.available_days } : {}),
+    ...(row.time_of_day ? { timeOfDay: row.time_of_day } : {}),
   };
 }
 
