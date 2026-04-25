@@ -6,35 +6,14 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-const ISO_8601_PATTERN =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
-
-function parseDateTime(value: string | null): Date | undefined {
-  if (value === null) {
-    return undefined;
-  }
-
-  if (!ISO_8601_PATTERN.test(value)) {
-    throw new Error("dateTime must be a valid ISO 8601 string");
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    throw new Error("dateTime must be a valid ISO 8601 string");
-  }
-
-  return date;
-}
-
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(_request: Request, { params }: RouteParams) {
   const { id } = await params;
 
   try {
-    const url = new URL(request.url);
-    const dateTime = parseDateTime(url.searchParams.get("dateTime"));
+    // Time resolution (scheduledAt → confirmedDateTime → fallback) happens
+    // inside generateICS; the route just supplies the enriched MatchResult.
     const matchResult = await getMatchResult(id);
-    const ics = generateICS(matchResult, dateTime);
+    const ics = generateICS(matchResult);
 
     return new NextResponse(ics, {
       status: 200,
@@ -45,10 +24,6 @@ export async function GET(request: Request, { params }: RouteParams) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
-
-    if (message === "dateTime must be a valid ISO 8601 string") {
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
 
     if (message === "Session not found") {
       return NextResponse.json({ error: message }, { status: 404 });

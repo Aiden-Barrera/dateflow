@@ -11,7 +11,7 @@ import {
 import { Button } from "../../../../components/button";
 import { Logo } from "../../../../components/logo";
 import type { MatchResult } from "../../../../lib/types/match-result";
-import type { Category } from "../../../../lib/types/preference";
+import type { Category, DayOfWeek, Role } from "../../../../lib/types/preference";
 import {
   clearStoredSessionLink,
   loadStoredSessionLink,
@@ -27,11 +27,14 @@ import {
   getResultRevealMode,
   type ResultRevealMode,
 } from "./result-screen-state";
+import { DateTimePlanner } from "./date-time-planner";
 import type { AuthDraft, AuthMode } from "../../../../components/auth-sheet-state";
 
 type ResultScreenProps = {
   readonly matchedWithName: string | null;
   readonly matchResult: MatchResult;
+  readonly viewerRole?: Role | null;
+  readonly intersectedDays?: readonly DayOfWeek[];
   readonly initialAuthStatus?: "idle" | "saved";
   readonly initialAccountEmail?: string | null;
 };
@@ -46,6 +49,8 @@ const CATEGORY_LABELS: Record<Category, string> = {
 export function ResultScreen({
   matchedWithName,
   matchResult,
+  viewerRole = null,
+  intersectedDays = [],
   initialAuthStatus = "idle",
   initialAccountEmail = null,
 }: ResultScreenProps) {
@@ -338,20 +343,14 @@ export function ResultScreen({
                 </Button>
               </a>
 
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <a
-                  href={`/api/sessions/${matchResult.sessionId}/calendar`}
-                  className="col-span-2 w-full"
-                >
-                  <Button
-                    variant="secondary"
-                    icon={<CalendarIcon />}
-                    className="h-12 w-full rounded-[1rem] !border !border-white/20 !bg-white/[0.08] !text-white !shadow-none hover:!bg-white/[0.14]"
-                  >
-                    Calendar
-                  </Button>
-                </a>
-              </div>
+              <DateTimePlanner
+                sessionId={matchResult.sessionId}
+                venue={venue}
+                role={viewerRole ?? "a"}
+                intersectedDays={intersectedDays}
+                initialConfirmedDateTime={matchResult.confirmedDateTime ?? null}
+                calendarHref={`/api/sessions/${matchResult.sessionId}/calendar`}
+              />
             </div>
 
             {galleryImages.length > 1 ? (
@@ -489,19 +488,6 @@ function DirectionsIcon() {
         stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M7 4v3M17 4v3M4.75 8.5h14.5M6.75 20h10.5c1.1 0 2-.9 2-2V8a2 2 0 0 0-2-2H6.75a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
       />
     </svg>
   );
