@@ -174,6 +174,7 @@ describe("places-api-client", () => {
           "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200",
         ],
         photoReference: "places/ChIJ_abc123/photos/ref123",
+      sourceType: "places" as const,
       });
     });
 

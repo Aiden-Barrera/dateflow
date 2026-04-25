@@ -22,6 +22,7 @@ describe("result-serializer", () => {
           "https://example.com/photo-2.jpg",
         ],
         photoUrl: "https://example.com/photo.jpg",
+      sourceType: "places" as const,
         tags: ["cozy", "patio"],
         round: 3,
         position: 4,

@@ -98,6 +98,7 @@ function makeCandidatePoolItem(index: number): SessionCandidatePoolItem {
     priceLevel: 2,
     rating: 4.5,
     photoUrl: null,
+    photoUrls: [],
     rawTypes: ["restaurant"],
     rawTags: [],
     sourceRank: index,

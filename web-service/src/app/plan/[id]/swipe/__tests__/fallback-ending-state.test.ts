@@ -19,6 +19,8 @@ const venues: readonly Venue[] = [
     priceLevel: 2,
     rating: 4.7,
     photoUrl: "/api/places/photos?name=places%2Fabc%2Fphotos%2Fref",
+    photoUrls: [],
+      sourceType: "places" as const,
     tags: ["cozy patio"],
     round: 2,
     position: 3,

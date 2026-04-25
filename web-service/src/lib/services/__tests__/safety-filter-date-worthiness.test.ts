@@ -13,6 +13,7 @@ function makeCandidate(overrides: Partial<PlaceCandidate> = {}): PlaceCandidate 
     rating: 4.6,
     reviewCount: 240,
     photoReference: "photo_ref",
+      sourceType: "places" as const,
     photoReferences: ["photo_ref"],
     photoUrls: ["/api/places/photos?name=places%2Ftest%2Fphotos%2Fphoto_ref&maxHeightPx=1200"],
     ...overrides,
