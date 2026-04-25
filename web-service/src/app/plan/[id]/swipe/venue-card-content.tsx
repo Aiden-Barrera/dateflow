@@ -84,7 +84,7 @@ export function buildSwipeCardAriaLabel(
   category: Category,
   ageRestriction: "18+" | "21+" | null | undefined,
 ): string {
-  const base = `${name}, ${category}`;
+  const base = `${name}, ${CATEGORY_LABELS[category]}`;
   const restriction = getAgeRestrictionLabel(ageRestriction);
   return restriction ? `${base}, ${restriction} only` : base;
 }
@@ -97,6 +97,7 @@ export function PreviewVenueCard({
   readonly venue: Venue;
 }) {
   const slides = getVenueSlides(venue);
+  const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
 
   return (
     <div className="flex h-full flex-col bg-white/72">
@@ -146,12 +147,12 @@ export function PreviewVenueCard({
               {tag}
             </div>
           ))}
-          {getAgeRestrictionLabel(venue.ageRestriction) ? (
+          {ageLabel ? (
             <span
-              aria-label={`Age restriction: ${getAgeRestrictionLabel(venue.ageRestriction)}`}
+              aria-label={`Age restriction: ${ageLabel}`}
               className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 text-caption font-semibold text-amber-700"
             >
-              {getAgeRestrictionLabel(venue.ageRestriction)}
+              {ageLabel}
             </span>
           ) : null}
         </div>
@@ -184,6 +185,7 @@ export function VenueCardContent({
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const slides = getVenueSlides(venue);
   const activeSlide = slides[activeSlideIndex] ?? slides[0] ?? null;
+  const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
 
   function moveToSlide(nextIndex: number) {
     if (slides.length <= 1) return;
@@ -304,12 +306,12 @@ export function VenueCardContent({
                   </InfoPill>
                 ) : null}
                 <InfoPill>{`Round ${venue.round}`}</InfoPill>
-                {getAgeRestrictionLabel(venue.ageRestriction) ? (
+                {ageLabel ? (
                   <span
-                    aria-label={`Age restriction: ${getAgeRestrictionLabel(venue.ageRestriction)}`}
+                    aria-label={`Age restriction: ${ageLabel}`}
                     className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-3 py-1.5 text-caption font-semibold text-amber-700"
                   >
-                    {getAgeRestrictionLabel(venue.ageRestriction)}
+                    {ageLabel}
                   </span>
                 ) : null}
               </div>

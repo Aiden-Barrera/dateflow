@@ -49,7 +49,7 @@ describe("buildSwipeCardAriaLabel", () => {
   it("includes venue name and category", () => {
     const label = buildSwipeCardAriaLabel("The Comedy Club", "BAR", undefined);
     expect(label).toContain("The Comedy Club");
-    expect(label).toContain("BAR");
+    expect(label).toContain("Bar");
   });
 
   it("omits age restriction when not present", () => {
