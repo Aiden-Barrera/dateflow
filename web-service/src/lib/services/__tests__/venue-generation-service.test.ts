@@ -80,6 +80,12 @@ vi.mock("../ai-curation-service", () => ({
   scoreAndCurate: (...args: unknown[]) => mockScoreAndCurate(...args),
 }));
 
+const mockFetchLiveEventCandidates = vi.fn();
+vi.mock("../event-enrichment-service", () => ({
+  fetchLiveEventCandidates: (...args: unknown[]) =>
+    mockFetchLiveEventCandidates(...args),
+}));
+
 const preferences: readonly [Preference, Preference] = [
   {
     id: "pref-a",
@@ -117,6 +123,7 @@ function makeCuratedVenue(index: number): CuratedVenueCandidate {
     reviewCount: 200 + index,
     photoReference:
       index % 2 === 0 ? `places/place-${index}/photos/photo-${index}` : null,
+      sourceType: "places" as const,
     photoReferences:
       index % 2 === 0
         ? [
@@ -186,6 +193,7 @@ describe("generateVenues", () => {
     const curated = Array.from({ length: 12 }, (_, index) => makeCuratedVenue(index + 1));
     mockSearchNearbyWithCache.mockResolvedValue(curated);
     mockApplySafetyFilter.mockImplementation((candidates: unknown) => candidates);
+    mockFetchLiveEventCandidates.mockResolvedValue([]);
     mockScoreAndCurate
       .mockResolvedValueOnce(curated.slice(0, 4))
       .mockResolvedValueOnce(curated.slice(4, 8))
@@ -302,5 +310,32 @@ describe("generateVenues", () => {
       "both_ready",
       "generation_failed",
     ]);
+  });
+
+  it("fetches live events and merges them into the candidate pool when categories include ACTIVITY", async () => {
+    const eventPreferences: readonly [typeof preferences[0], typeof preferences[1]] = [
+      { ...preferences[0], categories: ["RESTAURANT", "ACTIVITY"] },
+      { ...preferences[1], categories: ["ACTIVITY"] },
+    ];
+    mockGetBothPreferences.mockResolvedValue(eventPreferences);
+
+    const liveEventCandidate = makeCuratedVenue(99);
+    mockFetchLiveEventCandidates.mockResolvedValueOnce([liveEventCandidate]);
+
+    await generateVenues("session-1");
+
+    expect(mockFetchLiveEventCandidates).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fetch live events when categories have no ACTIVITY or EVENT", async () => {
+    const restaurantOnlyPreferences: readonly [typeof preferences[0], typeof preferences[1]] = [
+      { ...preferences[0], categories: ["RESTAURANT", "BAR"] },
+      { ...preferences[1], categories: ["RESTAURANT"] },
+    ];
+    mockGetBothPreferences.mockResolvedValue(restaurantOnlyPreferences);
+
+    await generateVenues("session-1");
+
+    expect(mockFetchLiveEventCandidates).not.toHaveBeenCalled();
   });
 });

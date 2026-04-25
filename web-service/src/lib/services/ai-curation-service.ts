@@ -121,7 +121,7 @@ function budgetRomanticBonus(
   }
 
   const hasBudgetPrimaryType =
-    candidate.primaryType !== null &&
+    candidate.primaryType != null &&
     BUDGET_ROMANTIC_TYPES.has(candidate.primaryType);
   const hasBudgetFriendlyType = candidate.types.some((type) =>
     BUDGET_ROMANTIC_TYPES.has(type),
@@ -158,14 +158,52 @@ function distanceScore(candidate: PlaceCandidate, midpoint: Location): number {
   return Math.max(0, 1 - meters / 5_000);
 }
 
+/**
+ * Maximum "going" count used to normalize Meetup attendance to 0–1.
+ * A meetup with 200+ RSVPs is considered a full-quality signal.
+ */
+const ATTENDANCE_SIGNAL_CAP = 200;
+
 function qualitySignal(candidate: PlaceCandidate): number {
+  // Live event candidates (Meetup / Ticketmaster) always have rating=0 and
+  // reviewCount=0 — use attendanceSignal instead.
+  const isLiveEvent = candidate.sourceType === "meetup" || candidate.sourceType === "ticketmaster";
+  if (isLiveEvent) {
+    const attendance = candidate.attendanceSignal ?? 0;
+    // Normalize: Meetup "going" count capped at ATTENDANCE_SIGNAL_CAP;
+    // Ticketmaster popularity is already 0–1.
+    const normalized = candidate.sourceType === "ticketmaster"
+      ? Math.min(1, attendance)
+      : Math.min(1, attendance / ATTENDANCE_SIGNAL_CAP);
+    return normalized;
+  }
+
   const ratingScore = candidate.rating / 5;
   const clampedReviews = Math.max(1, Math.min(candidate.reviewCount, REVIEW_COUNT_CAP));
   const reviewScore = Math.log(clampedReviews) / Math.log(REVIEW_COUNT_CAP);
   return ratingScore * 0.6 + reviewScore * 0.4;
 }
 
-function timeOfDayFit(category: Category, round: number): number {
+/**
+ * Returns the hour (0–23) from a scheduledAt Date, or null if absent.
+ */
+function scheduledHour(candidate: PlaceCandidate): number | null {
+  if (!candidate.scheduledAt) return null;
+  return candidate.scheduledAt.getHours();
+}
+
+function timeOfDayFit(category: Category, round: number, candidate: PlaceCandidate): number {
+  // Live events: boost when the event's start time matches the round's
+  // typical time-of-day window.
+  const hour = scheduledHour(candidate);
+  if (hour !== null) {
+    const isEvening = hour >= 17; // 5 PM or later
+    const isAfternoon = hour >= 12 && hour < 17;
+    if (round === 1) return isEvening ? 1 : 0.6;
+    if (round === 2) return isAfternoon ? 1 : 0.7;
+    return 0.8;
+  }
+
   if (round === 1) {
     return category === "RESTAURANT" || category === "BAR" ? 1 : 0.6;
   }
@@ -230,7 +268,7 @@ export function buildDeterministicRanking(
         distanceToMidpoint: distanceScore(candidate, midpoint),
         firstDateSuitability: scoreSafety(candidate),
         qualitySignal: qualitySignal(candidate),
-        timeOfDayFit: timeOfDayFit(category, round),
+        timeOfDayFit: timeOfDayFit(category, round, candidate),
       };
 
       const baseComposite = computeVenueComposite(partialScore);

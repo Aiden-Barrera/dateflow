@@ -94,7 +94,7 @@ const preferences: readonly [Preference, Preference] = [
 const originalGooglePlacesApiKey = process.env.GOOGLE_PLACES_API_KEY;
 const originalAppUrl = process.env.NEXT_PUBLIC_APP_URL;
 
-function makeCandidate(overrides: Partial<PlaceCandidate> = {}): PlaceCandidate {
+function makeCandidate(overrides: Partial<PlaceCandidate & { category: string; tags: readonly string[]; score: Record<string, number> }> = {}): PlaceCandidate {
   return {
     placeId: "place-1",
     name: "Default Venue",
@@ -105,6 +105,7 @@ function makeCandidate(overrides: Partial<PlaceCandidate> = {}): PlaceCandidate 
     rating: 4.6,
     reviewCount: 250,
     photoReference: null,
+      sourceType: "places" as const,
     photoReferences: [],
     photoUrls: [],
     category: "RESTAURANT",

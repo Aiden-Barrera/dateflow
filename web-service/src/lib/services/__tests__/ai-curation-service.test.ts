@@ -63,6 +63,7 @@ function makeCandidate(
     rating: 4.5,
     reviewCount: 300,
     photoReference: null,
+      sourceType: "places" as const,
     ...overrides,
   };
 }
@@ -519,6 +520,84 @@ describe("scoreAndCurate", () => {
         provider: "gemini",
         reason: "provider_timeout",
       }),
+    );
+  });
+});
+
+describe("buildDeterministicRanking — live event scoring", () => {
+  it("uses attendanceSignal for qualitySignal when rating and reviewCount are zero", () => {
+    const liveEvent = makeCandidate("live-event", {
+      sourceType: "meetup" as const,
+      rating: 0,
+      reviewCount: 0,
+      attendanceSignal: 80,
+      types: ["event"],
+    });
+    const placesVenue = makeCandidate("places-venue", {
+      sourceType: "places" as const,
+      rating: 4.5,
+      reviewCount: 300,
+    });
+
+    const ranked = buildDeterministicRanking(
+      [liveEvent, placesVenue],
+      preferences,
+      1,
+      midpoint,
+    );
+
+    const eventResult = ranked.find((c) => c.placeId === "live-event");
+    expect(eventResult).toBeDefined();
+    expect(eventResult!.score.qualitySignal).toBeGreaterThan(0);
+  });
+
+  it("scores qualitySignal = 0 for a live event with zero attendanceSignal", () => {
+    const liveEvent = makeCandidate("low-attendance-event", {
+      sourceType: "meetup" as const,
+      rating: 0,
+      reviewCount: 0,
+      attendanceSignal: 0,
+      types: ["event"],
+    });
+
+    const ranked = buildDeterministicRanking(
+      [liveEvent],
+      preferences,
+      1,
+      midpoint,
+    );
+
+    const result = ranked.find((c) => c.placeId === "low-attendance-event");
+    expect(result!.score.qualitySignal).toBe(0);
+  });
+
+  it("boosts timeOfDayFit for a live event scheduled in the evening (round 1)", () => {
+    const eveningEvent = makeCandidate("evening-event", {
+      sourceType: "ticketmaster" as const,
+      rating: 0,
+      reviewCount: 0,
+      types: ["event"],
+      scheduledAt: new Date("2026-05-15T19:00:00"),
+    });
+    const afternoonEvent = makeCandidate("afternoon-event", {
+      sourceType: "ticketmaster" as const,
+      rating: 0,
+      reviewCount: 0,
+      types: ["event"],
+      scheduledAt: new Date("2026-05-15T14:00:00"),
+    });
+
+    const ranked = buildDeterministicRanking(
+      [eveningEvent, afternoonEvent],
+      preferences,
+      1,
+      midpoint,
+    );
+
+    const evening = ranked.find((c) => c.placeId === "evening-event");
+    const afternoon = ranked.find((c) => c.placeId === "afternoon-event");
+    expect(evening!.score.timeOfDayFit).toBeGreaterThanOrEqual(
+      afternoon!.score.timeOfDayFit,
     );
   });
 });

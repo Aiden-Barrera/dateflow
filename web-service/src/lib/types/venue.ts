@@ -102,6 +102,11 @@ export type Venue = {
   readonly distanceMeters?: number;
   readonly website?: string;
   readonly whyPicked?: string;
+  readonly sourceType: "places" | "meetup" | "ticketmaster";
+  readonly scheduledAt?: Date;
+  readonly eventUrl?: string;
+  readonly durationMinutes?: number;
+  readonly ageRestriction?: "18+" | "21+" | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -140,6 +145,11 @@ export type VenueRow = {
   readonly distance_meters?: number | null;
   readonly website?: string | null;
   readonly why_picked?: string | null;
+  readonly source_type?: string | null;
+  readonly scheduled_at?: string | null;
+  readonly event_url?: string | null;
+  readonly duration_minutes?: number | null;
+  readonly age_restriction?: string | null;
 };
 
 export type VenueOpeningHoursRow = {
@@ -215,6 +225,13 @@ export function toVenue(row: VenueRow): Venue {
       : {}),
     ...(row.website ? { website: row.website } : {}),
     ...(row.why_picked ? { whyPicked: row.why_picked } : {}),
+    sourceType: (row.source_type as "places" | "meetup" | "ticketmaster" | null | undefined) ?? "places",
+    ...(row.scheduled_at ? { scheduledAt: new Date(row.scheduled_at) } : {}),
+    ...(row.event_url ? { eventUrl: row.event_url } : {}),
+    ...(typeof row.duration_minutes === "number" ? { durationMinutes: row.duration_minutes } : {}),
+    ...(row.age_restriction !== undefined && row.age_restriction !== null
+      ? { ageRestriction: row.age_restriction as "18+" | "21+" }
+      : {}),
   };
 }
 
@@ -239,16 +256,30 @@ export type PlaceCandidate = {
   readonly address: string;
   readonly location: Location;
   readonly types: readonly string[];
-  readonly primaryType: string | null;
+  readonly primaryType?: string | null;
   readonly priceLevel: number;
   readonly rating: number;
   readonly reviewCount: number;
-  readonly photoReferences: readonly string[];
-  readonly photoReference: string | null;
-  readonly photoUrls: readonly string[];
+  readonly photoReferences?: readonly string[];
+  readonly photoReference?: string | null;
+  readonly photoUrls?: readonly string[];
   readonly editorialSummary?: string;
   readonly openingHours?: VenueOpeningHours;
   readonly website?: string;
+  /** 'places' | 'meetup' | 'ticketmaster'. Defaults to 'places' for Google Places candidates. */
+  readonly sourceType: "places" | "meetup" | "ticketmaster";
+  /** Live event start time — present for meetup/ticketmaster candidates. */
+  readonly scheduledAt?: Date;
+  /** Deep link to the event page on Meetup or Ticketmaster. */
+  readonly eventUrl?: string;
+  /** Event duration in minutes. */
+  readonly durationMinutes?: number;
+  /** Age restriction badge ('18+' | '21+') or null if none. */
+  readonly ageRestriction?: "18+" | "21+" | null;
+  /** Short description from the event source (e.g. Meetup description, TM subtitle). */
+  readonly eventDescription?: string;
+  /** Attendance/popularity signal (Meetup going count or Ticketmaster popularity). */
+  readonly attendanceSignal?: number;
 };
 
 /**

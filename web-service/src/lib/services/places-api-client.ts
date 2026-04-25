@@ -433,6 +433,7 @@ export async function searchNearby(
       ...(editorialSummary ? { editorialSummary } : {}),
       ...(openingHours ? { openingHours } : {}),
       ...(website ? { website } : {}),
+      sourceType: "places" as const,
     };
   });
 
