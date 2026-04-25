@@ -110,6 +110,11 @@ type InsertVenueRow = {
   readonly distance_meters: number | null;
   readonly website: string | null;
   readonly why_picked: string | null;
+  readonly source_type: string;
+  readonly scheduled_at: string | null;
+  readonly event_url: string | null;
+  readonly duration_minutes: number | null;
+  readonly age_restriction: string | null;
 };
 
 async function insertVenues(rows: readonly InsertVenueRow[]): Promise<void> {
@@ -225,6 +230,10 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
     const wantsLiveEvents = categories.some(
       (cat) => cat === "EVENT" || cat === "ACTIVITY",
     );
+    // Live event candidates intentionally bypass applySafetyFilter: the rating
+    // and review-count gates are meaningless for Ticketmaster events (always 0),
+    // and the deny-listed type check is irrelevant since TM types are pre-scoped
+    // to Arts & Theatre + Comedy at the API level.
     const liveEventCandidates = wantsLiveEvents
       ? await fetchLiveEventCandidates(midpoint, SEARCH_RADIUS_METERS)
       : [];
@@ -305,6 +314,11 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           distance_meters: distanceMeters,
           website: venue.website ?? null,
           why_picked: whyPicked ?? null,
+          source_type: venue.sourceType ?? "places",
+          scheduled_at: venue.scheduledAt ? venue.scheduledAt.toISOString() : null,
+          event_url: venue.eventUrl ?? null,
+          duration_minutes: venue.durationMinutes ?? null,
+          age_restriction: venue.ageRestriction ?? null,
         });
       });
 

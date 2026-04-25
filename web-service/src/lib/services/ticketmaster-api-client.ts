@@ -61,6 +61,22 @@ function buildAddress(venue: TmVenue): string {
   return parts.join(", ");
 }
 
+/**
+ * Maps a Ticketmaster genre name to Google Places-compatible type strings so
+ * that `mapGoogleTypeToCategory` classifies the event correctly as EVENT.
+ * Falls back to `performing_arts_theater` for unrecognised genres.
+ */
+function tmGenreToGoogleTypes(genreName: string | undefined): readonly string[] {
+  const genre = genreName?.toLowerCase() ?? "";
+  if (genre.includes("comedy")) return ["comedy_club", "performing_arts_theater"];
+  if (genre.includes("theatre") || genre.includes("theater") || genre.includes("broadway")) {
+    return ["performing_arts_theater"];
+  }
+  if (genre.includes("opera") || genre.includes("classical")) return ["opera_house", "performing_arts_theater"];
+  if (genre.includes("concert")) return ["concert_hall", "performing_arts_theater"];
+  return ["performing_arts_theater"];
+}
+
 function toPlaceCandidate(event: TmEvent): PlaceCandidate | null {
   const venue = event._embedded?.venues?.[0];
   if (!venue) return null;
@@ -76,14 +92,17 @@ function toPlaceCandidate(event: TmEvent): PlaceCandidate | null {
   const venueName = venue.name ?? event.name;
   const address = buildAddress(venue);
   const eventDescription = event.info ?? event.pleaseNote;
+  const genreName = event.classifications?.[0]?.genre?.name;
+  const types = tmGenreToGoogleTypes(genreName);
+  const primaryType = types[0] ?? "performing_arts_theater";
 
   return {
     placeId: `ticketmaster:${event.id}`,
     name: event.name,
     address,
     location: { lat, lng, label: venueName },
-    types: ["event"],
-    primaryType: "event",
+    types,
+    primaryType,
     priceLevel: 0,
     rating: 0,
     reviewCount: 0,

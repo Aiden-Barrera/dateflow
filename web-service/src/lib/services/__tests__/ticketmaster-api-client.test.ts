@@ -91,7 +91,7 @@ describe("fetchTicketmasterEventCandidates", () => {
     expect(candidate!.eventUrl).toBe("https://www.ticketmaster.com/event/tm-event-1");
     expect(candidate!.attendanceSignal).toBe(0.72);
     expect(candidate!.scheduledAt).toBeInstanceOf(Date);
-    expect(candidate!.types).toContain("event");
+    expect(candidate!.types).toContain("performing_arts_theater");
   });
 
   it("skips events that have no venue location", async () => {

@@ -225,7 +225,7 @@ export function toVenue(row: VenueRow): Venue {
       : {}),
     ...(row.website ? { website: row.website } : {}),
     ...(row.why_picked ? { whyPicked: row.why_picked } : {}),
-    sourceType: (row.source_type as "places" | "ticketmaster" | null | undefined) ?? "places",
+    sourceType: row.source_type === "ticketmaster" ? "ticketmaster" : "places",
     ...(row.scheduled_at ? { scheduledAt: new Date(row.scheduled_at) } : {}),
     ...(row.event_url ? { eventUrl: row.event_url } : {}),
     ...(typeof row.duration_minutes === "number" ? { durationMinutes: row.duration_minutes } : {}),
@@ -270,15 +270,15 @@ export type PlaceCandidate = {
   readonly sourceType: "places" | "ticketmaster";
   /** Live event start time — present for ticketmaster candidates. */
   readonly scheduledAt?: Date;
-  /** Deep link to the event page on Meetup or Ticketmaster. */
+  /** Deep link to the Ticketmaster event page. */
   readonly eventUrl?: string;
   /** Event duration in minutes. */
   readonly durationMinutes?: number;
   /** Age restriction badge ('18+' | '21+') or null if none. */
   readonly ageRestriction?: "18+" | "21+" | null;
-  /** Short description from the event source (e.g. Meetup description, TM subtitle). */
+  /** Short description from the event source (e.g. Ticketmaster subtitle). */
   readonly eventDescription?: string;
-  /** Attendance/popularity signal (Meetup going count or Ticketmaster popularity). */
+  /** Attendance/popularity signal from Ticketmaster (0–1 float). */
   readonly attendanceSignal?: number;
 };
 

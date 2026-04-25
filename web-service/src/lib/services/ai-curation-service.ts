@@ -172,11 +172,12 @@ function qualitySignal(candidate: PlaceCandidate): number {
 }
 
 /**
- * Returns the hour (0–23) from a scheduledAt Date, or null if absent.
+ * Returns the UTC hour (0–23) from a scheduledAt Date, or null if absent.
+ * Uses UTC to stay consistent with schedule-intersection logic elsewhere.
  */
 function scheduledHour(candidate: PlaceCandidate): number | null {
   if (!candidate.scheduledAt) return null;
-  return candidate.scheduledAt.getHours();
+  return candidate.scheduledAt.getUTCHours();
 }
 
 function timeOfDayFit(category: Category, round: number, candidate: PlaceCandidate): number {
