@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   formatRatingWithCount,
   formatDistance,
+  getAgeRestrictionLabel,
+  buildSwipeCardAriaLabel,
 } from "../venue-card-content";
 
 describe("formatRatingWithCount", () => {
@@ -22,6 +24,48 @@ describe("formatRatingWithCount", () => {
     expect(formatRatingWithCount(4.7, 1000)).toBe("4.7 · 1k reviews");
     expect(formatRatingWithCount(4.7, 12500)).toBe("4.7 · 13k reviews");
     expect(formatRatingWithCount(4.7, 1500)).toBe("4.7 · 1.5k reviews");
+  });
+});
+
+describe("getAgeRestrictionLabel", () => {
+  it("returns null when ageRestriction is undefined", () => {
+    expect(getAgeRestrictionLabel(undefined)).toBeNull();
+  });
+
+  it("returns null when ageRestriction is null", () => {
+    expect(getAgeRestrictionLabel(null)).toBeNull();
+  });
+
+  it('returns "18+" for 18+ restriction', () => {
+    expect(getAgeRestrictionLabel("18+")).toBe("18+");
+  });
+
+  it('returns "21+" for 21+ restriction', () => {
+    expect(getAgeRestrictionLabel("21+")).toBe("21+");
+  });
+});
+
+describe("buildSwipeCardAriaLabel", () => {
+  it("includes venue name and category", () => {
+    const label = buildSwipeCardAriaLabel("The Comedy Club", "BAR", undefined);
+    expect(label).toContain("The Comedy Club");
+    expect(label).toContain("BAR");
+  });
+
+  it("omits age restriction when not present", () => {
+    const label = buildSwipeCardAriaLabel("Cafe Luna", "RESTAURANT", undefined);
+    expect(label).not.toContain("18+");
+    expect(label).not.toContain("21+");
+  });
+
+  it("includes age restriction in label when present", () => {
+    const label = buildSwipeCardAriaLabel("Club Noir", "BAR", "21+");
+    expect(label).toContain("21+");
+  });
+
+  it("includes 18+ restriction in label when present", () => {
+    const label = buildSwipeCardAriaLabel("Comedy Night", "ACTIVITY", "18+");
+    expect(label).toContain("18+");
   });
 });
 

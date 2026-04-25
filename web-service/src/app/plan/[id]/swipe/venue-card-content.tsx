@@ -72,6 +72,23 @@ export function formatDistance(meters: number): string {
   return `${miles.toFixed(1)} mi away`;
 }
 
+export function getAgeRestrictionLabel(
+  ageRestriction: "18+" | "21+" | null | undefined,
+): string | null {
+  if (ageRestriction == null) return null;
+  return ageRestriction;
+}
+
+export function buildSwipeCardAriaLabel(
+  name: string,
+  category: Category,
+  ageRestriction: "18+" | "21+" | null | undefined,
+): string {
+  const base = `${name}, ${category}`;
+  const restriction = getAgeRestrictionLabel(ageRestriction);
+  return restriction ? `${base}, ${restriction} only` : base;
+}
+
 // ─── Preview card for cards 2 & 3 in the stack ───────────────────────────────
 
 export function PreviewVenueCard({
@@ -129,6 +146,14 @@ export function PreviewVenueCard({
               {tag}
             </div>
           ))}
+          {getAgeRestrictionLabel(venue.ageRestriction) ? (
+            <span
+              aria-label={`Age restriction: ${getAgeRestrictionLabel(venue.ageRestriction)}`}
+              className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 text-caption font-semibold text-amber-700"
+            >
+              {getAgeRestrictionLabel(venue.ageRestriction)}
+            </span>
+          ) : null}
         </div>
       </div>
     </div>
@@ -279,6 +304,14 @@ export function VenueCardContent({
                   </InfoPill>
                 ) : null}
                 <InfoPill>{`Round ${venue.round}`}</InfoPill>
+                {getAgeRestrictionLabel(venue.ageRestriction) ? (
+                  <span
+                    aria-label={`Age restriction: ${getAgeRestrictionLabel(venue.ageRestriction)}`}
+                    className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-3 py-1.5 text-caption font-semibold text-amber-700"
+                  >
+                    {getAgeRestrictionLabel(venue.ageRestriction)}
+                  </span>
+                ) : null}
               </div>
             </div>
             <div className="sm:hidden">
