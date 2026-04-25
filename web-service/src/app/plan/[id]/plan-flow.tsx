@@ -4,8 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HookScreen } from "../../../components/hook-screen";
 import { LoadingScreen } from "../../../components/loading-screen";
+import { ScheduleScreen } from "../../../components/schedule-screen";
 import { createSessionStatusSync } from "../../../lib/session-status-sync";
-import type { Location, BudgetLevel, Category } from "../../../lib/types/preference";
+import type {
+  Location,
+  BudgetLevel,
+  Category,
+  DayOfWeek,
+  ScheduleWindow,
+  TimeOfDay,
+} from "../../../lib/types/preference";
 import { getPlanFlowSyncAction } from "./plan-flow-state";
 
 type PlanFlowProps = {
@@ -22,7 +30,14 @@ type PlanFlowProps = {
  * single landing, then PlanFlow POSTs the bundled preferences and shows
  * the loading screen while the session transitions.
  */
-type FlowStep = "hook" | "loading";
+type FlowStep = "hook" | "schedule" | "loading";
+
+type HookData = {
+  displayName: string;
+  location: Location;
+  categories: Category[];
+  budget: BudgetLevel;
+};
 
 export function PlanFlow({
   sessionId,
@@ -32,15 +47,14 @@ export function PlanFlow({
 }: PlanFlowProps) {
   const router = useRouter();
   const [step, setStep] = useState<FlowStep>(initialStep);
-  const [location, setLocation] = useState<Location | null>(null);
-  const [inviteeDisplayName, setInviteeDisplayName] = useState("");
+  const [hookData, setHookData] = useState<HookData | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   async function submitPreferences(
-    loc: Location,
-    vibeCategories: Category[],
-    vibeBudget: BudgetLevel,
-    displayNameOverride?: string,
+    data: HookData,
+    scheduleWindow?: ScheduleWindow,
+    availableDays?: DayOfWeek[],
+    timeOfDay?: TimeOfDay,
   ) {
     try {
       const response = await fetch(
@@ -50,10 +64,13 @@ export function PlanFlow({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             role: "b",
-            displayName: displayNameOverride ?? inviteeDisplayName,
-            location: { lat: loc.lat, lng: loc.lng, label: loc.label },
-            budget: vibeBudget,
-            categories: vibeCategories,
+            displayName: data.displayName,
+            location: { lat: data.location.lat, lng: data.location.lng, label: data.location.label },
+            budget: data.budget,
+            categories: data.categories,
+            ...(scheduleWindow ? { scheduleWindow } : {}),
+            ...(availableDays ? { availableDays } : {}),
+            ...(timeOfDay ? { timeOfDay } : {}),
             demo: demoMode,
           }),
         }
@@ -95,13 +112,30 @@ export function PlanFlow({
     return (
       <HookScreen
         creatorName={creatorName}
-        initialDisplayName={inviteeDisplayName}
-        initialLocation={location}
+        initialDisplayName={hookData?.displayName ?? ""}
+        initialLocation={hookData?.location ?? null}
         onContinue={(data) => {
-          setInviteeDisplayName(data.displayName);
-          setLocation(data.location);
+          setHookData(data);
+          setStep("schedule");
+        }}
+      />
+    );
+  }
+
+  if (step === "schedule") {
+    return (
+      <ScheduleScreen
+        stepLabel="Step 2 of 2"
+        onBack={() => setStep("hook")}
+        onComplete={(schedule) => {
+          if (!hookData) return;
           setStep("loading");
-          submitPreferences(data.location, data.categories, data.budget, data.displayName);
+          submitPreferences(
+            hookData,
+            schedule.scheduleWindow,
+            schedule.availableDays,
+            schedule.timeOfDay,
+          );
         }}
       />
     );

@@ -14,7 +14,14 @@ import { isExpired } from "../../../../../lib/services/session-helpers";
 import { generateDemoVenues } from "../../../../../lib/services/demo-venue-service";
 import { generateVenues } from "../../../../../lib/services/venue-generation-service";
 import { buildSessionRoleCookieValue } from "../../../../../lib/session-role-access";
-import type { BudgetLevel, Category, Role } from "../../../../../lib/types/preference";
+import type {
+  BudgetLevel,
+  Category,
+  DayOfWeek,
+  Role,
+  ScheduleWindow,
+  TimeOfDay,
+} from "../../../../../lib/types/preference";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -38,6 +45,27 @@ const VALID_CATEGORIES: readonly Category[] = [
   "EVENT",
 ];
 const MAX_CATEGORIES = 4;
+const VALID_SCHEDULE_WINDOWS: readonly ScheduleWindow[] = [
+  "this_week",
+  "next_week",
+  "two_weeks",
+  "flexible",
+];
+const VALID_DAYS_OF_WEEK: readonly DayOfWeek[] = [
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+];
+const VALID_TIMES_OF_DAY: readonly TimeOfDay[] = [
+  "afternoon",
+  "evening",
+  "night",
+  "any",
+];
 const SESSION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -53,6 +81,9 @@ type ValidationResult =
       location: { lat: number; lng: number; label: string };
       budget: BudgetLevel;
       categories: Category[];
+      scheduleWindow?: ScheduleWindow;
+      availableDays?: DayOfWeek[];
+      timeOfDay?: TimeOfDay;
       demo: boolean;
     }
   | { valid: false; error: string };
@@ -62,7 +93,17 @@ function validateBody(body: unknown): ValidationResult {
     return { valid: false, error: "Request body must be a JSON object" };
   }
 
-  const { role, displayName, location, budget, categories, demo } = body as Record<string, unknown>;
+  const {
+    role,
+    displayName,
+    location,
+    budget,
+    categories,
+    scheduleWindow,
+    availableDays,
+    timeOfDay,
+    demo,
+  } = body as Record<string, unknown>;
 
   // Role
   if (!role || !VALID_ROLES.includes(role as Role)) {
@@ -125,6 +166,25 @@ function validateBody(body: unknown): ValidationResult {
     return { valid: false, error: `Invalid category: ${invalidCategory}` };
   }
 
+  // Schedule fields (all optional)
+  if (scheduleWindow !== undefined && !VALID_SCHEDULE_WINDOWS.includes(scheduleWindow as ScheduleWindow)) {
+    return { valid: false, error: "scheduleWindow must be this_week, next_week, two_weeks, or flexible" };
+  }
+
+  if (availableDays !== undefined) {
+    if (!Array.isArray(availableDays) || availableDays.length === 0) {
+      return { valid: false, error: "availableDays must be a non-empty array" };
+    }
+    const invalidDay = availableDays.find((d: unknown) => !VALID_DAYS_OF_WEEK.includes(d as DayOfWeek));
+    if (invalidDay !== undefined) {
+      return { valid: false, error: `Invalid day: ${invalidDay}` };
+    }
+  }
+
+  if (timeOfDay !== undefined && !VALID_TIMES_OF_DAY.includes(timeOfDay as TimeOfDay)) {
+    return { valid: false, error: "timeOfDay must be afternoon, evening, night, or any" };
+  }
+
   return {
     valid: true,
     role: role as Role,
@@ -132,6 +192,9 @@ function validateBody(body: unknown): ValidationResult {
     location: { lat: lat as number, lng: lng as number, label: (label as string).trim() },
     budget: budget as BudgetLevel,
     categories: categories as Category[],
+    ...(scheduleWindow !== undefined ? { scheduleWindow: scheduleWindow as ScheduleWindow } : {}),
+    ...(availableDays !== undefined ? { availableDays: availableDays as DayOfWeek[] } : {}),
+    ...(timeOfDay !== undefined ? { timeOfDay: timeOfDay as TimeOfDay } : {}),
     demo: demo === true,
   };
 }
@@ -184,7 +247,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: validation.error }, { status: 400 });
   }
 
-  const { role, displayName, location, budget, categories, demo } = validation;
+  const { role, displayName, location, budget, categories, scheduleWindow, availableDays, timeOfDay, demo } = validation;
 
   try {
     // 3. Check session exists
@@ -231,6 +294,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       location,
       budget,
       categories,
+      ...(scheduleWindow !== undefined ? { scheduleWindow } : {}),
+      ...(availableDays !== undefined ? { availableDays } : {}),
+      ...(timeOfDay !== undefined ? { timeOfDay } : {}),
     });
 
     if (role === "b" && displayName) {

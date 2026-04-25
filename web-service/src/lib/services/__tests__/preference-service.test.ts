@@ -68,6 +68,9 @@ const fakeRow: PreferenceRow = {
   budget: "MODERATE",
   categories: ["RESTAURANT", "BAR"],
   created_at: "2026-03-29T12:00:00Z",
+  schedule_window: null,
+  available_days: null,
+  time_of_day: null,
 };
 
 const fakeRowB: PreferenceRow = {
@@ -78,6 +81,9 @@ const fakeRowB: PreferenceRow = {
   budget: "UPSCALE",
   categories: ["RESTAURANT", "ACTIVITY"],
   created_at: "2026-03-29T13:00:00Z",
+  schedule_window: null,
+  available_days: null,
+  time_of_day: null,
 };
 
 // ---------------------------------------------------------------------------

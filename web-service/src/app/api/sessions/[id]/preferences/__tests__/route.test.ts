@@ -452,6 +452,63 @@ describe("POST /api/sessions/[id]/preferences", () => {
     expect(body.error).toContain("already submitted");
   });
 
+  // --- Schedule field validation ---
+
+  it("accepts valid schedule fields and passes them to submitPreference", async () => {
+    const response = await POST(
+      makePostRequest({
+        ...validBody,
+        scheduleWindow: "this_week",
+        availableDays: ["sat", "sun"],
+        timeOfDay: "evening",
+      }),
+      makeParams(),
+    );
+
+    expect(response.status).toBe(201);
+    expect(mockSubmitPreference).toHaveBeenCalledWith(SESSION_ID, {
+      role: "b",
+      location: { lat: 30.2672, lng: -97.7431, label: "Downtown Austin" },
+      budget: "MODERATE",
+      categories: ["RESTAURANT", "BAR"],
+      scheduleWindow: "this_week",
+      availableDays: ["sat", "sun"],
+      timeOfDay: "evening",
+    });
+  });
+
+  it("returns 400 when scheduleWindow is an invalid value", async () => {
+    const response = await POST(
+      makePostRequest({ ...validBody, scheduleWindow: "yesterday" }),
+      makeParams(),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when availableDays contains an invalid day", async () => {
+    const response = await POST(
+      makePostRequest({ ...validBody, availableDays: ["sat", "monday"] }),
+      makeParams(),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when availableDays is an empty array", async () => {
+    const response = await POST(
+      makePostRequest({ ...validBody, availableDays: [] }),
+      makeParams(),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when timeOfDay is an invalid value", async () => {
+    const response = await POST(
+      makePostRequest({ ...validBody, timeOfDay: "midnight" }),
+      makeParams(),
+    );
+    expect(response.status).toBe(400);
+  });
+
   // --- Unexpected errors ---
 
   it("returns 500 on unexpected error without leaking details", async () => {

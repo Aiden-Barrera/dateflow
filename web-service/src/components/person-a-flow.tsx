@@ -7,8 +7,16 @@ import { BudgetIcon } from "./budget-icon";
 import { CategoryIcon } from "./category-icon";
 import { createSessionStatusSync } from "../lib/session-status-sync";
 import { WaitingForPartnerScreen } from "./waiting-for-partner-screen";
+import { ScheduleScreen } from "./schedule-screen";
 import type { WaitingStatus } from "./waiting-for-partner-screen";
-import type { BudgetLevel, Category, Location } from "../lib/types/preference";
+import type {
+  BudgetLevel,
+  Category,
+  DayOfWeek,
+  Location,
+  ScheduleWindow,
+  TimeOfDay,
+} from "../lib/types/preference";
 
 type CreatedSession = {
   readonly id: string;
@@ -46,8 +54,11 @@ const BUDGETS: { value: BudgetLevel; label: string }[] = [
   { value: "UPSCALE", label: "Upscale" },
 ];
 
+type FormStep = "form" | "schedule";
+
 export function PersonAFlow() {
   const router = useRouter();
+  const [formStep, setFormStep] = useState<FormStep>("form");
   const [name, setName] = useState("");
   const [locationLabel, setLocationLabel] = useState("");
   const [location, setLocation] = useState<Location | null>(null);
@@ -105,11 +116,16 @@ export function PersonAFlow() {
     setBudget("MODERATE");
   }
 
-  async function handleCreateSession() {
-    if (!canSubmit) {
-      return;
-    }
+  function handleCreateSession() {
+    if (!canSubmit) return;
+    setFormStep("schedule");
+  }
 
+  async function handleScheduleComplete(schedule: {
+    scheduleWindow?: ScheduleWindow;
+    availableDays?: DayOfWeek[];
+    timeOfDay?: TimeOfDay;
+  }) {
     setSubmitting(true);
     setError(null);
 
@@ -144,6 +160,9 @@ export function PersonAFlow() {
           location: resolvedLocation,
           budget,
           categories,
+          ...(schedule.scheduleWindow ? { scheduleWindow: schedule.scheduleWindow } : {}),
+          ...(schedule.availableDays ? { availableDays: schedule.availableDays } : {}),
+          ...(schedule.timeOfDay ? { timeOfDay: schedule.timeOfDay } : {}),
         }),
       });
       const preferenceBody = await preferenceResponse.json().catch(() => ({}));
@@ -231,6 +250,19 @@ export function PersonAFlow() {
 
     router.push(redirectHref);
   }, [createdSession, createdSessionStatus, router]);
+
+  if (formStep === "schedule" && !createdSession) {
+    return (
+      <ScheduleScreen
+        stepLabel="Almost there"
+        onBack={() => setFormStep("form")}
+        onComplete={(schedule) => {
+          setFormStep("form");
+          handleScheduleComplete(schedule);
+        }}
+      />
+    );
+  }
 
   if (createdSession) {
     const waitingStatus = toWaitingStatus(createdSessionStatus);
