@@ -112,6 +112,7 @@ export function PlanFlow({
     return (
       <HookScreen
         creatorName={creatorName}
+        sessionId={sessionId}
         initialDisplayName={hookData?.displayName ?? ""}
         initialLocation={hookData?.location ?? null}
         onContinue={(data) => {

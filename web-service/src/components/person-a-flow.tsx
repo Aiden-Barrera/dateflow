@@ -278,6 +278,7 @@ export function PersonAFlow() {
       <WaitingForPartnerScreen
         creatorName={name}
         shareUrl={createdSession.shareUrl}
+        sessionId={createdSession.id}
         status={waitingStatus}
         copyState={copyState}
         errorMessage={error}
