@@ -27,6 +27,10 @@ import type {
 } from "../../../../../lib/services/date-proposal-service";
 import { readBoundSessionRole } from "../../../../../lib/session-role-access";
 import type { DayOfWeek } from "../../../../../lib/types/preference";
+import {
+  buildDateTimeISO,
+  TIME_SLOTS,
+} from "../../../../../lib/date-proposal-utils";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -36,41 +40,8 @@ const ISO_8601_RE =
 // ─── Allowlists ───────────────────────────────────────────────────────────────
 
 const VALID_DAYS = new Set<DayOfWeek>(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
-const VALID_TIME_SLOTS = new Set([
-  "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM",
-]);
-
-// DayOfWeek abbreviation → UTC day-of-week number (0 = Sun)
-const DAY_OFFSETS: Record<DayOfWeek, number> = {
-  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
-};
-
-const TIME_TO_UTC_HOUR: Record<string, number> = {
-  "6:00 PM": 18, "6:30 PM": 18, "7:00 PM": 19, "7:30 PM": 19,
-  "8:00 PM": 20, "8:30 PM": 20, "9:00 PM": 21,
-};
-
-const TIME_TO_MINUTES: Record<string, number> = {
-  "6:00 PM": 0, "6:30 PM": 30, "7:00 PM": 0, "7:30 PM": 30,
-  "8:00 PM": 0, "8:30 PM": 30, "9:00 PM": 0,
-};
-
-function buildDateTimeISO(day: DayOfWeek, timeSlot: string): string {
-  // Build the next occurrence of `day` at `timeSlot` (UTC).
-  const now = new Date();
-  const targetDayNum = DAY_OFFSETS[day];
-  const daysUntil = (targetDayNum - now.getUTCDay() + 7) % 7;
-  const target = new Date(now);
-  target.setUTCDate(target.getUTCDate() + daysUntil);
-  target.setUTCHours(TIME_TO_UTC_HOUR[timeSlot] ?? 19, TIME_TO_MINUTES[timeSlot] ?? 0, 0, 0);
-
-  // If daysUntil === 0 (today) and the time has already passed, advance by 7 days.
-  if (daysUntil === 0 && target <= now) {
-    target.setUTCDate(target.getUTCDate() + 7);
-  }
-
-  return target.toISOString();
-}
+// Derived from the shared TIME_SLOTS constant so server and client stay in sync.
+const VALID_TIME_SLOTS = new Set<string>(TIME_SLOTS);
 
 export async function POST(request: Request, { params }: RouteParams) {
   const { id: sessionId } = await params;

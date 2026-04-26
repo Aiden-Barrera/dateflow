@@ -22,6 +22,10 @@ import { getDateProposalChannelName } from "../../../../lib/date-proposal-channe
 import type { DateProposalChannelEvent } from "../../../../lib/date-proposal-channel";
 import type { DayOfWeek } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
+import {
+  TIME_SLOTS,
+  formatDayChipLabel,
+} from "../../../../lib/date-proposal-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,18 +41,6 @@ type DateTimePlannerProps = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const WEEKDAY_LABELS: Record<DayOfWeek, string> = {
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-  sun: "Sun",
-};
-
-const TIME_SLOTS = ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM"];
 
 function formatEventTime(date: Date): string {
   return date.toLocaleString("en-US", {
@@ -345,19 +337,19 @@ function DatePickerForm({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2">
         {intersectedDays.map((day) => (
           <button
             key={day}
             type="button"
             onClick={() => setSelectedDay(day)}
-            className={`rounded-full px-4 py-2 text-caption font-semibold transition ${
+            className={`w-full rounded-2xl px-4 py-3 text-left text-body font-semibold transition ${
               selectedDay === day
                 ? "bg-primary text-white"
                 : "border border-white/20 bg-white/[0.06] text-white/70 hover:bg-white/[0.12]"
             }`}
           >
-            {WEEKDAY_LABELS[day] ?? day.toUpperCase()}
+            {formatDayChipLabel(day)}
           </button>
         ))}
       </div>
