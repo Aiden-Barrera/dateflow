@@ -16,13 +16,11 @@ describe("AuthSheet", () => {
         onModeChange={() => undefined}
         onSubmit={() => undefined}
         onGoogle={() => undefined}
-        onApple={() => undefined}
       />,
     );
 
     expect(html).toContain("Save this date");
     expect(html).toContain("Google");
-    expect(html).toContain("Apple");
     expect(html).toContain("Create account with email");
     expect(html).toContain("or email");
     expect(html).toContain("overflow-y-auto");
@@ -44,7 +42,6 @@ describe("AuthSheet", () => {
         onModeChange={() => undefined}
         onSubmit={() => undefined}
         onGoogle={() => undefined}
-        onApple={() => undefined}
       />,
     );
 
