@@ -22,6 +22,10 @@ import { getDateProposalChannelName } from "../../../../lib/date-proposal-channe
 import type { DateProposalChannelEvent } from "../../../../lib/date-proposal-channel";
 import type { DayOfWeek } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
+import {
+  TIME_SLOTS,
+  formatDayChipLabel,
+} from "../../../../lib/date-proposal-utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,37 +41,6 @@ type DateTimePlannerProps = {
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const DAY_OFFSETS: Record<DayOfWeek, number> = {
-  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
-};
-
-/**
- * Returns the next calendar date for a given DayOfWeek abbreviation.
- * If today is that day, returns today (not next week).
- */
-function getNextDateForDay(day: DayOfWeek): Date {
-  const now = new Date();
-  const targetDay = DAY_OFFSETS[day];
-  const daysUntil = (targetDay - now.getDay() + 7) % 7;
-  const result = new Date(now);
-  result.setDate(result.getDate() + daysUntil);
-  return result;
-}
-
-/**
- * Formats a DayOfWeek abbreviation as "Friday, April 25".
- */
-function formatDayChip(day: DayOfWeek): string {
-  const date = getNextDateForDay(day);
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-const TIME_SLOTS = ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM"];
 
 function formatEventTime(date: Date): string {
   return date.toLocaleString("en-US", {
@@ -376,7 +349,7 @@ function DatePickerForm({
                 : "border border-white/20 bg-white/[0.06] text-white/70 hover:bg-white/[0.12]"
             }`}
           >
-            {formatDayChip(day)}
+            {formatDayChipLabel(day)}
           </button>
         ))}
       </div>
