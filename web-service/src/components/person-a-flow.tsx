@@ -7,6 +7,7 @@ import { BudgetIcon } from "./budget-icon";
 import { CategoryIcon } from "./category-icon";
 import { createSessionStatusSync } from "../lib/session-status-sync";
 import { WaitingForPartnerScreen } from "./waiting-for-partner-screen";
+import { LoadingScreen } from "./loading-screen";
 import { ScheduleScreen } from "./schedule-screen";
 import type { WaitingStatus } from "./waiting-for-partner-screen";
 import type {
@@ -54,7 +55,7 @@ const BUDGETS: { value: BudgetLevel; label: string }[] = [
   { value: "UPSCALE", label: "Upscale" },
 ];
 
-type FormStep = "form" | "schedule";
+type FormStep = "form" | "schedule" | "submitting";
 
 export function PersonAFlow() {
   const router = useRouter();
@@ -255,13 +256,20 @@ export function PersonAFlow() {
     return (
       <ScheduleScreen
         stepLabel="Almost there"
+        role="a"
         onBack={() => setFormStep("form")}
         onComplete={(schedule) => {
-          setFormStep("form");
+          // Move to loading immediately — don't bounce back to form first
+          setFormStep("submitting");
           handleScheduleComplete(schedule);
         }}
       />
     );
+  }
+
+  // Show loading animation while session + preferences are being created
+  if (formStep === "submitting" && !createdSession && !error) {
+    return <LoadingScreen />;
   }
 
   if (createdSession) {

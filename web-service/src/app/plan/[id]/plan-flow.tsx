@@ -126,9 +126,11 @@ export function PlanFlow({
     return (
       <ScheduleScreen
         stepLabel="Step 2 of 2"
+        role="b"
         onBack={() => setStep("hook")}
         onComplete={(schedule) => {
           if (!hookData) return;
+          // Go straight to loading — skip the hook screen bounce
           setStep("loading");
           submitPreferences(
             hookData,
