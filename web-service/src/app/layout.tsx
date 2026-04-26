@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -20,6 +20,12 @@ function getMetadataBase(): URL | undefined {
     return undefined;
   }
 }
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),

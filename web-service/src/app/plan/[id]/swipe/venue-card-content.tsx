@@ -272,7 +272,7 @@ export function VenueCardContent({
                 <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#8a2346]">
                   Venue {cardIndex} of {totalCards}
                 </p>
-                <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-[#2a1a1c]">
+                <h2 className="mt-2 text-[clamp(1.4rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-[#2a1a1c]">
                   {venue.name}
                 </h2>
                 <p className="mt-2 text-body text-[#6a4a3a]">{venue.address}</p>
