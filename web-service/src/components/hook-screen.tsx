@@ -65,10 +65,12 @@ export function HookScreen({
       .channel(getPartnerPresenceChannelName(sessionId))
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          void channel.send({
+          channel.send({
             type: "broadcast",
             event: PARTNER_PRESENCE_EVENT,
             payload: { type: PARTNER_PRESENCE_EVENT },
+          }).catch((err: unknown) => {
+            console.error("[hook-screen] partner-presence broadcast failed:", err);
           });
         }
       });
