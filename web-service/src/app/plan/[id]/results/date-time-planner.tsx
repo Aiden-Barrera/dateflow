@@ -38,15 +38,34 @@ type DateTimePlannerProps = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const WEEKDAY_LABELS: Record<DayOfWeek, string> = {
-  mon: "Mon",
-  tue: "Tue",
-  wed: "Wed",
-  thu: "Thu",
-  fri: "Fri",
-  sat: "Sat",
-  sun: "Sun",
+const DAY_OFFSETS: Record<DayOfWeek, number> = {
+  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
 };
+
+/**
+ * Returns the next calendar date for a given DayOfWeek abbreviation.
+ * If today is that day, returns today (not next week).
+ */
+function getNextDateForDay(day: DayOfWeek): Date {
+  const now = new Date();
+  const targetDay = DAY_OFFSETS[day];
+  const daysUntil = (targetDay - now.getDay() + 7) % 7;
+  const result = new Date(now);
+  result.setDate(result.getDate() + daysUntil);
+  return result;
+}
+
+/**
+ * Formats a DayOfWeek abbreviation as "Friday, April 25".
+ */
+function formatDayChip(day: DayOfWeek): string {
+  const date = getNextDateForDay(day);
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 const TIME_SLOTS = ["6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM", "9:00 PM"];
 
@@ -345,19 +364,19 @@ function DatePickerForm({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2">
         {intersectedDays.map((day) => (
           <button
             key={day}
             type="button"
             onClick={() => setSelectedDay(day)}
-            className={`rounded-full px-4 py-2 text-caption font-semibold transition ${
+            className={`w-full rounded-2xl px-4 py-3 text-left text-body font-semibold transition ${
               selectedDay === day
                 ? "bg-primary text-white"
                 : "border border-white/20 bg-white/[0.06] text-white/70 hover:bg-white/[0.12]"
             }`}
           >
-            {WEEKDAY_LABELS[day] ?? day.toUpperCase()}
+            {formatDayChip(day)}
           </button>
         ))}
       </div>
