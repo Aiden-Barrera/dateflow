@@ -1,9 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Logo } from "./logo";
+import { getSupabaseClient } from "../lib/supabase";
+import {
+  getPartnerPresenceChannelName,
+  PARTNER_PRESENCE_EVENT,
+} from "../lib/partner-presence-channel";
 
 export type WaitingStatus =
   | "pending_b"
+  | "b_opened"
   | "both_ready"
   | "generating"
   | "generation_failed"
@@ -12,6 +19,7 @@ export type WaitingStatus =
 type WaitingForPartnerScreenProps = {
   readonly creatorName: string;
   readonly shareUrl: string;
+  readonly sessionId: string;
   readonly status: WaitingStatus;
   readonly copyState: "idle" | "copied";
   readonly errorMessage: string | null;
@@ -20,6 +28,7 @@ type WaitingForPartnerScreenProps = {
 
 const HEADLINE: Record<WaitingStatus, string> = {
   pending_b: "Waiting on them…",
+  b_opened: "They opened it!",
   both_ready: "They're in!",
   generating: "Finding your spots",
   generation_failed: "Something went sideways",
@@ -29,6 +38,7 @@ const HEADLINE: Record<WaitingStatus, string> = {
 const SUBLINE: Record<WaitingStatus, string> = {
   pending_b:
     "The moment they open your link and lock in their side, you'll know.",
+  b_opened: "They're looking at it right now — filling in their side.",
   both_ready: "Both sides locked in. Building your shortlist now.",
   generating: "Mixing your vibes and ranking what works for you both.",
   generation_failed:
@@ -44,6 +54,10 @@ function resolveSteps(
   if (status === "pending_b" || status === "expired") {
     return ["done", "active", "pending"];
   }
+  if (status === "b_opened") {
+    // Partner opened link — step 2 is mid-way (active but with orb lit)
+    return ["done", "active", "pending"];
+  }
   return ["done", "done", "active"];
 }
 
@@ -55,16 +69,46 @@ function isPartnerJoined(status: WaitingStatus) {
   );
 }
 
+function isPartnerOpened(status: WaitingStatus) {
+  return status === "b_opened";
+}
+
 export function WaitingForPartnerScreen({
   creatorName,
   shareUrl,
+  sessionId,
   status,
   copyState,
   errorMessage,
   onCopyInvite,
 }: WaitingForPartnerScreenProps) {
-  const joined = isPartnerJoined(status);
-  const [s1, s2, s3] = resolveSteps(status);
+  // Track whether Person B has opened the link via realtime broadcast.
+  // DB-driven status (prop) always takes precedence — once status moves past
+  // pending_b the broadcast state is irrelevant.
+  const [partnerOpened, setPartnerOpened] = useState(false);
+
+  // Subscribe to the partner-presence broadcast channel.
+  useEffect(() => {
+    const channel = getSupabaseClient()
+      .channel(getPartnerPresenceChannelName(sessionId))
+      .on("broadcast", { event: PARTNER_PRESENCE_EVENT }, () => {
+        setPartnerOpened(true);
+      })
+      .subscribe();
+    return () => { void channel.unsubscribe(); };
+  }, [sessionId]);
+
+  // Derive the display status. DB status wins once B has submitted.
+  const liveStatus: WaitingStatus =
+    status !== "pending_b"
+      ? status
+      : partnerOpened
+        ? "b_opened"
+        : "pending_b";
+
+  const joined = isPartnerJoined(liveStatus);
+  const opened = isPartnerOpened(liveStatus);
+  const [s1, s2, s3] = resolveSteps(liveStatus);
   const initial = creatorName.trim().charAt(0).toUpperCase() || "?";
 
   return (
@@ -97,15 +141,15 @@ export function WaitingForPartnerScreen({
 
         {/* Vertically centred main content */}
         <div className="flex flex-1 flex-col items-center justify-center gap-10 py-8">
-          <OrbPair joined={joined} creatorInitial={initial} />
+          <OrbPair joined={joined} opened={opened} creatorInitial={initial} />
 
-          {/* Status copy — keyed on status so it re-animates on change */}
-          <div className="text-center" key={status}>
+          {/* Status copy — keyed on liveStatus so it re-animates on change */}
+          <div className="text-center" key={liveStatus}>
             <h1
               className="text-[clamp(1.85rem,7vw,2.5rem)] font-bold leading-[1.05] tracking-[-0.035em] text-white"
               style={{ animation: "wfpFadeUp 0.42s var(--ease-enter) both" }}
             >
-              {HEADLINE[status]}
+              {HEADLINE[liveStatus]}
             </h1>
             <p
               className="mx-auto mt-3 max-w-[22ch] text-[0.9375rem] leading-relaxed text-white/58"
@@ -113,7 +157,7 @@ export function WaitingForPartnerScreen({
                 animation: "wfpFadeUp 0.42s 0.06s var(--ease-enter) both",
               }}
             >
-              {SUBLINE[status]}
+              {SUBLINE[liveStatus]}
             </p>
           </div>
 
@@ -250,9 +294,11 @@ export function WaitingForPartnerScreen({
 
 function OrbPair({
   joined,
+  opened,
   creatorInitial,
 }: {
   readonly joined: boolean;
+  readonly opened: boolean;
   readonly creatorInitial: string;
 }) {
   return (
@@ -308,20 +354,22 @@ function OrbPair({
         ) : null}
       </div>
 
-      {/* Person B — ghost until joined, ignites on join */}
+      {/* Person B — ghost → glowing (opened) → lit with checkmark (joined) */}
       <div className="flex flex-col items-center gap-2.5">
         <div className="relative">
-          {joined ? (
+          {(joined || opened) ? (
             <div
               className="pointer-events-none absolute -inset-5 rounded-full blur-2xl"
               style={{
-                background:
-                  "radial-gradient(circle, rgba(255,61,127,0.38) 0%, transparent 70%)",
+                background: joined
+                  ? "radial-gradient(circle, rgba(255,61,127,0.38) 0%, transparent 70%)"
+                  : "radial-gradient(circle, rgba(255,61,127,0.18) 0%, transparent 70%)",
                 animation: "wfpBloomIn 0.6s var(--ease-enter) both",
               }}
             />
           ) : null}
           {joined ? (
+            // Fully submitted — lit orb with checkmark
             <div
               className="relative flex h-[68px] w-[68px] items-center justify-center rounded-full text-white shadow-[0_10px_28px_rgba(255,61,127,0.42)]"
               style={{
@@ -329,7 +377,6 @@ function OrbPair({
                 animation: "wfpOrbIgnite 0.55s var(--ease-enter) both",
               }}
             >
-              {/* Checkmark */}
               <svg
                 className="h-7 w-7"
                 viewBox="0 0 24 24"
@@ -343,7 +390,31 @@ function OrbPair({
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
+          ) : opened ? (
+            // Opened link but still filling in — pulsing pink orb, no checkmark yet
+            <div
+              className="relative flex h-[68px] w-[68px] items-center justify-center rounded-full border border-[rgba(255,61,127,0.4)] text-white"
+              style={{
+                background: "linear-gradient(135deg, rgba(255,107,157,0.35), rgba(192,48,96,0.35))",
+                animation: "wfpGhostPulse 2s ease-in-out infinite",
+                boxShadow: "0 8px 24px rgba(255,61,127,0.22)",
+              }}
+            >
+              {/* Typing dots — still filling out their form */}
+              <div className="flex items-center gap-[3.5px]">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-[5px] w-[5px] rounded-full bg-white/60"
+                    style={{
+                      animation: `wfpDotPulse 1.5s ${i * 0.2}s ease-in-out infinite`,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           ) : (
+            // Not yet opened — fully ghost
             <div
               className="relative flex h-[68px] w-[68px] items-center justify-center rounded-full border border-white/12"
               style={{
@@ -351,7 +422,6 @@ function OrbPair({
                 animation: "wfpGhostPulse 3.2s ease-in-out infinite",
               }}
             >
-              {/* Waiting: three dot typing indicator */}
               <div className="flex items-center gap-[3.5px]">
                 {[0, 1, 2].map((i) => (
                   <div
@@ -367,7 +437,7 @@ function OrbPair({
           )}
         </div>
         <span className="text-[0.67rem] font-semibold uppercase tracking-[0.2em] text-white/40">
-          {joined ? "Joined" : "Them"}
+          {joined ? "Joined" : opened ? "Active" : "Them"}
         </span>
       </div>
     </div>

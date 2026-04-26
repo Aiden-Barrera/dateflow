@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BudgetIcon } from "./budget-icon";
 import { CategoryIcon } from "./category-icon";
+import { getSupabaseClient } from "../lib/supabase";
+import {
+  getPartnerPresenceChannelName,
+  PARTNER_PRESENCE_EVENT,
+} from "../lib/partner-presence-channel";
 import type { BudgetLevel, Category, Location } from "../lib/types/preference";
 
 type HookScreenProps = {
   readonly creatorName: string;
+  readonly sessionId?: string;
   readonly initialDisplayName?: string;
   readonly initialLocation?: Location | null;
   readonly onContinue: (data: {
@@ -37,6 +43,7 @@ const BUDGETS: { value: BudgetLevel; label: string }[] = [
  */
 export function HookScreen({
   creatorName,
+  sessionId,
   initialDisplayName = "",
   initialLocation = null,
   onContinue,
@@ -49,6 +56,24 @@ export function HookScreen({
   const [budget, setBudget] = useState<BudgetLevel>("MODERATE");
   const [error, setError] = useState<string | null>(null);
   const initial = creatorName.trim().charAt(0).toUpperCase() || "?";
+
+  // Broadcast to Person A's waiting screen that Person B has opened the link.
+  // Fire-and-forget — we don't need to await or handle errors here.
+  useEffect(() => {
+    if (!sessionId) return;
+    const channel = getSupabaseClient()
+      .channel(getPartnerPresenceChannelName(sessionId))
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          void channel.send({
+            type: "broadcast",
+            event: PARTNER_PRESENCE_EVENT,
+            payload: { type: PARTNER_PRESENCE_EVENT },
+          });
+        }
+      });
+    return () => { void channel.unsubscribe(); };
+  }, [sessionId]);
 
   const canSubmit =
     displayName.trim().length > 0 &&
