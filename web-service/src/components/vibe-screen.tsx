@@ -63,7 +63,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col bg-bg px-6 pb-24 pt-6">
+    <div className="relative flex min-h-dvh flex-col bg-bg px-6 pb-36 pt-6">
       <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col">
         <div className="flex items-center justify-between">
           <span className="rounded-full border border-white/70 bg-white/80 px-3 py-1 text-caption font-medium text-text-secondary shadow-sm">
@@ -81,7 +81,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
 
         <div className="grid flex-1 gap-8 lg:grid-cols-[1fr_0.86fr]">
           <section>
-            <h1 className="text-[clamp(2.4rem,8vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
+            <h1 className="text-[clamp(1.9rem,7vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
               What kind of date feels easy right now?
             </h1>
             <p className="mt-3 max-w-xl text-body text-text-secondary">
@@ -140,7 +140,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
             </div>
           </section>
 
-          <aside className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm">
+          <aside className="hidden rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm lg:block">
             <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
               Final check
             </p>
@@ -165,7 +165,7 @@ export function VibeScreen({ onComplete, onBack }: VibeScreenProps) {
           </aside>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 bg-bg/95 px-6 pb-8 pt-4 backdrop-blur">
+        <div className="fixed bottom-0 left-0 right-0 bg-bg/95 px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur">
           <div className="mx-auto max-w-sm">
             <Button disabled={!isComplete} onClick={handleSubmit}>
               Find our places

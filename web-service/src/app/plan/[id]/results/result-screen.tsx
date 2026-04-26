@@ -337,7 +337,7 @@ export function ResultScreen({
                   </p>
                   <p className="text-caption text-white/65">{galleryImages.length} photos</p>
                 </div>
-                <div className="mt-3 grid grid-cols-3 gap-2.5">
+                <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                   {galleryImages.slice(0, 3).map((photoUrl, photoIndex) => (
                     <div
                       key={`${photoUrl}-${photoIndex}`}

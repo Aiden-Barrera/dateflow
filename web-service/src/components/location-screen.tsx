@@ -85,7 +85,7 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
               <LocationPinIcon />
             </div>
 
-            <h1 className="text-[clamp(2.4rem,8vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
+            <h1 className="text-[clamp(1.9rem,7vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
               Where should Dateflow anchor your side?
             </h1>
             <p className="mt-3 max-w-lg text-body text-text-secondary">
@@ -145,7 +145,7 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
             )}
           </section>
 
-          <aside className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm">
+          <aside className="hidden rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm lg:block">
             <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
               Why we ask
             </p>
