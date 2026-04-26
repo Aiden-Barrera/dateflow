@@ -269,7 +269,7 @@ export function PersonAFlow() {
 
   // Show loading animation while session + preferences are being created
   if (formStep === "submitting" && !createdSession && !error) {
-    return <LoadingScreen />;
+    return <LoadingScreen role="a" />;
   }
 
   if (createdSession) {

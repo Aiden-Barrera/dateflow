@@ -17,11 +17,16 @@ const CYCLE_INTERVAL_MS = 2400;
 /**
  * Screen 4 — Loading.
  *
- * Sits on the raspberry canvas (Person B's world) so the transition from
- * the invitation landing feels continuous. A translucent glass card holds
- * the ornament + cycling subtitle.
+ * role="b" (default) → raspberry canvas, continuous from Person B's invite landing.
+ * role="a"           → brown canvas, continuous from Person A's form + schedule screens.
  */
-export function LoadingScreen({ demoMode = false }: { readonly demoMode?: boolean }) {
+export function LoadingScreen({
+  demoMode = false,
+  role = "b",
+}: {
+  readonly demoMode?: boolean;
+  readonly role?: "a" | "b";
+}) {
   const [subtitleIndex, setSubtitleIndex] = useState(0);
 
   useEffect(() => {
@@ -32,16 +37,18 @@ export function LoadingScreen({ demoMode = false }: { readonly demoMode?: boolea
     return () => clearInterval(interval);
   }, []);
 
+  const isPersonA = role === "a";
+
   return (
-    <div className="bg-person-b relative flex min-h-dvh flex-col justify-center overflow-hidden px-6 text-white">
+    <div className={`${isPersonA ? "bg-person-a" : "bg-person-b"} relative flex min-h-dvh flex-col justify-center overflow-hidden px-6 text-white`}>
       <div
         className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full opacity-40 blur-3xl"
-        style={{ background: "var(--accent-hot)" }}
+        style={{ background: isPersonA ? "var(--brown-400)" : "var(--accent-hot)" }}
         aria-hidden="true"
       />
       <div
         className="pointer-events-none absolute -bottom-20 left-0 h-80 w-80 rounded-full opacity-30 blur-3xl"
-        style={{ background: "var(--raspberry-600)" }}
+        style={{ background: isPersonA ? "var(--brown-600)" : "var(--raspberry-600)" }}
         aria-hidden="true"
       />
       <div className="absolute top-10 left-6 text-white">
