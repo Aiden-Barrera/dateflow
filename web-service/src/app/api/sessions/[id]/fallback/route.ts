@@ -4,6 +4,7 @@ import {
   acceptFallbackSuggestion,
   requestFallbackRetry,
   shouldWaitForPartnerRetryConfirmation,
+  shouldWaitForPartnerAcceptConfirmation,
   isRetryInProgress,
 } from "../../../../../lib/services/fallback-decision-service";
 import { getSession } from "../../../../../lib/services/session-service";
@@ -156,9 +157,15 @@ export async function POST(request: Request, { params }: RouteParams) {
         );
       }
 
-      const session = await acceptFallbackSuggestion(id);
+      const session = await acceptFallbackSuggestion(id, boundRole);
 
-      return NextResponse.json({ session: serializeSession(session) });
+      return NextResponse.json({
+        session: serializeSession(session),
+        acceptWaitingForPartner: shouldWaitForPartnerAcceptConfirmation(
+          session,
+          boundRole,
+        ),
+      });
     }
 
     if (!retryPreferences) {

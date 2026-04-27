@@ -59,6 +59,8 @@ const baseRow: SessionRow = {
   retry_b_confirmed_at: null,
   retry_a_preferences: null,
   retry_b_preferences: null,
+  accept_a_confirmed_at: null,
+  accept_b_confirmed_at: null,
 };
 
 describe("fallback-decision-service", () => {
@@ -75,27 +77,52 @@ describe("fallback-decision-service", () => {
     });
   });
 
-  it("accepts a fallback suggestion by promoting the session to matched", async () => {
+  it("records the first lock-in without yet transitioning to matched", async () => {
+    // First caller (role "a") — partner B hasn't confirmed yet.
     mockUpdateSingle.mockResolvedValue({
       data: {
         ...baseRow,
-        status: "matched",
-        matched_at: "2026-04-03T16:00:00Z",
+        accept_a_confirmed_at: "2026-04-03T16:00:00Z",
+        accept_b_confirmed_at: null,
       },
       error: null,
     });
 
-    const session = await acceptFallbackSuggestion("session-1");
+    const session = await acceptFallbackSuggestion("session-1", "a");
 
     expect(mockUpdate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "matched",
-        matched_at: expect.any(String),
-      }),
+      expect.objectContaining({ accept_a_confirmed_at: expect.any(String) }),
     );
+    expect(session.status).toBe("fallback_pending");
+  });
+
+  it("transitions to matched when both sides have confirmed lock-in", async () => {
+    // First call: B confirms (A already confirmed in a prior call).
+    mockUpdateSingle
+      .mockResolvedValueOnce({
+        data: {
+          ...baseRow,
+          accept_a_confirmed_at: "2026-04-03T15:00:00Z",
+          accept_b_confirmed_at: "2026-04-03T16:00:00Z",
+        },
+        error: null,
+      })
+      // Second call: sets status matched.
+      .mockResolvedValueOnce({
+        data: {
+          ...baseRow,
+          status: "matched",
+          matched_at: "2026-04-03T16:00:00Z",
+          accept_a_confirmed_at: null,
+          accept_b_confirmed_at: null,
+        },
+        error: null,
+      });
+
+    const session = await acceptFallbackSuggestion("session-1", "b");
+
     expect(session.status).toBe("matched");
     expect(session.matchedVenueId).toBe("venue-12");
-    expect(session.matchedAt?.toISOString()).toBe("2026-04-03T16:00:00.000Z");
   });
 
   it("stores the first retry confirmation and waits for the partner", async () => {
@@ -345,7 +372,7 @@ describe("fallback-decision-service", () => {
       error: null,
     });
 
-    await expect(acceptFallbackSuggestion("session-1")).rejects.toThrow(
+    await expect(acceptFallbackSuggestion("session-1", "a")).rejects.toThrow(
       "fallback_pending",
     );
     expect(mockUpdate).not.toHaveBeenCalled();
@@ -357,7 +384,7 @@ describe("fallback-decision-service", () => {
       error: { code: "PGRST116", message: "JSON object requested, multiple (or no) rows returned" },
     });
 
-    await expect(acceptFallbackSuggestion("session-1")).rejects.toThrow(
+    await expect(acceptFallbackSuggestion("session-1", "a")).rejects.toThrow(
       "Session not found",
     );
     expect(mockUpdate).not.toHaveBeenCalled();
@@ -380,6 +407,9 @@ describe("fallback-decision-service", () => {
           retryBConfirmedAt: null,
           retryAPreferences: { categories: ["BAR"], budget: "MODERATE" },
           retryBPreferences: null,
+          acceptAConfirmedAt: null,
+          acceptBConfirmedAt: null,
+          confirmedDateTime: null,
         },
         "a",
       ),

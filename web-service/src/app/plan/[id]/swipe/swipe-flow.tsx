@@ -34,6 +34,8 @@ type SessionStatusPayload = {
   readonly matchedVenueId: string | null;
   readonly retryWaitingForPartner?: boolean;
   readonly partnerInitiatedRetry?: boolean;
+  readonly acceptWaitingForPartner?: boolean;
+  readonly partnerInitiatedAccept?: boolean;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
 };
@@ -73,7 +75,7 @@ export function SwipeFlow({
   const [submitting, setSubmitting] = useState(false);
   const [submittingFallbackAction, setSubmittingFallbackAction] = useState<"accept" | "retry" | null>(null);
   const [fallbackVenue, setFallbackVenue] = useState<Venue | null>(null);
-  const [retryStep, setRetryStep] = useState<"default" | "partner_confirm">("default");
+  const [retryStep, setRetryStep] = useState<"default" | "partner_confirm" | "partner_accept">("default");
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
@@ -127,9 +129,18 @@ export function SwipeFlow({
     );
   }, []);
 
+  const enterAcceptConfirmationWaiting = useCallback(() => {
+    setWaitingStage("accept_confirmation");
+    setStatus("waiting");
+    setStatusMessage(
+      "You have locked in this venue. Waiting for your partner to confirm before the plan is set.",
+    );
+  }, []);
+
   const loadFallback = useCallback(async (
     matchedVenueId: string | null,
     partnerInitiatedRetry = false,
+    partnerInitiatedAccept = false,
   ) => {
     // Skip if we've already loaded this exact fallback venue, or a load is in
     // flight. Prevents the status-sync polling loop from flashing the loading
@@ -142,10 +153,15 @@ export function SwipeFlow({
       loadedFallbackVenueIdRef.current === (matchedVenueId ?? "")
     ) {
       // The venue is already loaded. Still update retryStep in case the
-      // partner has clicked "Try a new mix" since we last rendered — this is
-      // how a polling update upgrades an existing fallback view to
-      // partner_confirm without reloading the venue.
-      setRetryStep(partnerInitiatedRetry ? "partner_confirm" : "default");
+      // partner's action changed since we last rendered — polling uses this
+      // to upgrade the fallback view without reloading the venue data.
+      setRetryStep(
+        partnerInitiatedRetry
+          ? "partner_confirm"
+          : partnerInitiatedAccept
+            ? "partner_accept"
+            : "default",
+      );
       setStatus("fallback");
       setStatusMessage("");
       return;
@@ -172,7 +188,13 @@ export function SwipeFlow({
       setVenues(body.venues);
       logVenuePhotoSnapshot("fallback", null, body.venues);
       setFallbackVenue(resolvedVenue);
-      setRetryStep(partnerInitiatedRetry ? "partner_confirm" : "default");
+      setRetryStep(
+        partnerInitiatedRetry
+          ? "partner_confirm"
+          : partnerInitiatedAccept
+            ? "partner_accept"
+            : "default",
+      );
       loadedFallbackVenueIdRef.current = matchedVenueId ?? "";
       setStatus("fallback");
       setStatusMessage("");
@@ -233,11 +255,20 @@ export function SwipeFlow({
         return;
       }
 
+      if (snapshot.status === "fallback_pending" && snapshot.acceptWaitingForPartner) {
+        enterAcceptConfirmationWaiting();
+        return;
+      }
+
       if (snapshot.status !== "ready_to_swipe") {
         const nextState = getSwipeFlowStatusState(snapshot.status);
 
         if (nextState.kind === "fallback") {
-          await loadFallback(snapshot.matchedVenueId, snapshot.partnerInitiatedRetry);
+          await loadFallback(
+            snapshot.matchedVenueId,
+            snapshot.partnerInitiatedRetry,
+            snapshot.partnerInitiatedAccept,
+          );
           return;
         }
 
@@ -266,8 +297,17 @@ export function SwipeFlow({
         return;
       }
 
+      if (snapshot.status === "fallback_pending" && snapshot.acceptWaitingForPartner) {
+        enterAcceptConfirmationWaiting();
+        return;
+      }
+
       if (snapshot.status === "fallback_pending") {
-        void loadFallback(snapshot.matchedVenueId, snapshot.partnerInitiatedRetry).catch(() => {
+        void loadFallback(
+          snapshot.matchedVenueId,
+          snapshot.partnerInitiatedRetry,
+          snapshot.partnerInitiatedAccept,
+        ).catch(() => {
           setStatus("error");
           setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
         });
@@ -430,13 +470,17 @@ export function SwipeFlow({
         return;
       }
 
+      // First person to click lock — wait for partner to confirm.
+      if (result.acceptWaitingForPartner) {
+        enterAcceptConfirmationWaiting();
+        return;
+      }
+
       await bootstrap();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to accept the fallback pick.";
 
-      // The server returns a 409 when the partner has already initiated a retry.
-      // Switch the fallback screen to partner_confirm mode so the viewer can
-      // respond to the retry request instead of retrying accept.
+      // 409: partner already initiated a retry — show them the confirm screen.
       if (message.includes("partner has already requested a new mix")) {
         setRetryStep("partner_confirm");
         setToast("Your partner wants a new mix — please confirm below.");
@@ -736,7 +780,7 @@ function getWaitingLoaderVariant(
     return "venue";
   }
 
-  if (stage === "retry_confirmation") {
+  if (stage === "retry_confirmation" || stage === "accept_confirmation") {
     return "partner-preferences";
   }
 
@@ -786,6 +830,14 @@ function getWaitingCopy(stage: WaitingStage): {
         body: "Your side is locked in. As soon as your partner confirms their updated vibe, Dateflow will rebuild the shortlist using both of your new inputs.",
         cardTitle: "What happens next",
         cardBody: "Once both retry selections are in, the fallback pick is replaced with a fresh swipe deck.",
+      };
+    case "accept_confirmation":
+      return {
+        eyebrow: "Almost confirmed",
+        title: "Waiting for your partner to lock in",
+        body: "You have confirmed this venue. As soon as your partner locks in too, your date plan is set.",
+        cardTitle: "What happens next",
+        cardBody: "If your partner confirms, you both go to the results page. If they want a new mix, Dateflow will restart with fresh options.",
       };
     case "session":
     default:

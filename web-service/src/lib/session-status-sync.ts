@@ -18,6 +18,12 @@ export type SessionStatusSnapshot = {
    *  the viewer hasn't responded yet. The client should show the
    *  partner_confirm variant of the fallback screen. */
   readonly partnerInitiatedRetry?: boolean;
+  /** True when the viewer has already clicked "Lock in this plan" and is
+   *  waiting for their partner to confirm — shows "waiting for partner". */
+  readonly acceptWaitingForPartner?: boolean;
+  /** True when the viewer's partner has clicked "Lock in this plan" but the
+   *  viewer hasn't responded — viewer should see the partner_accept variant. */
+  readonly partnerInitiatedAccept?: boolean;
   readonly retryState?: {
     readonly initiatorRole: Role;
     readonly viewerRole: Role;

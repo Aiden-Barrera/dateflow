@@ -27,8 +27,17 @@ const BUDGET_ORDER: readonly BudgetLevel[] = [
   "UPSCALE",
 ];
 
+/**
+ * Records this role's lock-in confirmation.
+ *
+ * First caller: stores accept_{role}_confirmed_at and returns the session
+ * still in fallback_pending — the partner must also confirm.
+ *
+ * Second caller: both timestamps are set → transitions to "matched".
+ */
 export async function acceptFallbackSuggestion(
   sessionId: string,
+  role: Role,
 ): Promise<Session> {
   const session = await getFallbackPendingSession(sessionId);
 
@@ -36,9 +45,23 @@ export async function acceptFallbackSuggestion(
     throw new Error("Fallback suggestion is missing a venue");
   }
 
+  const confirmedAt = new Date().toISOString();
+  const acceptUpdate =
+    role === "a"
+      ? { accept_a_confirmed_at: confirmedAt }
+      : { accept_b_confirmed_at: confirmedAt };
+
+  const updated = await updateSession(sessionId, acceptUpdate);
+
+  if (!hasBothAcceptConfirmations(updated)) {
+    return updated;
+  }
+
+  // Both sides confirmed — lock it in and clean up.
   return updateSession(sessionId, {
     status: "matched",
     matched_at: new Date().toISOString(),
+    ...clearAcceptCoordination(),
   });
 }
 
@@ -51,6 +74,9 @@ export async function requestFallbackRetry(
   const confirmedSession = await updateSession(sessionId, {
     retry_initiator_role: session.retryInitiatorRole ?? role,
     ...buildRetryConfirmationUpdates(role, preferences),
+    // Clear any pending accept coordination — if the partner had clicked
+    // "Lock in" first, this user choosing "Try a new mix" overrides it.
+    ...clearAcceptCoordination(),
   });
 
   if (!hasBothRetryConfirmations(confirmedSession)) {
@@ -143,6 +169,42 @@ export function isRetryInProgress(session: Session): boolean {
   );
 }
 
+/**
+ * Returns true when the viewer has already clicked "Lock in this plan" but
+ * their partner hasn't confirmed yet — viewer sees a "waiting for partner"
+ * screen.
+ */
+export function shouldWaitForPartnerAcceptConfirmation(
+  session: Session,
+  role: Role | null,
+): boolean {
+  if (session.status !== "fallback_pending" || !role) {
+    return false;
+  }
+
+  return role === "a"
+    ? session.acceptAConfirmedAt !== null && session.acceptBConfirmedAt === null
+    : session.acceptBConfirmedAt !== null && session.acceptAConfirmedAt === null;
+}
+
+/**
+ * Returns true when the viewer's partner has already clicked "Lock in this
+ * plan" but the viewer hasn't responded yet. The viewer should be shown the
+ * "partner_accept" variant of the fallback screen.
+ */
+export function hasPartnerInitiatedAccept(
+  session: Session,
+  role: Role | null,
+): boolean {
+  if (session.status !== "fallback_pending" || !role) {
+    return false;
+  }
+
+  return role === "b"
+    ? session.acceptAConfirmedAt !== null && session.acceptBConfirmedAt === null
+    : session.acceptBConfirmedAt !== null && session.acceptAConfirmedAt === null;
+}
+
 async function getFallbackPendingSession(sessionId: string): Promise<Session> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
@@ -194,6 +256,22 @@ function hasBothRetryConfirmations(session: Session): boolean {
     session.retryAPreferences !== null &&
     session.retryBPreferences !== null
   );
+}
+
+function hasBothAcceptConfirmations(session: Session): boolean {
+  return (
+    session.acceptAConfirmedAt !== null && session.acceptBConfirmedAt !== null
+  );
+}
+
+function clearAcceptCoordination(): Pick<
+  SessionRow,
+  "accept_a_confirmed_at" | "accept_b_confirmed_at"
+> {
+  return {
+    accept_a_confirmed_at: null,
+    accept_b_confirmed_at: null,
+  };
 }
 
 function buildRetryConfirmationUpdates(
@@ -337,6 +415,8 @@ async function updateSession(
       | "retry_b_confirmed_at"
       | "retry_a_preferences"
       | "retry_b_preferences"
+      | "accept_a_confirmed_at"
+      | "accept_b_confirmed_at"
     >
   >,
 ): Promise<Session> {
