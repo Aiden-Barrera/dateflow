@@ -5,6 +5,9 @@ const mockGetCurrentRound = vi.fn();
 const mockGetRoundCompletion = vi.fn();
 const mockReadBoundSessionRole = vi.fn();
 const mockShouldWaitForPartnerRetryConfirmation = vi.fn();
+const mockHasPartnerInitiatedRetry = vi.fn();
+const mockShouldWaitForPartnerAcceptConfirmation = vi.fn();
+const mockHasPartnerInitiatedAccept = vi.fn();
 
 vi.mock("../../../../../../lib/services/session-service", () => ({
   getSession: (...args: unknown[]) => mockGetSession(...args),
@@ -25,6 +28,12 @@ vi.mock("../../../../../../lib/session-role-access", () => ({
 vi.mock("../../../../../../lib/services/fallback-decision-service", () => ({
   shouldWaitForPartnerRetryConfirmation: (...args: unknown[]) =>
     mockShouldWaitForPartnerRetryConfirmation(...args),
+  hasPartnerInitiatedRetry: (...args: unknown[]) =>
+    mockHasPartnerInitiatedRetry(...args),
+  shouldWaitForPartnerAcceptConfirmation: (...args: unknown[]) =>
+    mockShouldWaitForPartnerAcceptConfirmation(...args),
+  hasPartnerInitiatedAccept: (...args: unknown[]) =>
+    mockHasPartnerInitiatedAccept(...args),
 }));
 
 import { GET } from "../route";
@@ -50,6 +59,8 @@ const readySession = {
   retryBConfirmedAt: null,
   retryAPreferences: null,
   retryBPreferences: null,
+  acceptAConfirmedAt: null,
+  acceptBConfirmedAt: null,
 };
 
 describe("GET /api/sessions/[id]/status", () => {
@@ -63,6 +74,9 @@ describe("GET /api/sessions/[id]/status", () => {
     vi.setSystemTime(new Date("2026-04-03T12:00:00Z"));
     mockReadBoundSessionRole.mockReturnValue("a");
     mockShouldWaitForPartnerRetryConfirmation.mockReturnValue(false);
+    mockHasPartnerInitiatedRetry.mockReturnValue(false);
+    mockShouldWaitForPartnerAcceptConfirmation.mockReturnValue(false);
+    mockHasPartnerInitiatedAccept.mockReturnValue(false);
     mockGetSession.mockResolvedValue(readySession);
     mockGetCurrentRound.mockResolvedValue(2);
     mockGetRoundCompletion.mockResolvedValue({
@@ -88,6 +102,81 @@ describe("GET /api/sessions/[id]/status", () => {
       matchedVenueId: null,
       currentRound: 2,
       roundComplete: false,
+      viewerRoundComplete: false,
+    });
+  });
+
+  it('returns viewerRoundComplete true for role "a" when role A has swiped all venues', async () => {
+    mockReadBoundSessionRole.mockReturnValue("a");
+    mockGetRoundCompletion.mockResolvedValue({
+      round: 2,
+      roleACount: 4,
+      roleBCount: 2,
+      total: 4,
+      complete: false,
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      status: "ready_to_swipe",
+      matchedVenueId: null,
+      currentRound: 2,
+      roundComplete: false,
+      viewerRoundComplete: true,
+    });
+  });
+
+  it('returns viewerRoundComplete true for role "b" when role B has swiped all venues', async () => {
+    mockReadBoundSessionRole.mockReturnValue("b");
+    mockGetRoundCompletion.mockResolvedValue({
+      round: 2,
+      roleACount: 3,
+      roleBCount: 4,
+      total: 4,
+      complete: false,
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      status: "ready_to_swipe",
+      matchedVenueId: null,
+      currentRound: 2,
+      roundComplete: false,
+      viewerRoundComplete: true,
+    });
+  });
+
+  it("keeps viewerRoundComplete false when total is zero", async () => {
+    mockGetRoundCompletion.mockResolvedValue({
+      round: 2,
+      roleACount: 0,
+      roleBCount: 0,
+      total: 0,
+      complete: false,
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      status: "ready_to_swipe",
+      matchedVenueId: null,
+      currentRound: 2,
+      roundComplete: false,
+      viewerRoundComplete: false,
     });
   });
 
@@ -162,6 +251,9 @@ describe("GET /api/sessions/[id]/status", () => {
       status: "fallback_pending",
       matchedVenueId: "venue-12",
       retryWaitingForPartner: true,
+      partnerInitiatedRetry: false,
+      acceptWaitingForPartner: false,
+      partnerInitiatedAccept: false,
     });
   });
 

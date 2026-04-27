@@ -3,6 +3,7 @@ export type WaitingStage =
   | "generation"
   | "round"
   | "retry_confirmation"
+  | "accept_confirmation"
   | "session";
 
 export type SwipeFlowStatusState =

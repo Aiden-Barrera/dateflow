@@ -222,6 +222,19 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
 
   try {
     const preferences = await getBothPreferences(sessionId);
+
+    // Guard against placeholder (0, 0) coordinates written by manual location
+    // entry. A midpoint involving (0, 0) lands in the Atlantic Ocean, causing
+    // Google Places to return nothing — and previously that empty result got
+    // cached, poisoning every future generation attempt for the same key.
+    for (const pref of preferences) {
+      if (pref.location.lat === 0 && pref.location.lng === 0) {
+        throw new Error(
+          `Invalid location coordinates (0, 0) for session ${sessionId} — manual location entry may not have resolved a real address.`
+        );
+      }
+    }
+
     const midpoint = calculateMidpoint(
       preferences[0].location,
       preferences[1].location

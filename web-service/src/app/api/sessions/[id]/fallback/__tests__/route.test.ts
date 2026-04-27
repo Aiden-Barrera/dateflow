@@ -4,6 +4,10 @@ const mockAcceptFallbackSuggestion = vi.fn();
 const mockRequestFallbackRetry = vi.fn();
 const mockReadBoundSessionRole = vi.fn();
 const mockShouldWaitForPartnerRetryConfirmation = vi.fn();
+const mockShouldWaitForPartnerAcceptConfirmation = vi.fn();
+const mockIsRetryInProgress = vi.fn();
+const mockHasPartnerInitiatedAccept = vi.fn();
+const mockGetSession = vi.fn();
 
 vi.mock("../../../../../../lib/services/fallback-decision-service", () => ({
   acceptFallbackSuggestion: (...args: unknown[]) =>
@@ -11,6 +15,15 @@ vi.mock("../../../../../../lib/services/fallback-decision-service", () => ({
   requestFallbackRetry: (...args: unknown[]) => mockRequestFallbackRetry(...args),
   shouldWaitForPartnerRetryConfirmation: (...args: unknown[]) =>
     mockShouldWaitForPartnerRetryConfirmation(...args),
+  shouldWaitForPartnerAcceptConfirmation: (...args: unknown[]) =>
+    mockShouldWaitForPartnerAcceptConfirmation(...args),
+  isRetryInProgress: (...args: unknown[]) => mockIsRetryInProgress(...args),
+  hasPartnerInitiatedAccept: (...args: unknown[]) =>
+    mockHasPartnerInitiatedAccept(...args),
+}));
+
+vi.mock("../../../../../../lib/services/session-service", () => ({
+  getSession: (...args: unknown[]) => mockGetSession(...args),
 }));
 
 vi.mock("../../../../../../lib/session-role-access", () => ({
@@ -41,6 +54,8 @@ const matchedSession = {
   retryBConfirmedAt: null,
   retryAPreferences: null,
   retryBPreferences: null,
+  acceptAConfirmedAt: null,
+  acceptBConfirmedAt: null,
 };
 
 const rerankedSession = {
@@ -55,6 +70,10 @@ describe("POST /api/sessions/[id]/fallback", () => {
     vi.clearAllMocks();
     mockReadBoundSessionRole.mockReturnValue("a");
     mockShouldWaitForPartnerRetryConfirmation.mockReturnValue(true);
+    mockShouldWaitForPartnerAcceptConfirmation.mockReturnValue(false);
+    mockIsRetryInProgress.mockReturnValue(false);
+    mockHasPartnerInitiatedAccept.mockReturnValue(false);
+    mockGetSession.mockResolvedValue(matchedSession);
   });
 
   it("accepts the suggested fallback venue", async () => {
@@ -66,7 +85,7 @@ describe("POST /api/sessions/[id]/fallback", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(mockAcceptFallbackSuggestion).toHaveBeenCalledWith("session-1");
+    expect(mockAcceptFallbackSuggestion).toHaveBeenCalledWith("session-1", "a");
     expect(body.session.status).toBe("matched");
     expect(body.session.matchedVenueId).toBe("venue-12");
   });

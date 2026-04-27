@@ -145,9 +145,18 @@ describe("searchNearbyWithCache", () => {
     expect(searchNearby).toHaveBeenCalled();
   });
 
-  it("does not write to cache when the API returns no candidates", async () => {
+  it("skips writing to cache when all API results are filtered out (empty filteredCandidates)", async () => {
     mockCache.get.mockResolvedValueOnce(null);
-    vi.mocked(searchNearby).mockResolvedValueOnce([]);
+    // API returns only a chain venue that gets filtered out
+    vi.mocked(searchNearby).mockResolvedValueOnce([
+      {
+        ...fakeCandidates[0],
+        placeId: "chain-1",
+        name: "McDonald's",
+        types: ["restaurant", "food"],
+        primaryType: "restaurant",
+      },
+    ]);
 
     const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
 

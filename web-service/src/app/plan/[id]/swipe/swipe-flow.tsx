@@ -33,8 +33,14 @@ type SessionStatusPayload = {
   readonly status: string;
   readonly matchedVenueId: string | null;
   readonly retryWaitingForPartner?: boolean;
+  readonly partnerInitiatedRetry?: boolean;
+  readonly acceptWaitingForPartner?: boolean;
+  readonly partnerInitiatedAccept?: boolean;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
+  /** True when the calling user has personally swiped all venues in the
+   *  current round, even if their partner hasn't finished yet. */
+  readonly viewerRoundComplete?: boolean;
 };
 
 type SwipeApiResult = {
@@ -72,6 +78,7 @@ export function SwipeFlow({
   const [submitting, setSubmitting] = useState(false);
   const [submittingFallbackAction, setSubmittingFallbackAction] = useState<"accept" | "retry" | null>(null);
   const [fallbackVenue, setFallbackVenue] = useState<Venue | null>(null);
+  const [retryStep, setRetryStep] = useState<"default" | "partner_confirm" | "partner_accept">("default");
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
@@ -129,7 +136,19 @@ export function SwipeFlow({
     );
   }, []);
 
-  const loadFallback = useCallback(async (matchedVenueId: string | null) => {
+  const enterAcceptConfirmationWaiting = useCallback(() => {
+    setWaitingStage("accept_confirmation");
+    setStatus("waiting");
+    setStatusMessage(
+      "You have locked in this venue. Waiting for your partner to confirm before the plan is set.",
+    );
+  }, []);
+
+  const loadFallback = useCallback(async (
+    matchedVenueId: string | null,
+    partnerInitiatedRetry = false,
+    partnerInitiatedAccept = false,
+  ) => {
     // Skip if we've already loaded this exact fallback venue, or a load is in
     // flight. Prevents the status-sync polling loop from flashing the loading
     // screen every few seconds while the user is on the fallback pick screen.
@@ -140,9 +159,16 @@ export function SwipeFlow({
       loadedFallbackVenueIdRef.current !== null &&
       loadedFallbackVenueIdRef.current === (matchedVenueId ?? "")
     ) {
-      // Callers (e.g. bootstrap) may have flipped status to "loading" before
-      // dispatching here. Restore the fallback view so the UI doesn't stall
-      // on the loading screen.
+      // The venue is already loaded. Still update retryStep in case the
+      // partner's action changed since we last rendered — polling uses this
+      // to upgrade the fallback view without reloading the venue data.
+      setRetryStep(
+        partnerInitiatedRetry
+          ? "partner_confirm"
+          : partnerInitiatedAccept
+            ? "partner_accept"
+            : "default",
+      );
       setStatus("fallback");
       setStatusMessage("");
       return;
@@ -169,6 +195,13 @@ export function SwipeFlow({
       setVenues(body.venues);
       logVenuePhotoSnapshot("fallback", null, body.venues);
       setFallbackVenue(resolvedVenue);
+      setRetryStep(
+        partnerInitiatedRetry
+          ? "partner_confirm"
+          : partnerInitiatedAccept
+            ? "partner_accept"
+            : "default",
+      );
       loadedFallbackVenueIdRef.current = matchedVenueId ?? "";
       setStatus("fallback");
       setStatusMessage("");
@@ -177,11 +210,18 @@ export function SwipeFlow({
     }
   }, [logVenuePhotoSnapshot, sessionId]);
 
-  const loadRound = useCallback(async (nextRound: number) => {
-    if (
-      loadedRoundRef.current === nextRound ||
-      loadingRoundRef.current === nextRound
-    ) {
+  const loadRound = useCallback(async (nextRound: number, currentStatus?: string) => {
+    if (loadedRoundRef.current === nextRound) {
+      // Round is already loaded. Only snap back to "ready" when we arrived here
+      // from a "loading" transition — if the user is intentionally in a waiting
+      // state (e.g. "waiting for partner"), overriding it would hide that UI.
+      if (currentStatus === "loading") {
+        setStatus("ready");
+        setStatusMessage("");
+      }
+      return;
+    }
+    if (loadingRoundRef.current === nextRound) {
       return;
     }
 
@@ -240,11 +280,20 @@ export function SwipeFlow({
         return;
       }
 
+      if (snapshot.status === "fallback_pending" && snapshot.acceptWaitingForPartner) {
+        enterAcceptConfirmationWaiting();
+        return;
+      }
+
       if (snapshot.status !== "ready_to_swipe") {
         const nextState = getSwipeFlowStatusState(snapshot.status);
 
         if (nextState.kind === "fallback") {
-          await loadFallback(snapshot.matchedVenueId);
+          await loadFallback(
+            snapshot.matchedVenueId,
+            snapshot.partnerInitiatedRetry,
+            snapshot.partnerInitiatedAccept,
+          );
           return;
         }
 
@@ -254,7 +303,17 @@ export function SwipeFlow({
         return;
       }
 
-      await loadRound(snapshot.currentRound ?? 1);
+      // If the viewer has already finished their side but the partner hasn't,
+      // show "waiting" rather than re-loading the round from scratch. Without
+      // this, a page refresh after completing your side lands you back at card 1.
+      if (snapshot.viewerRoundComplete && !snapshot.roundComplete) {
+        setWaitingStage("round");
+        setStatus("waiting");
+        setStatusMessage("You are set for this round. We will keep watch for your partner's next picks.");
+        return;
+      }
+
+      await loadRound(snapshot.currentRound ?? 1, "loading");
     } catch {
       setStatus("error");
       setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
@@ -273,8 +332,17 @@ export function SwipeFlow({
         return;
       }
 
+      if (snapshot.status === "fallback_pending" && snapshot.acceptWaitingForPartner) {
+        enterAcceptConfirmationWaiting();
+        return;
+      }
+
       if (snapshot.status === "fallback_pending") {
-        void loadFallback(snapshot.matchedVenueId).catch(() => {
+        void loadFallback(
+          snapshot.matchedVenueId,
+          snapshot.partnerInitiatedRetry,
+          snapshot.partnerInitiatedAccept,
+        ).catch(() => {
           setStatus("error");
           setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
         });
@@ -282,14 +350,22 @@ export function SwipeFlow({
       }
 
       if (snapshot.status === "ready_to_swipe" && typeof snapshot.currentRound === "number") {
-        // If the viewer has already finished their side for this round
-        // (viewerFinishedRoundRef tracks which round they last ran out of
-        // cards on) and the server round hasn't advanced yet, we're just
-        // waiting for the partner — skip the loadRound call entirely rather
-        // than triggering a no-op early-return that could race with React
-        // state. When the partner finishes, currentRound will advance and
-        // we'll load the next round normally.
+        // Client-side guard: if the viewer already finished their cards for
+        // this round (tracked via viewerFinishedRoundRef), skip the loadRound
+        // call entirely to avoid a race between finishing swipes and the
+        // partner completing their side. The server-side viewerRoundComplete
+        // flag below handles showing the waiting screen on the first sync
+        // after finishing; this ref prevents redundant subsequent calls.
         if (viewerFinishedRoundRef.current === snapshot.currentRound) {
+          return;
+        }
+
+        // Server confirms the viewer is done but the partner hasn't caught up —
+        // show the waiting screen rather than reloading the same empty deck.
+        if (snapshot.viewerRoundComplete && !snapshot.roundComplete) {
+          setWaitingStage("round");
+          setStatus("waiting");
+          setStatusMessage("You are set for this round. We will keep watch for your partner's next picks.");
           return;
         }
         void loadRound(snapshot.currentRound);
@@ -453,9 +529,23 @@ export function SwipeFlow({
         return;
       }
 
+      // First person to click lock — wait for partner to confirm.
+      if (result.acceptWaitingForPartner) {
+        enterAcceptConfirmationWaiting();
+        return;
+      }
+
       await bootstrap();
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Failed to accept the fallback pick.");
+      const message = error instanceof Error ? error.message : "Failed to accept the fallback pick.";
+
+      // 409: partner already initiated a retry — show them the confirm screen.
+      if (message.includes("partner has already requested a new mix")) {
+        setRetryStep("partner_confirm");
+        setToast("Your partner wants a new mix — please confirm below.");
+      } else {
+        setToast(message);
+      }
     } finally {
       setSubmittingFallbackAction(null);
     }
@@ -471,6 +561,7 @@ export function SwipeFlow({
     try {
       const result = await requestFallbackRetryDecision(sessionId, preferences);
       setFallbackVenue(null);
+      setRetryStep("default");
       loadedFallbackVenueIdRef.current = null;
 
       if (result.retryWaitingForPartner) {
@@ -574,6 +665,7 @@ export function SwipeFlow({
           explanation={buildFallbackExplanation(fallbackVenue)}
           initialRetryCategories={retryDefaults.categories}
           initialRetryBudget={retryDefaults.budget}
+          retryStep={retryStep}
           onAccept={handleAcceptFallback}
           onRetry={handleRetryFallback}
           onStartOver={handleFallbackStartOver}
@@ -747,7 +839,7 @@ function getWaitingLoaderVariant(
     return "venue";
   }
 
-  if (stage === "retry_confirmation") {
+  if (stage === "retry_confirmation" || stage === "accept_confirmation") {
     return "partner-preferences";
   }
 
@@ -797,6 +889,14 @@ function getWaitingCopy(stage: WaitingStage): {
         body: "Your side is locked in. As soon as your partner confirms their updated vibe, Dateflow will rebuild the shortlist using both of your new inputs.",
         cardTitle: "What happens next",
         cardBody: "Once both retry selections are in, the fallback pick is replaced with a fresh swipe deck.",
+      };
+    case "accept_confirmation":
+      return {
+        eyebrow: "Almost confirmed",
+        title: "Waiting for your partner to lock in",
+        body: "You have confirmed this venue. As soon as your partner locks in too, your date plan is set.",
+        cardTitle: "What happens next",
+        cardBody: "If your partner confirms, you both go to the results page. If they want a new mix, Dateflow will restart with fresh options.",
       };
     case "session":
     default:

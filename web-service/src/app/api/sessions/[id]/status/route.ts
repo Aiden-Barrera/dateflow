@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { readBoundSessionRole } from "../../../../../lib/session-role-access";
-import { shouldWaitForPartnerRetryConfirmation } from "../../../../../lib/services/fallback-decision-service";
+import {
+  shouldWaitForPartnerRetryConfirmation,
+  hasPartnerInitiatedRetry,
+  shouldWaitForPartnerAcceptConfirmation,
+  hasPartnerInitiatedAccept,
+} from "../../../../../lib/services/fallback-decision-service";
 import { getSession } from "../../../../../lib/services/session-service";
 import { getCurrentRound } from "../../../../../lib/services/round-manager";
 import { getRoundCompletion } from "../../../../../lib/services/swipe-service";
@@ -50,21 +55,40 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({
         status: session.status,
         matchedVenueId: session.matchedVenueId,
+        // Retry coordination
         retryWaitingForPartner: shouldWaitForPartnerRetryConfirmation(
           session,
           boundRole,
         ),
+        partnerInitiatedRetry: hasPartnerInitiatedRetry(session, boundRole),
+        // Accept (lock-in) coordination
+        acceptWaitingForPartner: shouldWaitForPartnerAcceptConfirmation(
+          session,
+          boundRole,
+        ),
+        partnerInitiatedAccept: hasPartnerInitiatedAccept(session, boundRole),
       });
     }
 
     const currentRound = await getCurrentRound(id);
     const completion = await getRoundCompletion(id, currentRound);
 
+    // Whether the calling user has personally finished swiping this round
+    // (their partner may still be going). Used by the client to show
+    // "waiting for partner" instead of re-loading the swipe deck.
+    const viewerRoundComplete =
+      boundRole === "a"
+        ? completion.roleACount === completion.total && completion.total > 0
+        : boundRole === "b"
+          ? completion.roleBCount === completion.total && completion.total > 0
+          : false;
+
     return NextResponse.json({
       status: session.status,
       matchedVenueId: session.matchedVenueId,
       currentRound,
       roundComplete: completion.complete,
+      viewerRoundComplete,
     });
   } catch (err) {
     console.error(`[GET /api/sessions/${id}/status] Failed:`, err);

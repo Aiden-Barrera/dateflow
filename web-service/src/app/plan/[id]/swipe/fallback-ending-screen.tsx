@@ -14,7 +14,7 @@ type FallbackEndingScreenProps = {
   readonly initialRetryBudget: BudgetLevel;
   readonly venueAddress: string;
   readonly explanation: string;
-  readonly retryStep?: "default" | "partner_confirm";
+  readonly retryStep?: "default" | "partner_confirm" | "partner_accept";
   readonly onAccept: () => void;
   readonly onRetry: (preferences: {
     categories: readonly Category[];
@@ -70,16 +70,26 @@ export function FallbackEndingScreen({
   }
 
   const isPartnerConfirmStep = retryStep === "partner_confirm";
-  const eyebrow = isPartnerConfirmStep
-    ? "New mix request"
-    : "Dateflow fallback pick";
-  const title = isPartnerConfirmStep
-    ? "Your partner wants a new mix"
-    : "No mutual match this time";
-  const introCopy = isPartnerConfirmStep
-    ? "Keep your current vibes or tweak them below, then confirm the retry together."
-    : `You and ${creatorName} did not land on the same venue, so Dateflow pulled forward the best next option instead of ending the night flat.`;
-  const retryEyebrow = isPartnerConfirmStep ? "Confirm the new mix" : "Try a new mix";
+  const isPartnerAcceptStep = retryStep === "partner_accept";
+
+  const eyebrow = isPartnerAcceptStep
+    ? "Lock-in request"
+    : isPartnerConfirmStep
+      ? "New mix request"
+      : "Dateflow fallback pick";
+  const title = isPartnerAcceptStep
+    ? "Your partner wants to lock this in"
+    : isPartnerConfirmStep
+      ? "Your partner wants a new mix"
+      : "No mutual match this time";
+  const introCopy = isPartnerAcceptStep
+    ? `${creatorName} is ready to commit to this venue. Lock it in to confirm — or try a new mix if you'd rather keep looking.`
+    : isPartnerConfirmStep
+      ? "Keep your current vibes or tweak them below, then confirm the retry together."
+      : `You and ${creatorName} did not land on the same venue, so Dateflow pulled forward the best next option instead of ending the night flat.`;
+  const retryEyebrow = isPartnerConfirmStep
+    ? "Confirm the new mix"
+    : "Try a new mix instead";
   const retryIntro = isPartnerConfirmStep
     ? "You can keep your current vibe selections as-is or update them before you confirm the refresh."
     : `If ${venueName} is not the move, tighten the vibe below and Dateflow will reshuffle the shortlist around a fresh direction.`;

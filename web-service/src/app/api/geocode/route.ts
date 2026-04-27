@@ -1,108 +1,92 @@
 import { NextResponse } from "next/server";
 
-const PLACES_TEXT_SEARCH_URL =
-  "https://places.googleapis.com/v1/places:searchText";
-
-type PlacesTextSearchResponse = {
-  readonly places?: ReadonlyArray<{
-    readonly displayName?: { readonly text?: string };
-    readonly formattedAddress?: string;
-    readonly location?: { readonly latitude?: number; readonly longitude?: number };
-  }>;
-};
-
 /**
- * GET /api/geocode?q=<query>
+ * GET /api/geocode?q=<address>
  *
- * Resolves a free-text location query (zip code, city, neighborhood) to a
- * lat/lng coordinate using the Google Places Text Search API.
+ * Server-side geocoding using the Google Places API (New) Text Search endpoint.
+ * This reuses the existing GOOGLE_PLACES_API_KEY — no additional API product
+ * needs to be enabled. Resolves city names, neighborhoods, and zip codes into
+ * real lat/lng coordinates.
  *
- * Returns { lat, lng, label } on success, or an appropriate error response.
- *
- * Rate-limited by the caller (one request per user input submission).
- * GOOGLE_PLACES_API_KEY must be set — the same key used for venue search.
+ * Returns { lat, lng, label } on success or { error } on failure.
  */
-export async function GET(request: Request): Promise<NextResponse> {
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const q = searchParams.get("q")?.trim() ?? "";
+  const query = searchParams.get("q")?.trim() ?? "";
 
-  if (!q) {
-    return NextResponse.json(
-      { error: "Missing required query parameter: q" },
-      { status: 400 }
-    );
+  if (query.length === 0) {
+    return NextResponse.json({ error: "Missing query parameter q" }, { status: 400 });
   }
 
-  if (q.length > 200) {
-    return NextResponse.json(
-      { error: "Query too long (max 200 characters)" },
-      { status: 400 }
-    );
+  if (query.length > 200) {
+    return NextResponse.json({ error: "Query too long" }, { status: 400 });
   }
 
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
-    console.error("[GET /api/geocode] GOOGLE_PLACES_API_KEY not set");
-    return NextResponse.json(
-      { error: "Geocoding service unavailable" },
-      { status: 503 }
-    );
+    console.error("[GET /api/geocode] GOOGLE_PLACES_API_KEY is not set");
+    return NextResponse.json({ error: "Geocoding unavailable" }, { status: 503 });
   }
 
   try {
-    const response = await fetch(PLACES_TEXT_SEARCH_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
+    // Places API (New) Text Search — returns the top matching place with
+    // its geometry. The field mask limits the response to only what we need,
+    // keeping the request cheap.
+    const response = await fetch(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          // Request only the fields we need — minimises billing footprint.
+          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
+        },
+        body: JSON.stringify({ textQuery: query }),
       },
-      body: JSON.stringify({ textQuery: q }),
-    });
+    );
 
     if (!response.ok) {
-      console.error("[GET /api/geocode] Places API error", {
-        status: response.status,
-        q,
-      });
+      const body = await response.text();
+      console.error(`[GET /api/geocode] Places API error ${response.status}`, body);
+      return NextResponse.json({ error: "Geocoding failed" }, { status: 502 });
+    }
+
+    type PlacesResult = {
+      places?: Array<{
+        displayName?: { text: string };
+        formattedAddress?: string;
+        location?: { latitude: number; longitude: number };
+      }>;
+    };
+
+    const data = (await response.json()) as PlacesResult;
+
+    if (!data.places || data.places.length === 0) {
+      console.warn("[GET /api/geocode] No results", { query });
       return NextResponse.json(
-        { error: "Geocoding service error" },
-        { status: 502 }
+        { error: "Location not found. Try a city name, neighborhood, or zip code." },
+        { status: 422 },
       );
     }
 
-    const data = (await response.json()) as PlacesTextSearchResponse;
-    const place = data.places?.[0];
-
-    if (!place) {
-      return NextResponse.json(
-        { error: "Location not found" },
-        { status: 422 }
-      );
-    }
-
+    const place = data.places[0];
     const lat = place.location?.latitude;
     const lng = place.location?.longitude;
 
-    if (typeof lat !== "number" || typeof lng !== "number") {
-      console.error("[GET /api/geocode] Places API returned place without coordinates", { q });
-      return NextResponse.json(
-        { error: "Geocoding service error" },
-        { status: 502 }
-      );
+    if (lat === undefined || lng === undefined) {
+      console.error("[GET /api/geocode] Place missing location", { query, place });
+      return NextResponse.json({ error: "Geocoding failed" }, { status: 502 });
     }
 
     const label =
       place.formattedAddress ??
       place.displayName?.text ??
-      q;
+      query;
 
     return NextResponse.json({ lat, lng, label });
   } catch (err) {
-    console.error("[GET /api/geocode] Unexpected error", err);
-    return NextResponse.json(
-      { error: "Geocoding service error" },
-      { status: 500 }
-    );
+    console.error("[GET /api/geocode] Unexpected error:", err);
+    return NextResponse.json({ error: "Geocoding failed" }, { status: 500 });
   }
 }

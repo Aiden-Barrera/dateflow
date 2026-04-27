@@ -39,6 +39,10 @@ export type Session = {
   readonly retryBConfirmedAt: Date | null;
   readonly retryAPreferences: Record<string, unknown> | null;
   readonly retryBPreferences: Record<string, unknown> | null;
+  /** Set when Person A clicks "Lock in this plan" on the fallback screen. */
+  readonly acceptAConfirmedAt: Date | null;
+  /** Set when Person B clicks "Lock in this plan" on the fallback screen. */
+  readonly acceptBConfirmedAt: Date | null;
   /** Set when both users confirm a meeting time for a static venue (DS-07D). */
   readonly confirmedDateTime: Date | null;
 };
@@ -78,6 +82,8 @@ export type SessionRow = {
   readonly retry_b_confirmed_at?: string | null;
   readonly retry_a_preferences?: Record<string, unknown> | null;
   readonly retry_b_preferences?: Record<string, unknown> | null;
+  readonly accept_a_confirmed_at?: string | null;
+  readonly accept_b_confirmed_at?: string | null;
   readonly confirmed_date_time?: string | null;
 };
 
@@ -106,6 +112,12 @@ export function toSession(row: SessionRow): Session {
       : null,
     retryAPreferences: row.retry_a_preferences ?? null,
     retryBPreferences: row.retry_b_preferences ?? null,
+    acceptAConfirmedAt: row.accept_a_confirmed_at
+      ? new Date(row.accept_a_confirmed_at)
+      : null,
+    acceptBConfirmedAt: row.accept_b_confirmed_at
+      ? new Date(row.accept_b_confirmed_at)
+      : null,
     confirmedDateTime: row.confirmed_date_time
       ? new Date(row.confirmed_date_time)
       : null,

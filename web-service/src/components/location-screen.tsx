@@ -10,6 +10,7 @@ type LocationScreenProps = {
 };
 
 type GpsState = "idle" | "loading" | "denied";
+type GeocodingState = "idle" | "loading" | "error";
 
 /**
  * Screen 2 — Location.
@@ -23,8 +24,8 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
   const [gpsState, setGpsState] = useState<GpsState>("idle");
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
-  const [geocodeState, setGeocodeState] = useState<"idle" | "loading" | "error">("idle");
-  const [geocodeError, setGeocodeError] = useState("");
+  const [geocodingState, setGeocodingState] = useState<GeocodingState>("idle");
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
   function handleGpsRequest() {
     if (!navigator.geolocation) {
@@ -55,32 +56,25 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
     const trimmed = manualInput.trim();
     if (trimmed.length === 0) return;
 
-    setGeocodeState("loading");
-    setGeocodeError("");
+    setGeocodingState("loading");
+    setGeocodingError(null);
 
     try {
-      const response = await fetch(
-        `/api/geocode?q=${encodeURIComponent(trimmed)}`
-      );
-      const data = (await response.json()) as
-        | { lat: number; lng: number; label: string }
-        | { error: string };
+      const response = await fetch(`/api/geocode?q=${encodeURIComponent(trimmed)}`);
+      type GeocodeResult = { lat: number; lng: number; label: string; error?: string };
+      const data = (await response.json()) as GeocodeResult;
 
-      if (!response.ok || "error" in data) {
-        const message =
-          "error" in data && data.error === "Location not found"
-            ? "We couldn't find that location. Try a city name or full zip code."
-            : "Couldn't look up that location. Please try again.";
-        setGeocodeState("error");
-        setGeocodeError(message);
+      if (!response.ok || data.error) {
+        setGeocodingState("error");
+        setGeocodingError(data.error ?? "Location not found. Try a different city or zip code.");
         return;
       }
 
-      setGeocodeState("idle");
+      setGeocodingState("idle");
       onComplete({ lat: data.lat, lng: data.lng, label: data.label });
     } catch {
-      setGeocodeState("error");
-      setGeocodeError("Couldn't look up that location. Please try again.");
+      setGeocodingState("error");
+      setGeocodingError("Couldn't reach the geocoding service. Check your connection and try again.");
     }
   }
 
@@ -107,7 +101,7 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
               <LocationPinIcon />
             </div>
 
-            <h1 className="text-[clamp(2.4rem,8vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
+            <h1 className="text-[clamp(1.9rem,7vw,4rem)] font-semibold leading-[0.95] tracking-[-0.05em] text-text">
               Where should Dateflow anchor your side?
             </h1>
             <p className="mt-3 max-w-lg text-body text-text-secondary">
@@ -145,28 +139,25 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
                     value={manualInput}
                     onChange={(e) => {
                       setManualInput(e.target.value);
-                      if (geocodeState === "error") {
-                        setGeocodeState("idle");
-                        setGeocodeError("");
-                      }
+                      setGeocodingError(null);
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") void handleManualSubmit();
+                      if (e.key === "Enter") { void handleManualSubmit(); }
                     }}
-                    placeholder="Williamsburg, Brooklyn or 07643"
+                    placeholder="Williamsburg, Brooklyn"
                     autoFocus
                     className="h-14 w-full rounded-2xl border-[1.5px] border-muted bg-surface px-4 text-body text-text placeholder:text-text-secondary/50 focus:border-primary focus:outline-none"
                   />
-                  {geocodeError && (
-                    <p className="text-sm text-red-500">{geocodeError}</p>
+                  {geocodingError && (
+                    <p className="text-caption text-error">{geocodingError}</p>
                   )}
                   {manualInput.trim().length > 0 && (
                     <Button
                       variant="secondary"
-                      loading={geocodeState === "loading"}
-                      onClick={() => void handleManualSubmit()}
+                      loading={geocodingState === "loading"}
+                      onClick={() => { void handleManualSubmit(); }}
                     >
-                      {geocodeState === "loading" ? "Looking up…" : "Continue"}
+                      {geocodingState === "loading" ? "Looking up location…" : "Continue"}
                     </Button>
                   )}
                 </div>
@@ -180,7 +171,7 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
             )}
           </section>
 
-          <aside className="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm">
+          <aside className="hidden rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_24px_80px_rgba(45,42,38,0.12)] backdrop-blur-sm lg:block">
             <p className="text-caption font-semibold uppercase tracking-[0.2em] text-secondary">
               Why we ask
             </p>
