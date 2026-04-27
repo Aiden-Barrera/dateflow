@@ -5,6 +5,9 @@ const mockGetCurrentRound = vi.fn();
 const mockGetRoundCompletion = vi.fn();
 const mockReadBoundSessionRole = vi.fn();
 const mockShouldWaitForPartnerRetryConfirmation = vi.fn();
+const mockHasPartnerInitiatedRetry = vi.fn();
+const mockShouldWaitForPartnerAcceptConfirmation = vi.fn();
+const mockHasPartnerInitiatedAccept = vi.fn();
 
 vi.mock("../../../../../../lib/services/session-service", () => ({
   getSession: (...args: unknown[]) => mockGetSession(...args),
@@ -25,6 +28,12 @@ vi.mock("../../../../../../lib/session-role-access", () => ({
 vi.mock("../../../../../../lib/services/fallback-decision-service", () => ({
   shouldWaitForPartnerRetryConfirmation: (...args: unknown[]) =>
     mockShouldWaitForPartnerRetryConfirmation(...args),
+  hasPartnerInitiatedRetry: (...args: unknown[]) =>
+    mockHasPartnerInitiatedRetry(...args),
+  shouldWaitForPartnerAcceptConfirmation: (...args: unknown[]) =>
+    mockShouldWaitForPartnerAcceptConfirmation(...args),
+  hasPartnerInitiatedAccept: (...args: unknown[]) =>
+    mockHasPartnerInitiatedAccept(...args),
 }));
 
 import { GET } from "../route";
@@ -50,6 +59,8 @@ const readySession = {
   retryBConfirmedAt: null,
   retryAPreferences: null,
   retryBPreferences: null,
+  acceptAConfirmedAt: null,
+  acceptBConfirmedAt: null,
 };
 
 describe("GET /api/sessions/[id]/status", () => {
@@ -63,6 +74,9 @@ describe("GET /api/sessions/[id]/status", () => {
     vi.setSystemTime(new Date("2026-04-03T12:00:00Z"));
     mockReadBoundSessionRole.mockReturnValue("a");
     mockShouldWaitForPartnerRetryConfirmation.mockReturnValue(false);
+    mockHasPartnerInitiatedRetry.mockReturnValue(false);
+    mockShouldWaitForPartnerAcceptConfirmation.mockReturnValue(false);
+    mockHasPartnerInitiatedAccept.mockReturnValue(false);
     mockGetSession.mockResolvedValue(readySession);
     mockGetCurrentRound.mockResolvedValue(2);
     mockGetRoundCompletion.mockResolvedValue({
@@ -162,6 +176,9 @@ describe("GET /api/sessions/[id]/status", () => {
       status: "fallback_pending",
       matchedVenueId: "venue-12",
       retryWaitingForPartner: true,
+      partnerInitiatedRetry: false,
+      acceptWaitingForPartner: false,
+      partnerInitiatedAccept: false,
     });
   });
 

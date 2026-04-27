@@ -145,6 +145,25 @@ describe("searchNearbyWithCache", () => {
     expect(searchNearby).toHaveBeenCalled();
   });
 
+  it("skips writing to cache when all API results are filtered out (empty filteredCandidates)", async () => {
+    mockCache.get.mockResolvedValueOnce(null);
+    // API returns only a chain venue that gets filtered out
+    vi.mocked(searchNearby).mockResolvedValueOnce([
+      {
+        ...fakeCandidates[0],
+        placeId: "chain-1",
+        name: "McDonald's",
+        types: ["restaurant", "food"],
+        primaryType: "restaurant",
+      },
+    ]);
+
+    const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
+
+    expect(results).toEqual([]);
+    expect(mockCache.set).not.toHaveBeenCalled();
+  });
+
   it("calls API without caching when cache initialization throws", async () => {
     vi.mocked(VenueCache).mockImplementationOnce(() => {
       throw new Error("Missing Upstash env");

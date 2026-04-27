@@ -55,6 +55,7 @@ export function HookScreen({
   const [categories, setCategories] = useState<Category[]>([]);
   const [budget, setBudget] = useState<BudgetLevel>("MODERATE");
   const [error, setError] = useState<string | null>(null);
+  const [geocoding, setGeocoding] = useState(false);
   const initial = creatorName.trim().charAt(0).toUpperCase() || "?";
 
   // Broadcast to Person A's waiting screen that Person B has opened the link.
@@ -120,17 +121,43 @@ export function HookScreen({
     );
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (!canSubmit) {
       setError("Fill in your name, location, and select at least one category.");
       return;
     }
 
-    const trimmedLocation = locationLabel.trim();
-    const resolvedLocation: Location =
-      location ?? { lat: 0, lng: 0, label: trimmedLocation };
-
     setError(null);
+
+    // If the user typed a location instead of using GPS, geocode it now so we
+    // always store real coordinates rather than a (0, 0) placeholder.
+    let resolvedLocation: Location;
+    if (location !== null) {
+      resolvedLocation = location;
+    } else {
+      const trimmedLocation = locationLabel.trim();
+      setGeocoding(true);
+      try {
+        const response = await fetch(`/api/geocode?q=${encodeURIComponent(trimmedLocation)}`);
+        type GeocodeResult = { lat: number; lng: number; label: string; error?: string };
+        const data = (await response.json()) as GeocodeResult;
+
+        if (!response.ok || data.error) {
+          setError(data.error ?? "Location not found. Try a different city or zip code.");
+          setGeocoding(false);
+          return;
+        }
+
+        resolvedLocation = { lat: data.lat, lng: data.lng, label: data.label };
+      } catch {
+        setError("Couldn't look up your location. Check your connection and try again.");
+        setGeocoding(false);
+        return;
+      } finally {
+        setGeocoding(false);
+      }
+    }
+
     onContinue({
       displayName: displayName.trim(),
       location: resolvedLocation,
@@ -275,16 +302,16 @@ export function HookScreen({
         <div className="mt-6">
           <button
             type="button"
-            onClick={handleContinue}
-            disabled={!canSubmit}
+            onClick={() => { void handleContinue(); }}
+            disabled={!canSubmit || geocoding}
             className={`flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-body font-semibold transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 ${
-              canSubmit
+              canSubmit && !geocoding
                 ? "cursor-pointer bg-white text-[#4a1224] shadow-[0_18px_40px_rgba(255,61,127,0.35),_inset_0_1px_0_rgba(255,255,255,0.9)] motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[0_22px_48px_rgba(255,61,127,0.45),_inset_0_1px_0_rgba(255,255,255,0.9)] active:translate-y-0"
                 : "cursor-not-allowed bg-white/20 text-white/50 shadow-none"
             }`}
           >
-            Join this date plan
-            {canSubmit ? (
+            {geocoding ? "Looking up location…" : "Join this date plan"}
+            {canSubmit && !geocoding ? (
               <svg
                 className="h-4 w-4"
                 viewBox="0 0 24 24"

@@ -10,6 +10,7 @@ type LocationScreenProps = {
 };
 
 type GpsState = "idle" | "loading" | "denied";
+type GeocodingState = "idle" | "loading" | "error";
 
 /**
  * Screen 2 — Location.
@@ -23,6 +24,8 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
   const [gpsState, setGpsState] = useState<GpsState>("idle");
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
+  const [geocodingState, setGeocodingState] = useState<GeocodingState>("idle");
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
   function handleGpsRequest() {
     if (!navigator.geolocation) {
@@ -49,17 +52,30 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
     );
   }
 
-  function handleManualSubmit() {
+  async function handleManualSubmit() {
     const trimmed = manualInput.trim();
     if (trimmed.length === 0) return;
 
-    // For MVP, we use a placeholder coordinate with the user's text as label.
-    // DS-03 will add Google Geocoding API to convert city/zip → lat/lng.
-    onComplete({
-      lat: 0,
-      lng: 0,
-      label: trimmed,
-    });
+    setGeocodingState("loading");
+    setGeocodingError(null);
+
+    try {
+      const response = await fetch(`/api/geocode?q=${encodeURIComponent(trimmed)}`);
+      type GeocodeResult = { lat: number; lng: number; label: string; error?: string };
+      const data = (await response.json()) as GeocodeResult;
+
+      if (!response.ok || data.error) {
+        setGeocodingState("error");
+        setGeocodingError(data.error ?? "Location not found. Try a different city or zip code.");
+        return;
+      }
+
+      setGeocodingState("idle");
+      onComplete({ lat: data.lat, lng: data.lng, label: data.label });
+    } catch {
+      setGeocodingState("error");
+      setGeocodingError("Couldn't reach the geocoding service. Check your connection and try again.");
+    }
   }
 
   return (
@@ -121,17 +137,27 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
                   <input
                     type="text"
                     value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
+                    onChange={(e) => {
+                      setManualInput(e.target.value);
+                      setGeocodingError(null);
+                    }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") handleManualSubmit();
+                      if (e.key === "Enter") { void handleManualSubmit(); }
                     }}
                     placeholder="Williamsburg, Brooklyn"
                     autoFocus
                     className="h-14 w-full rounded-2xl border-[1.5px] border-muted bg-surface px-4 text-body text-text placeholder:text-text-secondary/50 focus:border-primary focus:outline-none"
                   />
+                  {geocodingError && (
+                    <p className="text-caption text-error">{geocodingError}</p>
+                  )}
                   {manualInput.trim().length > 0 && (
-                    <Button variant="secondary" onClick={handleManualSubmit}>
-                      Continue
+                    <Button
+                      variant="secondary"
+                      loading={geocodingState === "loading"}
+                      onClick={() => { void handleManualSubmit(); }}
+                    >
+                      {geocodingState === "loading" ? "Looking up location…" : "Continue"}
                     </Button>
                   )}
                 </div>

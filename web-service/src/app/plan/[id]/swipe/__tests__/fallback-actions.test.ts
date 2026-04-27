@@ -34,6 +34,7 @@ describe("acceptFallbackDecision", () => {
     expect(result).toEqual({
       status: "matched",
       matchedVenueId: "venue-12",
+      acceptWaitingForPartner: false,
     });
   });
 

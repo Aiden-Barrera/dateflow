@@ -163,6 +163,26 @@ describe("VenueCache", () => {
 
       expect(retrieved).toEqual(candidates);
     });
+
+    it("treats a materialized empty array as a cache miss", async () => {
+      const key = "test:key";
+
+      mockRedisClient.get.mockResolvedValue([]);
+
+      const result = await cache.get(key);
+
+      expect(result).toBeNull();
+    });
+
+    it("treats a serialized empty array string as a cache miss", async () => {
+      const key = "test:key";
+
+      mockRedisClient.get.mockResolvedValue("[]");
+
+      const result = await cache.get(key);
+
+      expect(result).toBeNull();
+    });
   });
 
   describe("error handling", () => {
