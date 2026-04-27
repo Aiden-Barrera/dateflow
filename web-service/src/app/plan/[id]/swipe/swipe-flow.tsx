@@ -75,6 +75,10 @@ export function SwipeFlow({
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
+  // Tracks the highest round for which this viewer has personally finished
+  // swiping all their cards. Used to distinguish "I'm done, waiting for
+  // partner" from "a new round just became available — load it."
+  const viewerFinishedRoundRef = useRef<number | null>(null);
   const loadedFallbackVenueIdRef = useRef<string | null>(null);
   const loadingFallbackRef = useRef(false);
   const roundSwipesRef = useRef<Record<number, DemoRoundSwipe[]>>({});
@@ -185,6 +189,7 @@ export function SwipeFlow({
     setStatus("loading");
     setStatusMessage(nextRound === 1 ? "Loading the first round..." : `Loading round ${nextRound}...`);
 
+    let succeeded = false;
     try {
       const response = await fetch(`/api/sessions/${sessionId}/venues?round=${nextRound}`);
 
@@ -194,6 +199,9 @@ export function SwipeFlow({
 
       const body = (await response.json()) as { venues: Venue[] };
       loadedRoundRef.current = nextRound;
+      // Clear the finished-round marker since we've now moved to a new round
+      // and the viewer needs to swipe again.
+      viewerFinishedRoundRef.current = null;
       roundSwipesRef.current[nextRound] = [];
       setRound(nextRound);
       setVenues(body.venues);
@@ -201,9 +209,16 @@ export function SwipeFlow({
       setIndex(0);
       setStatus("ready");
       setStatusMessage("");
+      succeeded = true;
     } finally {
       if (loadingRoundRef.current === nextRound) {
         loadingRoundRef.current = null;
+      }
+      // If we set status to "loading" but the fetch failed, don't leave the
+      // user stuck on the loading screen — surface an error they can act on.
+      if (!succeeded) {
+        setStatus("error");
+        setStatusMessage("We couldn't load the next round. Please refresh and try again.");
       }
     }
   }, [logVenuePhotoSnapshot, sessionId]);
@@ -267,6 +282,16 @@ export function SwipeFlow({
       }
 
       if (snapshot.status === "ready_to_swipe" && typeof snapshot.currentRound === "number") {
+        // If the viewer has already finished their side for this round
+        // (viewerFinishedRoundRef tracks which round they last ran out of
+        // cards on) and the server round hasn't advanced yet, we're just
+        // waiting for the partner — skip the loadRound call entirely rather
+        // than triggering a no-op early-return that could race with React
+        // state. When the partner finishes, currentRound will advance and
+        // we'll load the next round normally.
+        if (viewerFinishedRoundRef.current === snapshot.currentRound) {
+          return;
+        }
         void loadRound(snapshot.currentRound);
       }
     });
@@ -378,6 +403,12 @@ export function SwipeFlow({
       } else if (!hasNextVenue && swipeResult.sessionStatus === "fallback_pending") {
         await loadFallback(swipeResult.matchedVenueId);
       } else if (!hasNextVenue) {
+        // Viewer has finished their side of this round; partner is still going.
+        // Record which round we finished so the status sync callback can skip
+        // loadRound calls for the same round number (avoiding a race where a
+        // polling tick fires between now and when the partner finishes and
+        // inadvertently triggers loadRound for the already-loaded round).
+        viewerFinishedRoundRef.current = swipeResult.currentRound;
         setWaitingStage("round");
         setStatus("waiting");
         setStatusMessage(
