@@ -23,6 +23,8 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
   const [gpsState, setGpsState] = useState<GpsState>("idle");
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
+  const [geocodeState, setGeocodeState] = useState<"idle" | "loading" | "error">("idle");
+  const [geocodeError, setGeocodeError] = useState("");
 
   function handleGpsRequest() {
     if (!navigator.geolocation) {
@@ -49,17 +51,37 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
     );
   }
 
-  function handleManualSubmit() {
+  async function handleManualSubmit() {
     const trimmed = manualInput.trim();
     if (trimmed.length === 0) return;
 
-    // For MVP, we use a placeholder coordinate with the user's text as label.
-    // DS-03 will add Google Geocoding API to convert city/zip → lat/lng.
-    onComplete({
-      lat: 0,
-      lng: 0,
-      label: trimmed,
-    });
+    setGeocodeState("loading");
+    setGeocodeError("");
+
+    try {
+      const response = await fetch(
+        `/api/geocode?q=${encodeURIComponent(trimmed)}`
+      );
+      const data = (await response.json()) as
+        | { lat: number; lng: number; label: string }
+        | { error: string };
+
+      if (!response.ok || "error" in data) {
+        const message =
+          "error" in data && data.error === "Location not found"
+            ? "We couldn't find that location. Try a city name or full zip code."
+            : "Couldn't look up that location. Please try again.";
+        setGeocodeState("error");
+        setGeocodeError(message);
+        return;
+      }
+
+      setGeocodeState("idle");
+      onComplete({ lat: data.lat, lng: data.lng, label: data.label });
+    } catch {
+      setGeocodeState("error");
+      setGeocodeError("Couldn't look up that location. Please try again.");
+    }
   }
 
   return (
@@ -121,17 +143,30 @@ export function LocationScreen({ onComplete, onBack }: LocationScreenProps) {
                   <input
                     type="text"
                     value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleManualSubmit();
+                    onChange={(e) => {
+                      setManualInput(e.target.value);
+                      if (geocodeState === "error") {
+                        setGeocodeState("idle");
+                        setGeocodeError("");
+                      }
                     }}
-                    placeholder="Williamsburg, Brooklyn"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleManualSubmit();
+                    }}
+                    placeholder="Williamsburg, Brooklyn or 07643"
                     autoFocus
                     className="h-14 w-full rounded-2xl border-[1.5px] border-muted bg-surface px-4 text-body text-text placeholder:text-text-secondary/50 focus:border-primary focus:outline-none"
                   />
+                  {geocodeError && (
+                    <p className="text-sm text-red-500">{geocodeError}</p>
+                  )}
                   {manualInput.trim().length > 0 && (
-                    <Button variant="secondary" onClick={handleManualSubmit}>
-                      Continue
+                    <Button
+                      variant="secondary"
+                      loading={geocodeState === "loading"}
+                      onClick={() => void handleManualSubmit()}
+                    >
+                      {geocodeState === "loading" ? "Looking up…" : "Continue"}
                     </Button>
                   )}
                 </div>
