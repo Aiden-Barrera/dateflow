@@ -51,7 +51,7 @@ export async function searchNearbyWithCache(
   if (cache && cacheKey) {
     try {
       const cached = await cache.get(cacheKey);
-      if (cached) {
+      if (cached !== null) {
         const filteredCached = filterDeniedFirstDateVenues(cached);
         console.info("[searchNearbyWithCache] cache hit", {
           cacheKey,
@@ -97,8 +97,10 @@ export async function searchNearbyWithCache(
     filteredCandidateCount: filteredCandidates.length,
   });
 
-  // Write to cache (fire-and-forget — don't block on this)
-  if (cache && cacheKey) {
+  // Write to cache (fire-and-forget — don't block on this).
+  // Skip caching empty results to prevent poisoning the cache with a key that
+  // will return 0 venues on every future hit (e.g. from an ocean-midpoint search).
+  if (cache && cacheKey && filteredCandidates.length > 0) {
     cache.set(cacheKey, filteredCandidates, CACHE_TTL_SECONDS).catch((err) => {
       console.error("[searchNearbyWithCache] Cache write failed:", err);
     });

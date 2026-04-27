@@ -15,7 +15,7 @@ import type { Location } from "../types/preference";
  */
 export class VenueCache {
   private redis = getRedisClient();
-  private static readonly KEY_VERSION = "v3";
+  private static readonly KEY_VERSION = "v4";
 
   private getValuePreview(value: unknown): string {
     if (typeof value === "string") {
@@ -75,6 +75,12 @@ export class VenueCache {
       }
 
       if (Array.isArray(cached)) {
+        if (cached.length === 0) {
+          // An empty array was previously poisoned into the cache (e.g. from a
+          // (0,0) ocean midpoint). Treat it as a miss so we re-fetch.
+          console.warn(`[VenueCache.get] Ignoring empty-array cache entry for key "${key}" — treating as miss`);
+          return null;
+        }
         console.warn(`[VenueCache.get] Returning non-string cached value for key "${key}"`, {
           valueType: typeof cached,
           preview: this.getValuePreview(cached),
