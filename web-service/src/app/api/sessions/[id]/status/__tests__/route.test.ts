@@ -102,6 +102,81 @@ describe("GET /api/sessions/[id]/status", () => {
       matchedVenueId: null,
       currentRound: 2,
       roundComplete: false,
+      viewerRoundComplete: false,
+    });
+  });
+
+  it('returns viewerRoundComplete true for role "a" when role A has swiped all venues', async () => {
+    mockReadBoundSessionRole.mockReturnValue("a");
+    mockGetRoundCompletion.mockResolvedValue({
+      round: 2,
+      roleACount: 4,
+      roleBCount: 2,
+      total: 4,
+      complete: false,
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      status: "ready_to_swipe",
+      matchedVenueId: null,
+      currentRound: 2,
+      roundComplete: false,
+      viewerRoundComplete: true,
+    });
+  });
+
+  it('returns viewerRoundComplete true for role "b" when role B has swiped all venues', async () => {
+    mockReadBoundSessionRole.mockReturnValue("b");
+    mockGetRoundCompletion.mockResolvedValue({
+      round: 2,
+      roleACount: 3,
+      roleBCount: 4,
+      total: 4,
+      complete: false,
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      status: "ready_to_swipe",
+      matchedVenueId: null,
+      currentRound: 2,
+      roundComplete: false,
+      viewerRoundComplete: true,
+    });
+  });
+
+  it("keeps viewerRoundComplete false when total is zero", async () => {
+    mockGetRoundCompletion.mockResolvedValue({
+      round: 2,
+      roleACount: 0,
+      roleBCount: 0,
+      total: 0,
+      complete: false,
+    });
+
+    const response = await GET(makeGetRequest(), {
+      params: Promise.resolve({ id: "session-1" }),
+    });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      status: "ready_to_swipe",
+      matchedVenueId: null,
+      currentRound: 2,
+      roundComplete: false,
+      viewerRoundComplete: false,
     });
   });
 

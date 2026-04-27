@@ -13,6 +13,9 @@ export type SessionStatusSnapshot = {
   readonly matchedVenueId: string | null;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
+  /** True when the calling user has personally swiped all venues in the
+   *  current round, even if their partner hasn't finished yet. */
+  readonly viewerRoundComplete?: boolean;
   readonly retryWaitingForPartner?: boolean;
   /** True when the viewer's partner has already clicked "Try a new mix" but
    *  the viewer hasn't responded yet. The client should show the
