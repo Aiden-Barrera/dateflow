@@ -154,6 +154,8 @@ describe("fallback-decision-service", () => {
         budget: "UPSCALE",
         radiusMeters: null,
       },
+      accept_a_confirmed_at: null,
+      accept_b_confirmed_at: null,
     });
     expect(mockRerankStoredCandidates).not.toHaveBeenCalled();
     expect(mockDelete).not.toHaveBeenCalled();
