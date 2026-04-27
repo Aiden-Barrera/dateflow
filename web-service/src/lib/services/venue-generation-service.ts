@@ -4,7 +4,7 @@ import type {
   GenerationStrategy,
 } from "../types/candidate-pool";
 import type { BudgetLevel, Category, Preference } from "../types/preference";
-import { toVenue, type Venue, type VenueRow } from "../types/venue";
+import { toVenue, type Venue, type VenueRow, type PlaceCandidate } from "../types/venue";
 import { getBothPreferences } from "./preference-service";
 import { calculateMidpoint, distanceBetween } from "./midpoint-calculator";
 import { buildWhyPicked } from "./venue-why-picked";
@@ -17,7 +17,17 @@ import { applySafetyFilter } from "./safety-filter";
 import { scoreAndCurate } from "./ai-curation-service";
 import { fetchLiveEventCandidates } from "./event-enrichment-service";
 
-const SEARCH_RADIUS_METERS = 2_000;
+/**
+ * Radius expansion ladder used when the initial search returns too few safe
+ * candidates. Each tier is tried in order; generation stops at the first
+ * radius that yields at least MIN_CANDIDATES_TO_PROCEED safe venues.
+ *
+ * 2 km → 5 km → 10 km → 20 km
+ */
+const SEARCH_RADIUS_LADDER_METERS = [2_000, 5_000, 10_000, 20_000] as const;
+
+/** Minimum number of safety-filtered candidates needed to proceed to AI curation. */
+const MIN_CANDIDATES_TO_PROCEED = 3;
 
 function budgetToMaxPrice(budget: BudgetLevel): number {
   if (budget === "BUDGET") return 1;
@@ -219,13 +229,29 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
     const categories = mergedCategories(preferences);
     const maxPrice = budgetToMaxPrice(stricterBudget(preferences));
 
-    const candidates = await searchNearbyWithCache(
-      midpoint,
-      SEARCH_RADIUS_METERS,
-      categories,
-      maxPrice
-    );
-    const placeCandidates = applySafetyFilter(candidates, categories);
+    // Search with radius expansion: start at 2 km and widen up to 20 km until
+    // we have enough safety-filtered candidates to run AI curation. This handles
+    // suburban and rural midpoints where the tighter radius yields too few venues.
+    let placeCandidates: readonly PlaceCandidate[] = [];
+    let usedRadius: number = SEARCH_RADIUS_LADDER_METERS[0];
+    for (const radius of SEARCH_RADIUS_LADDER_METERS) {
+      usedRadius = radius;
+      const rawCandidates = await searchNearbyWithCache(
+        midpoint,
+        radius,
+        categories,
+        maxPrice
+      );
+      placeCandidates = applySafetyFilter(rawCandidates, categories);
+      if (placeCandidates.length >= MIN_CANDIDATES_TO_PROCEED) break;
+
+      console.info("[generateVenues] radius expansion triggered", {
+        sessionId,
+        radius,
+        safeCandidateCount: placeCandidates.length,
+        required: MIN_CANDIDATES_TO_PROCEED,
+      });
+    }
 
     const wantsLiveEvents = categories.some(
       (cat) => cat === "EVENT" || cat === "ACTIVITY",
@@ -235,10 +261,16 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
     // and the deny-listed type check is irrelevant since TM types are pre-scoped
     // to Arts & Theatre + Comedy at the API level.
     const liveEventCandidates = wantsLiveEvents
-      ? await fetchLiveEventCandidates(midpoint, SEARCH_RADIUS_METERS)
+      ? await fetchLiveEventCandidates(midpoint, usedRadius)
       : [];
 
     const safeCandidates = [...placeCandidates, ...liveEventCandidates];
+
+    if (safeCandidates.length === 0) {
+      throw new Error(
+        "No venues found near your midpoint. Try entering locations closer together or choosing different categories."
+      );
+    }
     const poolId = await createCandidatePool(sessionId, "initial_generation");
 
     await insertCandidatePoolItems(

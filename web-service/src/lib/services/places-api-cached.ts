@@ -97,8 +97,11 @@ export async function searchNearbyWithCache(
     filteredCandidateCount: filteredCandidates.length,
   });
 
-  // Write to cache (fire-and-forget — don't block on this)
-  if (cache && cacheKey) {
+  // Write to cache (fire-and-forget — don't block on this).
+  // Skip empty arrays: caching an empty result would poison future searches
+  // for the same location and prevent the radius-expansion fallback from
+  // trying wider radii on a fresh request.
+  if (cache && cacheKey && filteredCandidates.length > 0) {
     cache.set(cacheKey, filteredCandidates, CACHE_TTL_SECONDS).catch((err) => {
       console.error("[searchNearbyWithCache] Cache write failed:", err);
     });
@@ -107,6 +110,10 @@ export async function searchNearbyWithCache(
       cacheKey,
       candidateCount: filteredCandidates.length,
       ttlSeconds: CACHE_TTL_SECONDS,
+    });
+  } else if (cache && cacheKey && filteredCandidates.length === 0) {
+    console.info("[searchNearbyWithCache] skipping cache write for empty result", {
+      cacheKey,
     });
   }
 

@@ -145,6 +145,16 @@ describe("searchNearbyWithCache", () => {
     expect(searchNearby).toHaveBeenCalled();
   });
 
+  it("does not write to cache when the API returns no candidates", async () => {
+    mockCache.get.mockResolvedValueOnce(null);
+    vi.mocked(searchNearby).mockResolvedValueOnce([]);
+
+    const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
+
+    expect(results).toEqual([]);
+    expect(mockCache.set).not.toHaveBeenCalled();
+  });
+
   it("calls API without caching when cache initialization throws", async () => {
     vi.mocked(VenueCache).mockImplementationOnce(() => {
       throw new Error("Missing Upstash env");
