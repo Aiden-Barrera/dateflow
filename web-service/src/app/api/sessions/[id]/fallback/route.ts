@@ -4,7 +4,9 @@ import {
   acceptFallbackSuggestion,
   requestFallbackRetry,
   shouldWaitForPartnerRetryConfirmation,
+  isRetryInProgress,
 } from "../../../../../lib/services/fallback-decision-service";
+import { getSession } from "../../../../../lib/services/session-service";
 import { serializeSession } from "../../../../../lib/services/session-serializer";
 import type { BudgetLevel, Category, Role } from "../../../../../lib/types/preference";
 
@@ -140,6 +142,20 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     if (body.action === "accept") {
+      // Guard: if the partner has already initiated a retry, accepting the
+      // fallback would silently override their choice. Reject instead and let
+      // the client show the partner_confirm view.
+      const currentSession = await getSession(id);
+      if (currentSession && isRetryInProgress(currentSession)) {
+        return NextResponse.json(
+          {
+            error:
+              "Your partner has already requested a new mix. Please confirm or decline the retry instead of locking the plan.",
+          },
+          { status: 409 },
+        );
+      }
+
       const session = await acceptFallbackSuggestion(id);
 
       return NextResponse.json({ session: serializeSession(session) });

@@ -14,6 +14,10 @@ export type SessionStatusSnapshot = {
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
   readonly retryWaitingForPartner?: boolean;
+  /** True when the viewer's partner has already clicked "Try a new mix" but
+   *  the viewer hasn't responded yet. The client should show the
+   *  partner_confirm variant of the fallback screen. */
+  readonly partnerInitiatedRetry?: boolean;
   readonly retryState?: {
     readonly initiatorRole: Role;
     readonly viewerRole: Role;

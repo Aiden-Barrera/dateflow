@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { readBoundSessionRole } from "../../../../../lib/session-role-access";
-import { shouldWaitForPartnerRetryConfirmation } from "../../../../../lib/services/fallback-decision-service";
+import {
+  shouldWaitForPartnerRetryConfirmation,
+  hasPartnerInitiatedRetry,
+} from "../../../../../lib/services/fallback-decision-service";
 import { getSession } from "../../../../../lib/services/session-service";
 import { getCurrentRound } from "../../../../../lib/services/round-manager";
 import { getRoundCompletion } from "../../../../../lib/services/swipe-service";
@@ -50,10 +53,16 @@ export async function GET(request: Request, { params }: RouteParams) {
       return NextResponse.json({
         status: session.status,
         matchedVenueId: session.matchedVenueId,
+        // True when the viewer has already confirmed retry and is waiting on
+        // their partner — shows "waiting for partner" screen.
         retryWaitingForPartner: shouldWaitForPartnerRetryConfirmation(
           session,
           boundRole,
         ),
+        // True when the viewer's partner has already clicked "Try a new mix"
+        // but the viewer hasn't responded yet — viewer should see the
+        // "partner_confirm" variant of the fallback screen (no lock button).
+        partnerInitiatedRetry: hasPartnerInitiatedRetry(session, boundRole),
       });
     }
 

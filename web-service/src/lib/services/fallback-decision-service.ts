@@ -107,6 +107,42 @@ export function shouldWaitForPartnerRetryConfirmation(
     : session.retryBConfirmedAt !== null && session.retryAConfirmedAt === null;
 }
 
+/**
+ * Returns true when the viewer's partner has already clicked "Try a new mix"
+ * but the viewer has not yet responded. The viewer should be shown the
+ * "partner_confirm" variant of the fallback screen (not the default view with
+ * a "Lock in this plan" button).
+ *
+ * This is the mirror of shouldWaitForPartnerRetryConfirmation: that helper
+ * tells you the viewer is already waiting; this tells you the viewer should
+ * now act on their partner's pending retry request.
+ */
+export function hasPartnerInitiatedRetry(
+  session: Session,
+  role: Role | null,
+): boolean {
+  if (session.status !== "fallback_pending" || !role) {
+    return false;
+  }
+
+  // Partner A initiated retry (retryAConfirmedAt set) but viewer B hasn't responded yet.
+  // Partner B initiated retry (retryBConfirmedAt set) but viewer A hasn't responded yet.
+  return role === "b"
+    ? session.retryAConfirmedAt !== null && session.retryBConfirmedAt === null
+    : session.retryBConfirmedAt !== null && session.retryAConfirmedAt === null;
+}
+
+/**
+ * Returns true when anyone has started the retry coordination flow
+ * (at least one retry_*_confirmed_at is set). Used to block the "accept"
+ * action once a retry has been initiated.
+ */
+export function isRetryInProgress(session: Session): boolean {
+  return (
+    session.retryAConfirmedAt !== null || session.retryBConfirmedAt !== null
+  );
+}
+
 async function getFallbackPendingSession(sessionId: string): Promise<Session> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase

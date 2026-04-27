@@ -33,6 +33,7 @@ type SessionStatusPayload = {
   readonly status: string;
   readonly matchedVenueId: string | null;
   readonly retryWaitingForPartner?: boolean;
+  readonly partnerInitiatedRetry?: boolean;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
 };
@@ -72,6 +73,7 @@ export function SwipeFlow({
   const [submitting, setSubmitting] = useState(false);
   const [submittingFallbackAction, setSubmittingFallbackAction] = useState<"accept" | "retry" | null>(null);
   const [fallbackVenue, setFallbackVenue] = useState<Venue | null>(null);
+  const [retryStep, setRetryStep] = useState<"default" | "partner_confirm">("default");
   const [showDeckInfo, setShowDeckInfo] = useState(false);
   const loadedRoundRef = useRef<number | null>(null);
   const loadingRoundRef = useRef<number | null>(null);
@@ -125,7 +127,10 @@ export function SwipeFlow({
     );
   }, []);
 
-  const loadFallback = useCallback(async (matchedVenueId: string | null) => {
+  const loadFallback = useCallback(async (
+    matchedVenueId: string | null,
+    partnerInitiatedRetry = false,
+  ) => {
     // Skip if we've already loaded this exact fallback venue, or a load is in
     // flight. Prevents the status-sync polling loop from flashing the loading
     // screen every few seconds while the user is on the fallback pick screen.
@@ -136,9 +141,11 @@ export function SwipeFlow({
       loadedFallbackVenueIdRef.current !== null &&
       loadedFallbackVenueIdRef.current === (matchedVenueId ?? "")
     ) {
-      // Callers (e.g. bootstrap) may have flipped status to "loading" before
-      // dispatching here. Restore the fallback view so the UI doesn't stall
-      // on the loading screen.
+      // The venue is already loaded. Still update retryStep in case the
+      // partner has clicked "Try a new mix" since we last rendered — this is
+      // how a polling update upgrades an existing fallback view to
+      // partner_confirm without reloading the venue.
+      setRetryStep(partnerInitiatedRetry ? "partner_confirm" : "default");
       setStatus("fallback");
       setStatusMessage("");
       return;
@@ -165,6 +172,7 @@ export function SwipeFlow({
       setVenues(body.venues);
       logVenuePhotoSnapshot("fallback", null, body.venues);
       setFallbackVenue(resolvedVenue);
+      setRetryStep(partnerInitiatedRetry ? "partner_confirm" : "default");
       loadedFallbackVenueIdRef.current = matchedVenueId ?? "";
       setStatus("fallback");
       setStatusMessage("");
@@ -229,7 +237,7 @@ export function SwipeFlow({
         const nextState = getSwipeFlowStatusState(snapshot.status);
 
         if (nextState.kind === "fallback") {
-          await loadFallback(snapshot.matchedVenueId);
+          await loadFallback(snapshot.matchedVenueId, snapshot.partnerInitiatedRetry);
           return;
         }
 
@@ -259,7 +267,7 @@ export function SwipeFlow({
       }
 
       if (snapshot.status === "fallback_pending") {
-        void loadFallback(snapshot.matchedVenueId).catch(() => {
+        void loadFallback(snapshot.matchedVenueId, snapshot.partnerInitiatedRetry).catch(() => {
           setStatus("error");
           setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
         });
@@ -424,7 +432,17 @@ export function SwipeFlow({
 
       await bootstrap();
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Failed to accept the fallback pick.");
+      const message = error instanceof Error ? error.message : "Failed to accept the fallback pick.";
+
+      // The server returns a 409 when the partner has already initiated a retry.
+      // Switch the fallback screen to partner_confirm mode so the viewer can
+      // respond to the retry request instead of retrying accept.
+      if (message.includes("partner has already requested a new mix")) {
+        setRetryStep("partner_confirm");
+        setToast("Your partner wants a new mix — please confirm below.");
+      } else {
+        setToast(message);
+      }
     } finally {
       setSubmittingFallbackAction(null);
     }
@@ -440,6 +458,7 @@ export function SwipeFlow({
     try {
       const result = await requestFallbackRetryDecision(sessionId, preferences);
       setFallbackVenue(null);
+      setRetryStep("default");
       loadedFallbackVenueIdRef.current = null;
 
       if (result.retryWaitingForPartner) {
@@ -543,6 +562,7 @@ export function SwipeFlow({
           explanation={buildFallbackExplanation(fallbackVenue)}
           initialRetryCategories={retryDefaults.categories}
           initialRetryBudget={retryDefaults.budget}
+          retryStep={retryStep}
           onAccept={handleAcceptFallback}
           onRetry={handleRetryFallback}
           onStartOver={handleFallbackStartOver}
