@@ -88,6 +88,7 @@ describe("GET /api/sessions/[id]/status", () => {
       matchedVenueId: null,
       currentRound: 2,
       roundComplete: false,
+      viewerRoundComplete: false,
     });
   });
 
