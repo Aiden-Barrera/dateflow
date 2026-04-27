@@ -176,13 +176,15 @@ export function SwipeFlow({
     }
   }, [logVenuePhotoSnapshot, sessionId]);
 
-  const loadRound = useCallback(async (nextRound: number) => {
+  const loadRound = useCallback(async (nextRound: number, currentStatus?: string) => {
     if (loadedRoundRef.current === nextRound) {
-      // Round is already loaded — snap the UI back to ready so the swipe deck
-      // is visible again. This prevents bootstrap from leaving the screen stuck
-      // on "Checking whether your venues are ready..." after a status refresh.
-      setStatus("ready");
-      setStatusMessage("");
+      // Round is already loaded. Only snap back to "ready" when we arrived here
+      // from a "loading" transition — if the user is intentionally in a waiting
+      // state (e.g. "waiting for partner"), overriding it would hide that UI.
+      if (currentStatus === "loading") {
+        setStatus("ready");
+        setStatusMessage("");
+      }
       return;
     }
     if (loadingRoundRef.current === nextRound) {
@@ -257,7 +259,7 @@ export function SwipeFlow({
         return;
       }
 
-      await loadRound(snapshot.currentRound ?? 1);
+      await loadRound(snapshot.currentRound ?? 1, "loading");
     } catch {
       setStatus("error");
       setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
@@ -285,6 +287,14 @@ export function SwipeFlow({
       }
 
       if (snapshot.status === "ready_to_swipe" && typeof snapshot.currentRound === "number") {
+        // If the viewer has already finished their side but the partner hasn't,
+        // don't reload the deck — show the "waiting for partner" screen instead.
+        if (snapshot.viewerRoundComplete && !snapshot.roundComplete) {
+          setWaitingStage("round");
+          setStatus("waiting");
+          setStatusMessage("You are set for this round. We will keep watch for your partner's next picks.");
+          return;
+        }
         void loadRound(snapshot.currentRound);
       }
     });
