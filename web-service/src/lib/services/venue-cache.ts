@@ -15,7 +15,7 @@ import type { Location } from "../types/preference";
  */
 export class VenueCache {
   private redis = getRedisClient();
-  private static readonly KEY_VERSION = "v3";
+  private static readonly KEY_VERSION = "v4";
 
   private getValuePreview(value: unknown): string {
     if (typeof value === "string") {
