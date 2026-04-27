@@ -18,5 +18,5 @@ BEGIN
     ALTER TABLE sessions
       ADD COLUMN accept_b_confirmed_at TIMESTAMPTZ;
   END IF;
-END
+END;
 $$;

@@ -71,7 +71,12 @@ export class VenueCache {
       }
 
       if (typeof cached === "string") {
-        return JSON.parse(cached) as readonly PlaceCandidate[];
+        const parsed = JSON.parse(cached) as readonly PlaceCandidate[];
+        if (Array.isArray(parsed) && parsed.length === 0) {
+          console.warn(`[VenueCache.get] Ignoring empty-array cache entry for key "${key}" (serialized) — treating as miss`);
+          return null;
+        }
+        return parsed;
       }
 
       if (Array.isArray(cached)) {
