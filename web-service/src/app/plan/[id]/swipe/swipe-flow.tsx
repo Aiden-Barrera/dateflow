@@ -35,6 +35,9 @@ type SessionStatusPayload = {
   readonly retryWaitingForPartner?: boolean;
   readonly currentRound?: number;
   readonly roundComplete?: boolean;
+  /** True when the calling user has personally swiped all venues in the
+   *  current round, even if their partner hasn't finished yet. */
+  readonly viewerRoundComplete?: boolean;
 };
 
 type SwipeApiResult = {
@@ -174,10 +177,15 @@ export function SwipeFlow({
   }, [logVenuePhotoSnapshot, sessionId]);
 
   const loadRound = useCallback(async (nextRound: number) => {
-    if (
-      loadedRoundRef.current === nextRound ||
-      loadingRoundRef.current === nextRound
-    ) {
+    if (loadedRoundRef.current === nextRound) {
+      // Round is already loaded — snap the UI back to ready so the swipe deck
+      // is visible again. This prevents bootstrap from leaving the screen stuck
+      // on "Checking whether your venues are ready..." after a status refresh.
+      setStatus("ready");
+      setStatusMessage("");
+      return;
+    }
+    if (loadingRoundRef.current === nextRound) {
       return;
     }
 
@@ -236,6 +244,16 @@ export function SwipeFlow({
         setWaitingStage(nextState.stage);
         setStatus("waiting");
         setStatusMessage(nextState.message);
+        return;
+      }
+
+      // If the viewer has already finished their side but the partner hasn't,
+      // show "waiting" rather than re-loading the round from scratch. Without
+      // this, a page refresh after completing your side lands you back at card 1.
+      if (snapshot.viewerRoundComplete && !snapshot.roundComplete) {
+        setWaitingStage("round");
+        setStatus("waiting");
+        setStatusMessage("You are set for this round. We will keep watch for your partner's next picks.");
         return;
       }
 
