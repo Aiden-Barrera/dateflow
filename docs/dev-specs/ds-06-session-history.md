@@ -18,7 +18,7 @@ flowchart LR
         HistoryPage["History Page<br/>/history"]
     end
 
-    subgraph Server["Server (Vercel Serverless)"]
+    subgraph Server["Server (Railway-hosted Next.js service)"]
         AuthAPI["Auth API Routes<br/>POST /api/auth/register<br/>POST /api/auth/login"]
         HistoryAPI["History API Route<br/>GET /api/sessions/history"]
     end
@@ -40,7 +40,7 @@ flowchart LR
 
 **Where components run:**
 - **Client:** Browser — authentication forms and session history list view
-- **Server:** Vercel serverless — auth route handlers and history query endpoint
+- **Server:** Railway-hosted Next.js service — auth route handlers and history query endpoint
 - **Cloud:** Supabase Auth (managed authentication with JWT), Supabase Postgres (account and session data)
 
 **Information flows:**

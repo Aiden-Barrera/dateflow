@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../../lib/rate-limit";
 import { enqueueVenueGeneration } from "../../../../../lib/qstash";
 import {
   getSession,
@@ -221,6 +222,12 @@ function classifyGenerationFailure(error: unknown): GenerationFailureDetails {
  */
 export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:preferences",
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
 
   if (!SESSION_ID_PATTERN.test(id)) {
     return NextResponse.json(

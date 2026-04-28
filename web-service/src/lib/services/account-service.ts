@@ -192,3 +192,42 @@ export async function getAccountByAccessToken(
 
   return toAccount(accountRow);
 }
+
+export async function deleteAccountByAccessToken(token: string): Promise<void> {
+  const supabase = getSupabaseClient();
+  const serverSupabase = getSupabaseServerClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser(token);
+
+  if (authError || !user) {
+    throw new Error("Invalid token");
+  }
+
+  const { error: linkError } = await serverSupabase
+    .from("session_accounts")
+    .delete()
+    .eq("account_id", user.id);
+
+  if (linkError) {
+    throw new Error(linkError.message);
+  }
+
+  const { error: accountError } = await serverSupabase
+    .from("accounts")
+    .delete()
+    .eq("id", user.id);
+
+  if (accountError) {
+    throw new Error(accountError.message);
+  }
+
+  const { error: deleteUserError } = await serverSupabase.auth.admin.deleteUser(
+    user.id,
+  );
+
+  if (deleteUserError) {
+    throw new Error(deleteUserError.message);
+  }
+}

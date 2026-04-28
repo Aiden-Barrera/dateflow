@@ -217,6 +217,46 @@ describe("rerankStoredCandidates", () => {
     });
   });
 
+  it("rejects another external regeneration once a full-regeneration pool already exists", async () => {
+    mockPoolEq.mockResolvedValue({
+      data: [
+        {
+          id: "pool-1",
+          session_id: "session-1",
+          source: "initial_generation",
+          created_at: "2026-04-02T09:00:00Z",
+        },
+        {
+          id: "pool-2",
+          session_id: "session-1",
+          source: "full_regeneration",
+          created_at: "2026-04-02T10:00:00Z",
+        },
+      ] satisfies SessionCandidatePoolRow[],
+      error: null,
+    });
+    mockPoolItemsEq.mockResolvedValue({
+      data: Array.from({ length: 8 }, (_, index) => makePoolItemRow(index + 1)),
+      error: null,
+    });
+    mockVenuesEq.mockResolvedValue({
+      data: Array.from({ length: 8 }, (_, index) => ({
+        place_id: `place-${index + 1}`,
+        surfaced_cycle: 2,
+      })),
+      error: null,
+    });
+
+    await expect(
+      rerankStoredCandidates("session-1", {
+        categories: ["RESTAURANT", "BAR"],
+        budget: "MODERATE",
+      }),
+    ).rejects.toThrow("Retry limit reached");
+    expect(mockBatchInsert).not.toHaveBeenCalled();
+    expect(mockVenuesUpsert).not.toHaveBeenCalled();
+  });
+
   it("keeps retry reranking deterministic even when AI curation exists", async () => {
     await rerankStoredCandidates("session-1", {
       categories: ["RESTAURANT", "BAR"],

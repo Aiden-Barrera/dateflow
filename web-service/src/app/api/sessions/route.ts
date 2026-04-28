@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../lib/rate-limit";
 import { createSession } from "../../../lib/services/session-service";
 import { generateShareLink } from "../../../lib/services/share-link-service";
 import { serializeSession } from "../../../lib/services/session-serializer";
@@ -10,6 +11,13 @@ import { serializeSession } from "../../../lib/services/session-serializer";
  * receives the session object + a share link to send to Person B.
  */
 export async function POST(request: Request) {
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:create",
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
+
   // 1. Parse the request body
   let body: unknown;
   try {

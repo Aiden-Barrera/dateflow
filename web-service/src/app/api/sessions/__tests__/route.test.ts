@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { resetRateLimitStoreForTests } from "../../../../lib/rate-limit";
 
 // ---------------------------------------------------------------------------
 // Mock the services — we're testing the HTTP layer, not business logic again
@@ -17,10 +18,13 @@ vi.mock("../../../../lib/services/share-link-service", () => ({
 import { POST } from "../route";
 
 // Helpers to build fake Request objects
-function makePostRequest(body: unknown): Request {
+function makePostRequest(body: unknown, ip?: string): Request {
   return new Request("http://localhost:3000/api/sessions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(ip ? { "x-forwarded-for": ip } : {}),
+    },
     body: JSON.stringify(body),
   });
 }
@@ -52,6 +56,7 @@ const fakeShareLink = {
 describe("POST /api/sessions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetRateLimitStoreForTests();
     mockCreateSession.mockResolvedValue(fakeSession);
     mockGenerateShareLink.mockReturnValue(fakeShareLink);
   });
@@ -106,5 +111,20 @@ describe("POST /api/sessions", () => {
     expect(body.error).toBeDefined();
     // Should NOT leak the internal error message
     expect(body.error).not.toContain("DB connection");
+  });
+
+  it("returns 429 after repeated creates from the same IP", async () => {
+    let response: Response | null = null;
+
+    for (let count = 0; count < 6; count += 1) {
+      response = await POST(
+        makePostRequest({ creatorDisplayName: "Alex" }, "203.0.113.10"),
+      );
+    }
+
+    expect(response?.status).toBe(429);
+    await expect(response?.json()).resolves.toEqual({
+      error: "Rate limit exceeded",
+    });
   });
 });

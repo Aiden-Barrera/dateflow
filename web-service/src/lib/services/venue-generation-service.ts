@@ -41,6 +41,8 @@ const SEARCH_RADIUS_LADDER_METERS = [2_000, 5_000, 10_000, 20_000] as const;
  */
 const MIN_CANDIDATES_TO_PROCEED = VENUES_PER_ROUND * FINAL_ROUND;
 
+const USER_LOCATION_FALLBACK_RADIUS_METERS = 5_000;
+
 /** Max venues per category in a single round (prevents restaurants from filling all 4 slots). */
 const MAX_PER_CATEGORY_PER_ROUND = 2;
 
@@ -104,6 +106,25 @@ function mergedCategories(
   preferences: readonly [Preference, Preference]
 ): readonly Category[] {
   return [...new Set([...preferences[0].categories, ...preferences[1].categories])];
+}
+
+function mergeUniqueCandidates(
+  existing: readonly PlaceCandidate[],
+  next: readonly PlaceCandidate[],
+): readonly PlaceCandidate[] {
+  const seen = new Set(existing.map((candidate) => candidate.placeId));
+  const merged = [...existing];
+
+  for (const candidate of next) {
+    if (seen.has(candidate.placeId)) {
+      continue;
+    }
+
+    seen.add(candidate.placeId);
+    merged.push(candidate);
+  }
+
+  return merged;
 }
 
 async function updateSessionStatus(
@@ -318,6 +339,24 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
       });
     }
 
+    if (placeCandidates.length < MIN_CANDIDATES_TO_PROCEED) {
+      for (const preference of preferences) {
+        const rawCandidates = await searchNearbyWithCache(
+          preference.location,
+          USER_LOCATION_FALLBACK_RADIUS_METERS,
+          categories,
+          maxPrice,
+        );
+        const safeUserCandidates = applySafetyFilter(rawCandidates, categories);
+        placeCandidates = mergeUniqueCandidates(
+          placeCandidates,
+          safeUserCandidates,
+        );
+
+        if (placeCandidates.length >= MIN_CANDIDATES_TO_PROCEED) break;
+      }
+    }
+
     const wantsLiveEvents = categories.some(
       (cat) => cat === "EVENT" || cat === "ACTIVITY",
     );
@@ -331,9 +370,9 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
 
     const safeCandidates = [...placeCandidates, ...liveEventCandidates];
 
-    if (safeCandidates.length < MIN_CANDIDATES_TO_PROCEED) {
+    if (safeCandidates.length === 0) {
       throw new Error(
-        "Not enough venues found near your midpoint to fill the swipe flow. Try entering locations closer together or choosing different categories."
+        "Not enough venues found near your midpoint. Try entering locations closer together or choosing different categories."
       );
     }
     const poolId = await createCandidatePool(sessionId, "initial_generation");

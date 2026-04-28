@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../lib/rate-limit";
 import { getSupabaseClient } from "../../../../lib/supabase";
 import { getHistory } from "../../../../lib/services/session-history-service";
 
@@ -33,6 +34,13 @@ function getBearerToken(header: string | null): string {
 }
 
 export async function GET(request: Request) {
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:history",
+    limit: 20,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
+
   try {
     const url = new URL(request.url);
     const token = getBearerToken(request.headers.get("authorization"));

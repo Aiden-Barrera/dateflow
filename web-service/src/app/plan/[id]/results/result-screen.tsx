@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { AuthSheet } from "../../../../components/auth-sheet";
@@ -354,6 +355,12 @@ export function ResultScreen({
                 initialConfirmedDateTime={matchResult.confirmedDateTime ?? null}
                 calendarHref={`/api/sessions/${matchResult.sessionId}/calendar`}
               />
+
+              <Link href="/" className="block w-full">
+                <Button variant="ghost" className="h-12 rounded-[1rem] text-[1rem]">
+                  Start over
+                </Button>
+              </Link>
             </div>
 
             {embedMapUrl ? (

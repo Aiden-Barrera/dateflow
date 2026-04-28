@@ -376,6 +376,58 @@ describe("generateVenues", () => {
     expect(mockSearchNearbyWithCache).toHaveBeenCalledTimes(2);
   });
 
+  it("searches around both users when midpoint radius expansion is still sparse", async () => {
+    const sparse = [makeCuratedVenue(1)];
+    const userAResults = Array.from({ length: 6 }, (_, index) => makeCuratedVenue(index + 1));
+    const userBResults = Array.from({ length: 6 }, (_, index) => makeCuratedVenue(index + 7));
+
+    mockSearchNearbyWithCache
+      .mockResolvedValueOnce(sparse)
+      .mockResolvedValueOnce(sparse)
+      .mockResolvedValueOnce(sparse)
+      .mockResolvedValueOnce(sparse)
+      .mockResolvedValueOnce(userAResults)
+      .mockResolvedValueOnce(userBResults);
+    mockApplySafetyFilter.mockImplementation((candidates: unknown) => candidates);
+
+    await generateVenues("session-1");
+
+    expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
+      5,
+      preferences[0].location,
+      5000,
+      ["RESTAURANT", "BAR", "ACTIVITY"],
+      1,
+    );
+    expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
+      6,
+      preferences[1].location,
+      5000,
+      ["RESTAURANT", "BAR", "ACTIVITY"],
+      1,
+    );
+    expect(mockUpdate).toHaveBeenLastCalledWith({ status: "ready_to_swipe" });
+  });
+
+  it("generates a smaller swipe deck instead of failing when some safe candidates exist", async () => {
+    const smallPool = Array.from({ length: 6 }, (_, index) => makeCuratedVenue(index + 1));
+    mockSearchNearbyWithCache.mockResolvedValue(smallPool);
+    mockApplySafetyFilter.mockImplementation((candidates: unknown) => candidates);
+    mockScoreAndCurate.mockReset();
+    mockScoreAndCurate
+      .mockResolvedValueOnce(smallPool.slice(0, 4))
+      .mockResolvedValueOnce(smallPool.slice(4, 6))
+      .mockResolvedValueOnce([]);
+
+    await generateVenues("session-1");
+
+    const insertedRows = mockUpsert.mock.calls[1][0];
+    expect(insertedRows).toHaveLength(6);
+    expect(insertedRows[0].round).toBe(1);
+    expect(insertedRows[4].round).toBe(2);
+    expect(mockUpdate).toHaveBeenLastCalledWith({ status: "ready_to_swipe" });
+  });
+
   it("throws and sets generation_failed when all radii return no safe candidates", async () => {
     mockSearchNearbyWithCache.mockResolvedValue([]);
     mockApplySafetyFilter.mockReturnValue([]);
@@ -385,8 +437,22 @@ describe("generateVenues", () => {
       "Not enough venues found near your midpoint"
     );
 
-    // Should have tried all 4 radius tiers
-    expect(mockSearchNearbyWithCache).toHaveBeenCalledTimes(4);
+    // Should have tried all 4 midpoint radius tiers plus both user-centered fallback searches.
+    expect(mockSearchNearbyWithCache).toHaveBeenCalledTimes(6);
+    expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
+      5,
+      preferences[0].location,
+      5000,
+      ["RESTAURANT", "BAR", "ACTIVITY"],
+      1,
+    );
+    expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
+      6,
+      preferences[1].location,
+      5000,
+      ["RESTAURANT", "BAR", "ACTIVITY"],
+      1,
+    );
 
     // Final status update must be generation_failed (not ready_to_swipe)
     expect(mockUpdate).toHaveBeenLastCalledWith({ status: "generation_failed" });

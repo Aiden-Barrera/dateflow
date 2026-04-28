@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../lib/rate-limit";
 import { register } from "../../../../lib/services/account-service";
 import { linkSessionToAccount } from "../../../../lib/services/session-history-service";
 
@@ -46,6 +47,13 @@ function validate(body: RegisterBody): {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = checkRateLimit(request, {
+    key: "auth:register",
+    limit: 3,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
+
   let body: unknown;
 
   try {

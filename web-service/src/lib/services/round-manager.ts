@@ -1,5 +1,5 @@
 import { getSupabaseServerClient } from "../supabase-server";
-import { FINAL_ROUND, VENUES_PER_ROUND } from "../swipe-config";
+import { FINAL_ROUND } from "../swipe-config";
 import type { SwipeRow } from "../types/swipe";
 import type { VenueRow } from "../types/venue";
 
@@ -26,7 +26,7 @@ export async function isRoundComplete(
 ): Promise<boolean> {
   const venueIds = await getVenueIdsForRound(sessionId, round);
 
-  if (venueIds.length !== VENUES_PER_ROUND) {
+  if (venueIds.length === 0) {
     return false;
   }
 
@@ -34,7 +34,7 @@ export async function isRoundComplete(
   const roleASwipes = countDistinctVenueSwipes(swipes, venueIds, "a");
   const roleBSwipes = countDistinctVenueSwipes(swipes, venueIds, "b");
 
-  return roleASwipes === VENUES_PER_ROUND && roleBSwipes === VENUES_PER_ROUND;
+  return roleASwipes === venueIds.length && roleBSwipes === venueIds.length;
 }
 
 export async function resolveNoMatch(

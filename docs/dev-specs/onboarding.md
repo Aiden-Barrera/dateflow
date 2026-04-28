@@ -53,7 +53,7 @@ DS-01 Session Management ← start here, everything depends on this
 
 **Key decisions:**
 - Sessions are identified by UUID v4 (not guessable, no auth needed)
-- Sessions expire after 48 hours (pg_cron cleans up stale ones)
+- Sessions expire after 48 hours (a protected cron route cleans up stale ones)
 - No PII collected — no name, email, or phone number at this stage
 
 **Classes:** `Session`, `SessionService`, `ShareLink`, `ShareLinkService`
@@ -84,7 +84,7 @@ DS-01 Session Management ← start here, everything depends on this
 
 ### [DS-03 — Venue Generation Engine](./ds-03-venue-generation.md)
 
-**What it does:** Takes both users' preferences, calculates the geographic midpoint, fetches nearby venue candidates from Google Places, filters them for first-date safety, and uses Claude (Sonnet 4.6) to score and rank 12 venues into 3 rounds of 4.
+**What it does:** Takes both users' preferences, calculates the geographic midpoint, fetches nearby venue candidates from Google Places, filters them for first-date safety, and uses optional AI curation with deterministic fallback ranking to score venues into swipe rounds.
 
 **Why it matters:** This is the intelligence layer — the thing that turns raw Google Places data into a curated shortlist that feels like a friend who knows the city recommended it. The safety filter (US-07) is a core differentiator: venues must be public, accessible, conversation-friendly, and easy to leave.
 
@@ -92,7 +92,7 @@ DS-01 Session Management ← start here, everything depends on this
 - Generation is async (Upstash QStash job queue) — takes 2–5 seconds, users see a loading state
 - Google Places results are cached in Redis (6h TTL, keyed by coordinate grid + categories) to reduce API cost
 - 3 rounds: Round 1 = highest consensus, Round 2 = category diversity, Round 3 = wildcards
-- If Claude is unavailable, falls back to pure Places API ranking (no AI, but the product still works)
+- If AI curation is unavailable, falls back to deterministic Places/event ranking (no AI, but the product still works)
 - If the midpoint falls in an empty area, two separate searches run from each user's location
 
 **Scoring algorithm (5 weighted dimensions):**
@@ -194,12 +194,12 @@ Any pre-matched session can expire after 48 hours (DS-01).
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js (App Router), React, Tailwind CSS |
-| Backend | Next.js API routes (Vercel serverless) |
-| Database | Supabase Postgres (+ Realtime, + pg_cron) |
+| Backend | Next.js API routes (Railway-hosted Next.js service) |
+| Database | Supabase Postgres (+ Realtime) |
 | Auth | Supabase Auth (Phase 2 only) |
 | Cache | Upstash Redis |
 | Job queue | Upstash QStash |
-| AI | Claude API (Sonnet 4.6) |
+| AI | Optional curation provider with deterministic fallback |
 | Venue data | Google Places API |
 | Monitoring | Sentry (errors), PostHog (analytics) |
 

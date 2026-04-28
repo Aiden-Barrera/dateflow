@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../../lib/rate-limit";
 import { getSession } from "../../../../../lib/services/session-service";
 import { recordSwipe } from "../../../../../lib/services/swipe-service";
 import { isExpired } from "../../../../../lib/services/session-helpers";
 import { readBoundSessionRole } from "../../../../../lib/session-role-access";
-import type { Role } from "../../../../../lib/types/preference";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -14,8 +14,6 @@ type SwipeRequestBody = {
   role?: unknown;
   liked?: unknown;
 };
-
-const VALID_ROLES: readonly Role[] = ["a", "b"];
 
 type ValidationResult =
   | {
@@ -52,6 +50,12 @@ function validateBody(body: unknown): ValidationResult {
 
 export async function POST(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:swipes",
+    limit: 60,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
 
   let rawBody: unknown;
   try {

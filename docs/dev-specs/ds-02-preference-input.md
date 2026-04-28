@@ -28,7 +28,7 @@ flowchart LR
         GeoAPI["Browser Geolocation API"]
     end
 
-    subgraph Server["Server (Vercel Serverless)"]
+    subgraph Server["Server (Railway-hosted Next.js service)"]
         SessionAPI["Session API<br/>GET /api/sessions/[id]"]
         PrefAPI["Preference API Route<br/>POST /api/sessions/[id]/preferences"]
     end
@@ -53,7 +53,7 @@ flowchart LR
 
 **Where components run:**
 - **Client:** Browser — renders the hook screen (Person B only) and preference forms. Person A's form is part of the `/plan` session creation page. Person B's flow starts with a hook screen at `/plan/[id]` followed by a compressed 2-screen preference input.
-- **Server:** Vercel serverless — validates input, inserts preference, checks if both roles are filled, transitions session status
+- **Server:** Railway-hosted Next.js service — validates input, inserts preference, checks if both roles are filled, transitions session status
 - **Cloud:** Supabase Postgres — stores preferences and session state
 
 **Information flows:**

@@ -22,7 +22,11 @@ import {
   buildInitialRetryPreferences,
   resolveFallbackVenue,
 } from "./fallback-ending-state";
-import { getSwipeFlowStatusState, type WaitingStage } from "./swipe-flow-state";
+import {
+  getResumeVenueIndex,
+  getSwipeFlowStatusState,
+  type WaitingStage,
+} from "./swipe-flow-state";
 
 type SwipeFlowProps = {
   readonly sessionId: string;
@@ -51,6 +55,11 @@ type SwipeApiResult = {
   readonly roundComplete: boolean;
   readonly currentRound: number;
   readonly sessionStatus: string;
+};
+
+type VenuesApiPayload = {
+  readonly venues: Venue[];
+  readonly viewerSwipedVenueIds?: readonly string[];
 };
 
 type DemoRoundSwipe = {
@@ -187,7 +196,7 @@ export function SwipeFlow({
         throw new Error("Failed to load the fallback suggestion.");
       }
 
-      const body = (await response.json()) as { venues: Venue[] };
+      const body = (await response.json()) as VenuesApiPayload;
       const resolvedVenue = resolveFallbackVenue(matchedVenueId, body.venues);
 
       if (!resolvedVenue) {
@@ -239,7 +248,7 @@ export function SwipeFlow({
         throw new Error("Failed to fetch venues");
       }
 
-      const body = (await response.json()) as { venues: Venue[] };
+      const body = (await response.json()) as VenuesApiPayload;
       loadedRoundRef.current = nextRound;
       // Clear the finished-round marker since we've now moved to a new round
       // and the viewer needs to swipe again.
@@ -248,7 +257,7 @@ export function SwipeFlow({
       setRound(nextRound);
       setVenues(body.venues);
       logVenuePhotoSnapshot("round", nextRound, body.venues);
-      setIndex(0);
+      setIndex(getResumeVenueIndex(body.venues, body.viewerSwipedVenueIds ?? []));
       setStatus("ready");
       setStatusMessage("");
       succeeded = true;
@@ -320,7 +329,15 @@ export function SwipeFlow({
       setStatus("error");
       setStatusMessage("We couldn't load the swipe deck. Please refresh and try again.");
     }
-  }, [enterRetryConfirmationWaiting, fetchStatus, loadFallback, loadRound, router, sessionId]);
+  }, [
+    enterAcceptConfirmationWaiting,
+    enterRetryConfirmationWaiting,
+    fetchStatus,
+    loadFallback,
+    loadRound,
+    router,
+    sessionId,
+  ]);
 
   useEffect(() => {
     const sync = createSessionStatusSync(sessionId, (snapshot) => {
@@ -375,7 +392,14 @@ export function SwipeFlow({
     });
 
     return () => sync.stop();
-  }, [enterRetryConfirmationWaiting, loadFallback, loadRound, router, sessionId]);
+  }, [
+    enterAcceptConfirmationWaiting,
+    enterRetryConfirmationWaiting,
+    loadFallback,
+    loadRound,
+    router,
+    sessionId,
+  ]);
 
   useEffect(() => {
     void bootstrap();
