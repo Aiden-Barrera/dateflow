@@ -334,7 +334,7 @@ export function ResultScreen({
               </div>
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 space-y-4">
               <a
                 href={directionsUrl}
                 target="_blank"
