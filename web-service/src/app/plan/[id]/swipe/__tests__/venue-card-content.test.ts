@@ -4,6 +4,7 @@ import {
   formatDistance,
   getAgeRestrictionLabel,
   buildSwipeCardAriaLabel,
+  getActivePhotoStripIndex,
 } from "../venue-card-content";
 
 describe("formatRatingWithCount", () => {
@@ -80,5 +81,20 @@ describe("formatDistance", () => {
 
   it("formats larger distances", () => {
     expect(formatDistance(8047)).toMatch(/5\.0 mi away/);
+  });
+});
+
+describe("getActivePhotoStripIndex", () => {
+  it("keeps the first photo active at the start of the strip", () => {
+    expect(getActivePhotoStripIndex(0, 336, 10)).toBe(0);
+  });
+
+  it("advances the active photo as the thumbnail rail scrolls right", () => {
+    expect(getActivePhotoStripIndex(108, 336, 10)).toBe(1);
+    expect(getActivePhotoStripIndex(648, 336, 10)).toBe(6);
+  });
+
+  it("clamps to the final photo near the end of the strip", () => {
+    expect(getActivePhotoStripIndex(9999, 336, 10)).toBe(9);
   });
 });
