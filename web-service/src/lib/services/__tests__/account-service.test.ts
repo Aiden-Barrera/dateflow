@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   beginAppleOAuth,
   beginGoogleOAuth,
+  deleteAccountByAccessToken,
   getAccountByAccessToken,
   login,
   register,
@@ -11,6 +12,7 @@ const mockAuthSignUp = vi.fn();
 const mockAuthSignInWithPassword = vi.fn();
 const mockAuthSignInWithOAuth = vi.fn();
 const mockAuthGetUser = vi.fn();
+const mockAuthAdminDeleteUser = vi.fn();
 const mockAnonFromSingle = vi.fn();
 const mockAnonFromEq = vi.fn(() => ({ single: mockAnonFromSingle }));
 const mockAnonFromSelect = vi.fn(() => ({ eq: mockAnonFromEq }));
@@ -22,9 +24,12 @@ const mockServerInsert = vi.fn(() => ({ select: mockServerInsertSelect }));
 const mockServerSelectSingle = vi.fn();
 const mockServerSelectEq = vi.fn(() => ({ single: mockServerSelectSingle }));
 const mockServerSelect = vi.fn(() => ({ eq: mockServerSelectEq }));
+const mockServerDeleteEq = vi.fn();
+const mockServerDelete = vi.fn(() => ({ eq: mockServerDeleteEq }));
 const mockServerFrom = vi.fn(() => ({
   insert: mockServerInsert,
   select: mockServerSelect,
+  delete: mockServerDelete,
 }));
 
 vi.mock("../../supabase", () => ({
@@ -42,6 +47,11 @@ vi.mock("../../supabase", () => ({
 
 vi.mock("../../supabase-server", () => ({
   getSupabaseServerClient: () => ({
+    auth: {
+      admin: {
+        deleteUser: (...args: unknown[]) => mockAuthAdminDeleteUser(...args),
+      },
+    },
     from: (...args: unknown[]) => mockServerFrom(...args),
   }),
 }));
@@ -282,5 +292,41 @@ describe("account-service getAccountByAccessToken", () => {
     await expect(getAccountByAccessToken("bad-token")).rejects.toThrow(
       "Invalid token",
     );
+  });
+});
+
+describe("account-service deleteAccountByAccessToken", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAuthGetUser.mockResolvedValue({
+      data: { user: { id: "account-1" } },
+      error: null,
+    });
+    mockServerDeleteEq.mockResolvedValue({ error: null });
+    mockAuthAdminDeleteUser.mockResolvedValue({ data: {}, error: null });
+  });
+
+  it("deletes session links, account row, and Supabase auth user for a valid token", async () => {
+    await deleteAccountByAccessToken("token-123");
+
+    expect(mockAuthGetUser).toHaveBeenCalledWith("token-123");
+    expect(mockServerFrom).toHaveBeenNthCalledWith(1, "session_accounts");
+    expect(mockServerDeleteEq).toHaveBeenNthCalledWith(1, "account_id", "account-1");
+    expect(mockServerFrom).toHaveBeenNthCalledWith(2, "accounts");
+    expect(mockServerDeleteEq).toHaveBeenNthCalledWith(2, "id", "account-1");
+    expect(mockAuthAdminDeleteUser).toHaveBeenCalledWith("account-1");
+  });
+
+  it("rejects deletion when the token is invalid", async () => {
+    mockAuthGetUser.mockResolvedValue({
+      data: { user: null },
+      error: { message: "invalid jwt" },
+    });
+
+    await expect(deleteAccountByAccessToken("bad-token")).rejects.toThrow(
+      "Invalid token",
+    );
+    expect(mockServerDelete).not.toHaveBeenCalled();
+    expect(mockAuthAdminDeleteUser).not.toHaveBeenCalled();
   });
 });

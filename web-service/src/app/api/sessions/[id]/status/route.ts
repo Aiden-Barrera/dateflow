@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../../lib/rate-limit";
 import { readBoundSessionRole } from "../../../../../lib/session-role-access";
 import {
   shouldWaitForPartnerRetryConfirmation,
@@ -17,6 +18,13 @@ type RouteParams = {
 
 export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:status",
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
+
   const boundRole = readBoundSessionRole(id, request.headers.get("cookie"));
 
   try {

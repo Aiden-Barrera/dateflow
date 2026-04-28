@@ -16,13 +16,13 @@ flowchart LR
         JoinPage["Join Page<br/>/plan/[id]"]
     end
 
-    subgraph Server["Server (Vercel Serverless)"]
+    subgraph Server["Server (Railway-hosted Next.js service)"]
         SessionAPI["Session API Routes<br/>POST /api/sessions<br/>GET /api/sessions/[id]"]
     end
 
     subgraph Cloud["Cloud (Supabase)"]
         Postgres["Postgres<br/>sessions table"]
-        PgCron["pg_cron<br/>Expiry Job"]
+        CronAPI["Protected Cron Route<br/>/api/cron/expire-sessions"]
     end
 
     PlanPage -- "Create session request" --> SessionAPI
@@ -31,19 +31,19 @@ flowchart LR
     PlanPage -- "Share link via clipboard/text" --> JoinPage
     JoinPage -- "Validate session exists + status" --> SessionAPI
     SessionAPI -- "Read session row" --> Postgres
-    PgCron -- "Expire stale sessions hourly" --> Postgres
+    CronAPI -- "Expire stale sessions on schedule" --> Postgres
 ```
 
 **Where components run:**
 - **Client:** Browser on the user's device (mobile-first web app, no install)
-- **Server:** Vercel serverless functions (Next.js API routes), stateless, auto-scaling
-- **Cloud:** Supabase Postgres for persistent session storage, pg_cron for scheduled expiry
+- **Server:** Railway-hosted Next.js service exposing App Router API routes
+- **Cloud:** Supabase Postgres for persistent session storage
 
 **Information flows:**
 - Client → Server: session creation request (no auth required), session ID for retrieval
 - Server → Cloud: SQL insert/select on sessions table
 - Server → Client: session object with ID, status, and generated share URL
-- Cloud (internal): pg_cron marks expired sessions hourly
+- Scheduler -> Server: protected cron request marks expired sessions
 
 ---
 
@@ -102,7 +102,7 @@ classDiagram
 - `createSession()` — generates UUID, inserts row with status `pending_b`, returns Session
 - `getSession(id)` — retrieves session by ID, returns null if not found
 - `validateSessionForJoin(id)` — retrieves session, throws if status is not `pending_b` (already joined, expired, etc.)
-- `expireStaleSessions()` — called by pg_cron, marks all sessions past `expiresAt` as `expired`, returns count updated
+- `expireStaleSessions()` — called by the protected cron endpoint, marks all sessions past `expiresAt` as `expired`, returns count updated
 
 ### ShareLink
 **Type:** Value Object
@@ -124,7 +124,7 @@ classDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> pending_b : Person A creates session
-    pending_b --> expired : 48h timeout (pg_cron)
+    pending_b --> expired : 48h timeout (cron endpoint)
 
     note right of pending_b
         Session is waiting for Person B to join.
@@ -161,10 +161,10 @@ flowchart TD
 | Risk | Impact | Mitigation |
 |---|---|---|
 | UUID collision on session ID | Duplicate sessions, data corruption | UUID v4 collision probability is negligible (~2^-122). No mitigation needed beyond using `crypto.randomUUID()`. |
-| Session created but share link never sent | Orphaned sessions consuming DB space | 48h expiry + pg_cron cleanup handles this automatically. |
+| Session created but share link never sent | Orphaned sessions consuming DB space | 48h expiry plus the protected cron cleanup handles this automatically. |
 | Person B opens link after expiry | Confusing dead-end | `validateSessionForJoin` returns a clear "this session has expired" message with a CTA to start a new one. |
 | Supabase downtime during session creation | Session cannot be created | Return a 503 with "Try again in a moment." No retry logic needed for user-initiated actions. |
-| pg_cron job fails or is delayed | Expired sessions remain in `pending_b` | The `isExpired()` method on Session checks expiry client-side as a secondary guard. Sessions are never served as active after expiry regardless of status field. |
+| Cron job fails or is delayed | Expired sessions remain in `pending_b` | The `isExpired()` method on Session checks expiry as a secondary guard. Sessions are never served as active after expiry regardless of status field. |
 
 ---
 
@@ -173,10 +173,10 @@ flowchart TD
 | Component | Technology | Justification |
 |---|---|---|
 | API routes | Next.js App Router (Route Handlers) | Serverless, co-located with frontend |
-| Database | Supabase Postgres | Managed Postgres with row-level security, realtime, and pg_cron |
-| Scheduled jobs | pg_cron (Supabase extension) | Runs inside the database, no external scheduler needed |
+| Database | Supabase Postgres | Managed Postgres with row-level security and realtime |
+| Scheduled jobs | Protected Next.js cron route | Works with hosted schedulers and calls the existing `expireStaleSessions()` service |
 | ID generation | `crypto.randomUUID()` (Node.js built-in) | Cryptographically random, no collision risk |
-| Hosting | Vercel | Auto-scaling, edge network, zero-config deploys |
+| Hosting | Railway | Container-style app hosting with managed deploys and cron support |
 
 ---
 
@@ -310,8 +310,8 @@ type ShareLink = {
 - **Minimal PII collected.** Session creation requires only a display name (first name or nickname) for the OG preview and Person B's hook screen. No email, phone number, or full name. The display name is cascade-deleted with the session after expiry.
 - **UUIDs are not guessable.** Session IDs are UUID v4 (122 bits of randomness). An attacker cannot enumerate sessions.
 - **Rate limiting** on session creation (5/hr per IP) prevents resource exhaustion.
-- **Expiry enforcement** at both the DB level (pg_cron marks expired) and application level (`isExpired()` check) ensures no stale session is ever served as active.
-- **No server-side session cookies.** Sessions are identified by ID in the URL, not by cookies. This avoids CSRF concerns for the sessionless MVP.
+- **Expiry enforcement** happens through the protected cron endpoint (`GET /api/cron/expire-sessions`) and application-level `isExpired()` checks, ensuring stale sessions are not served as active even between cron runs.
+- **Role-bound session cookies.** Sessions are identified by ID in the URL, and the browser receives a signed HttpOnly role cookie after joining. Swipe and status-sensitive routes use this cookie so clients cannot spoof Person A or Person B by editing request bodies.
 
 ---
 
@@ -319,6 +319,6 @@ type ShareLink = {
 
 | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
-| Supabase pg_cron not available on free tier | Medium | Low — sessions still expire via app-level check; cleanup is deferred | Verify pg_cron availability during Supabase project setup. Fall back to Vercel Cron if needed. |
+| Hosted cron is not configured | Medium | Low — sessions still expire via app-level check; cleanup is deferred | Configure a scheduler to call `/api/cron/expire-sessions` with `CRON_SECRET`. |
 | Share link feels too long or technical for users | Low | Medium — reduces share rate if the URL looks intimidating | Use a short path (`/plan/[id]`) and rely on link preview (Open Graph tags) to make the link look inviting in chat apps. |
 | Session creation rate limit too aggressive | Low | Low — 5/hr is generous for any real user | Monitor 429 response rate in PostHog. Adjust if legitimate users are blocked. |

@@ -61,7 +61,7 @@ All 34 classes across all specs, tracked here to prevent cross-spec inconsistenc
 | VenueScore | DS-03 | Value Object | Weighted scoring dimensions |
 | VenueGenerationService | DS-03 | Service | Orchestrates generation pipeline |
 | PlacesAPIClient | DS-03 | Client | Google Places API wrapper |
-| AICurationService | DS-03 | Client | Claude API wrapper for venue curation |
+| AICurationService | DS-03 | Client | Optional AI provider wrapper with deterministic fallback ranking |
 | SafetyFilter | DS-03 | Filter | First-date safety venue filtering |
 | MidpointCalculator | DS-03 | Utility | Geographic midpoint calculation |
 | VenueCache | DS-03 | Cache | Redis cache for Places API results |
@@ -96,6 +96,12 @@ stateDiagram-v2
     generation_failed --> generating : DS-03: Retry triggered
     generating --> ready_to_swipe : DS-03: Venues saved
     ready_to_swipe --> matched : DS-04: Mutual like detected
+    ready_to_swipe --> fallback_pending : DS-03A/DS-04: No mutual match after final round
+    fallback_pending --> reranking : DS-03A: Both users request retry
+    reranking --> ready_to_swipe : DS-03A: Stored pool rerank succeeds
+    reranking --> retry_pending : DS-03A: External regeneration needed
+    retry_pending --> generating : DS-03A: Regeneration job starts
+    fallback_pending --> matched : DS-03A/DS-05: Both users accept fallback suggestion
     pending_b --> expired : DS-01: 48h timeout
     both_ready --> expired : DS-01: 48h timeout
     generating --> expired : DS-01: 48h timeout
@@ -117,7 +123,10 @@ stateDiagram-v2
 | GET | `/api/sessions/[id]/calendar` | DS-05 | Download ICS calendar file |
 | POST | `/api/auth/register` | DS-06 | Create a lightweight account |
 | POST | `/api/auth/login` | DS-06 | Authenticate and get session token |
+| GET | `/api/auth/me` | DS-06 | Get the authenticated account |
+| DELETE | `/api/auth/me` | DS-06 | Delete the authenticated account and session links |
 | GET | `/api/sessions/history` | DS-06 | List past sessions for authenticated user |
+| GET | `/api/cron/expire-sessions` | DS-01 | Protected cron endpoint to expire stale sessions |
 | POST | `/api/revenue/events` | DS-07 | Record monetization, funnel, and trust guardrail events |
 | GET | `/api/revenue/experiment` | DS-07 | Return stable experiment assignment for a session |
 | POST | `/api/revenue/pricing-intents` | DS-07 | Record willingness-to-pay signals |

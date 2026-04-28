@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getAccountByAccessToken } from "../../../../lib/services/account-service";
+import {
+  deleteAccountByAccessToken,
+  getAccountByAccessToken,
+} from "../../../../lib/services/account-service";
 
 function getBearerToken(header: string | null): string {
   if (!header) {
@@ -31,6 +34,31 @@ export async function GET(request: Request) {
     }
 
     console.error("[GET /api/auth/me] Failed:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const token = getBearerToken(request.headers.get("authorization"));
+    await deleteAccountByAccessToken(token);
+
+    return NextResponse.json({ deleted: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "";
+
+    if (
+      message === "Authorization header is required" ||
+      message === "Authorization header must use Bearer token" ||
+      message === "Invalid token"
+    ) {
+      return NextResponse.json({ error: message }, { status: 401 });
+    }
+
+    console.error("[DELETE /api/auth/me] Failed:", err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
       { status: 500 },

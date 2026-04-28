@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../lib/rate-limit";
 import { getSession } from "../../../../lib/services/session-service";
 import { isExpired } from "../../../../lib/services/session-helpers";
 import { serializeSession } from "../../../../lib/services/session-serializer";
@@ -15,8 +16,14 @@ type RouteParams = {
  * - 404 if the session doesn't exist
  * - 410 if the session has expired
  */
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:get",
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
 
   try {
     const session = await getSession(id);

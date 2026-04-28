@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { readBoundSessionRole } from "../../../../../lib/session-role-access";
 import { getSession } from "../../../../../lib/services/session-service";
 import { getVenues } from "../../../../../lib/services/venue-generation-service";
+import { getSwipesForRole } from "../../../../../lib/services/swipe-service";
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -28,6 +30,7 @@ function parseRound(value: string | null): number | undefined {
 
 export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const boundRole = readBoundSessionRole(id, request.headers.get("cookie"));
 
   try {
     const session = await getSession(id);
@@ -54,8 +57,12 @@ export async function GET(request: Request, { params }: RouteParams) {
     const url = new URL(request.url);
     const round = parseRound(url.searchParams.get("round"));
     const venues = await getVenues(id, round);
+    const viewerSwipedVenueIds =
+      boundRole === null
+        ? []
+        : (await getSwipesForRole(id, boundRole)).map((swipe) => swipe.venueId);
 
-    return NextResponse.json({ venues });
+    return NextResponse.json({ venues, viewerSwipedVenueIds });
   } catch (err) {
     if (err instanceof InvalidRoundError) {
       return NextResponse.json(

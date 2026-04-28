@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../../lib/rate-limit";
 import { generateICS } from "../../../../../lib/services/calendar-export-service";
 import { getMatchResult } from "../../../../../lib/services/result-service";
 
@@ -6,8 +7,14 @@ type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:calendar",
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
 
   try {
     // Time resolution (scheduledAt → confirmedDateTime → fallback) happens

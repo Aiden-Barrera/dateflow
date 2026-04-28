@@ -49,7 +49,11 @@ export async function recordSwipe(
     ? false
     : await isRoundComplete(sessionId, currentRound);
 
-  if (!matchResult.matched && roundComplete && currentRound === FINAL_ROUND) {
+  if (
+    !matchResult.matched &&
+    roundComplete &&
+    currentRound === (await getLastRoundWithVenues(sessionId))
+  ) {
     const resolution = await resolveNoMatch(sessionId);
 
     return {
@@ -68,6 +72,25 @@ export async function recordSwipe(
     currentRound,
     sessionStatus: matchResult.matched ? "matched" : "ready_to_swipe",
   };
+}
+
+async function getLastRoundWithVenues(sessionId: string): Promise<number> {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("venues")
+    .select("*")
+    .eq("session_id", sessionId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const lastRound = ((data ?? []) as VenueRow[]).reduce(
+    (lastRound, venue) => Math.max(lastRound, venue.round),
+    0,
+  );
+
+  return lastRound || FINAL_ROUND;
 }
 
 export async function getSwipesForRole(

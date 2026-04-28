@@ -13,7 +13,7 @@
 
 ```mermaid
 flowchart LR
-    subgraph Server["Server (Vercel Serverless)"]
+    subgraph Server["Server (Railway-hosted Next.js service)"]
         GenAPI["Generation Trigger<br/>POST /api/sessions/[id]/generate"]
         VenueAPI["Venue Retrieval<br/>GET /api/sessions/[id]/venues"]
     end
@@ -26,7 +26,7 @@ flowchart LR
 
     subgraph External["External APIs"]
         Places["Google Places API"]
-        Claude["Claude API<br/>(Sonnet 4.6)"]
+        AICuration["AI Curation Provider<br/>(optional)"]
     end
 
     GenAPI -- "Enqueue generation job" --> QStash
@@ -36,23 +36,23 @@ flowchart LR
     GenAPI -- "Fetch nearby venues" --> Places
     Places -- "Venue candidates" --> GenAPI
     GenAPI -- "Cache results" --> Redis
-    GenAPI -- "Score and curate venues" --> Claude
-    Claude -- "Scored shortlist" --> GenAPI
+    GenAPI -- "Score and curate venues" --> AICuration
+    AICuration -- "Scored shortlist or fallback ranking" --> GenAPI
     GenAPI -- "Insert venue rows" --> Postgres
     GenAPI -- "Update session status" --> Postgres
     VenueAPI -- "Read venue rows" --> Postgres
 ```
 
 **Where components run:**
-- **Server:** Vercel serverless — generation logic runs as an async job triggered via QStash
+- **Server:** Railway-hosted Next.js service — generation logic runs as an async job triggered via QStash
 - **Cloud:** Supabase Postgres (venue storage), Upstash Redis (Places API cache), Upstash QStash (async job queue)
-- **External:** Google Places API (venue candidate data), Claude API (AI curation and safety scoring)
+- **External:** Google Places API (venue candidate data), optional AI curation provider for scoring and explanation enrichment
 
 **Information flows:**
 - DS-02 triggers generation by enqueuing a QStash job when session transitions to `both_ready`
 - Server reads both preferences from Postgres, checks Redis cache for nearby venues
 - On cache miss: server calls Google Places API, stores results in Redis (6h TTL)
-- Server sends candidates to Claude for scoring and curation
+- Server sends candidates to the configured AI curation provider when available, otherwise falls back to deterministic ranking
 - Server inserts scored venue rows into Postgres, updates session status to `ready_to_swipe`
 - DS-04 reads venues via GET /api/sessions/[id]/venues
 
@@ -163,8 +163,8 @@ classDiagram
 
 ### AICurationService
 **Type:** Client
-**Purpose:** Wrapper around the Claude API (Sonnet 4.6). Sends venue candidates and user preferences to Claude for scoring on first-date suitability, and returns a ranked shortlist with tags and explanations.
-**Key methods:** `scoreAndCurate(candidates, preferences, round)` — sends a structured prompt with candidates and both users' preferences. Returns scored venues with first-date suitability ratings and generated tags. Round number affects prompt behavior (round 3 = "wildcard picks, surprise them").
+**Purpose:** Wrapper around the configured AI curation provider. Sends venue candidates and structured user preferences for first-date suitability scoring when AI credentials are available, and falls back to deterministic ranking when the provider is unavailable.
+**Key methods:** `scoreAndCurate(candidates, preferences, round)` — returns scored venues with first-date suitability ratings and generated tags. Round number affects prompt behavior (round 3 = "wildcard picks, surprise them").
 
 ### SafetyFilter
 **Type:** Filter
@@ -203,7 +203,7 @@ classDiagram
 stateDiagram-v2
     both_ready --> generating : Generation job starts
     generating --> ready_to_swipe : Venues saved successfully
-    generating --> generation_failed : Pipeline error (Places or Claude API)
+    generating --> generation_failed : Pipeline error (Places, events, or curation)
     generation_failed --> generating : Retry (up to 3 attempts)
 
     note right of generating
@@ -257,8 +257,8 @@ flowchart TD
 | Risk | Impact | Mitigation |
 |---|---|---|
 | Google Places returns fewer than 12 candidates for the area | Fewer venues per round, possibly empty rounds | Search with expanding radius (2km → 5km → 10km). If still under 12, generate what's available and cap at actual count. Never fail the pipeline for low candidate count. |
-| Claude API is unavailable or slow | Generation stalls or times out | Fall back to pure Places API ranking: sort by rating * log(reviews), skip AI curation. Mark venues as "unscored" in tags. |
-| Claude returns malformed scoring data | Venue scores are invalid, round assignment fails | Validate Claude response against a Zod schema. On parse failure, retry once with a stricter prompt. On second failure, fall back to Places-only ranking. |
+| AI curation provider is unavailable or slow | Generation stalls or times out | Fall back to deterministic Places/event ranking and mark venues as deterministic fallback picks. |
+| AI curation provider returns malformed scoring data | Venue scores are invalid, round assignment fails | Validate provider response. On parse failure, retry once with a stricter prompt. On second failure, fall back to deterministic ranking. |
 | Places API quota exceeded | No candidates returned for any session | Monitor quota via Google Cloud Console. Set alert at 80% of daily quota. If exceeded, return 503 and ask user to retry later. |
 | Midpoint falls in an area with no venues (river, highway, park) | All candidates are distant and scored poorly | Detect when nearest candidate is >5km from midpoint. In that case, run two separate searches centered on each user's location and merge results. |
 | Safety filter is too aggressive and removes most candidates | Too few venues survive filtering | Set minimum candidate floor: if safety filter reduces candidates below 15, relax the review count threshold (50 → 20) and rerun. Log these events for manual review of filter calibration. |
@@ -272,9 +272,9 @@ flowchart TD
 | Job queue | Upstash QStash | Serverless, HTTP-based, built-in retries and exponential backoff |
 | Venue cache | Upstash Redis | Serverless Redis, pay-per-request, supports TTL natively |
 | Venue data | Google Places API (Nearby Search) | Best global coverage, ratings, photos, hours, price levels |
-| AI curation | Claude API (Sonnet 4.6) | Strong structured output, can score multiple venues in a single call |
+| AI curation | Optional provider-backed service with deterministic fallback | Keeps generation available when AI credentials, quota, or provider responses fail |
 | Midpoint math | Custom utility (Haversine formula) | No external dependency needed, ~20 lines of code |
-| Response validation | Zod | Validates Claude API response structure before processing |
+| Response validation | Provider-specific validation | Validates AI response structure before processing and falls back on malformed output |
 
 ---
 
@@ -475,7 +475,7 @@ type Venue = {
 
 - **API keys are server-side only.** Google Places API key and Anthropic API key are never exposed to the client. All external API calls happen in serverless functions.
 - **QStash signature verification.** The generate endpoint validates the QStash signature header to prevent unauthorized job triggers.
-- **No user-generated content in AI prompts.** The Claude prompt contains only venue data from Google Places and structured preference data (enums and coordinates). No free-text user input enters the prompt, eliminating prompt injection risk.
+- **No user-generated content in AI prompts.** AI curation input contains only venue data and structured preference data (enums and coordinates). No free-text user input enters the prompt, reducing prompt injection risk.
 - **Cached data is not session-specific.** The venue cache stores anonymized Google Places results keyed by location grid + categories. No session ID or user data is in the cache.
 - **Photo URLs are proxied.** Google Places photo references are resolved server-side to prevent leaking the API key through client-side photo requests.
 
@@ -485,7 +485,7 @@ type Venue = {
 
 | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
-| Claude prompt engineering requires many iterations to produce consistent scoring | High | Medium — delays generation quality, not availability | Start with a simple prompt and test against 50 real venue sets. Iterate scoring weights based on manual review of output quality. |
+| AI curation prompt engineering requires many iterations to produce consistent scoring | High | Medium — delays generation quality, not availability | Start with a simple prompt and test against 50 real venue sets. Iterate scoring weights based on manual review of output quality. |
 | Google Places API pricing changes | Low | High — could significantly increase per-session cost | Monitor Google Cloud billing alerts. Places API has a $200/month free credit. At MVP volume (<100 sessions/day), total cost is ~$15–30/day. |
 | Venue quality varies dramatically by city | High | High — product feels broken in sparse areas | Launch in one city (Austin) with known venue density. Manually verify generation quality for launch city before opening to others. |
 | 12 venues may not be enough in very dense areas where users expect more options | Low | Low — users may feel artificially constrained | Cap at 12 is intentional (prevents decision paralysis). Monitor session match rates; if consistently >80% match in round 1, consider reducing to 8. |

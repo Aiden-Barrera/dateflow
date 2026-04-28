@@ -122,6 +122,27 @@ describe("round-manager", () => {
     await expect(isRoundComplete("session-1", 1)).resolves.toBe(true);
   });
 
+  it("reports a smaller generated round complete when both roles swiped every venue in that round", async () => {
+    mockVenueEq.mockResolvedValue({
+      data: [
+        makeVenueRow(0),
+        makeVenueRow(1),
+      ],
+      error: null,
+    });
+    mockSwipeEq.mockResolvedValue({
+      data: [
+        makeSwipeRow("venue-1", "a"),
+        makeSwipeRow("venue-2", "a"),
+        makeSwipeRow("venue-1", "b"),
+        makeSwipeRow("venue-2", "b"),
+      ],
+      error: null,
+    });
+
+    await expect(isRoundComplete("session-1", 1)).resolves.toBe(true);
+  });
+
   it("advances to round 2 only after both roles complete round 1", async () => {
     mockSwipeEq.mockResolvedValue({
       data: [

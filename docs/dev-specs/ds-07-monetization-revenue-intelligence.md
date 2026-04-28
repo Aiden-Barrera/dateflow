@@ -65,7 +65,7 @@ flowchart LR
         ConsentUI["Privacy and disclosure UI"]
     end
 
-    subgraph Server["Server (Next.js / Vercel)"]
+    subgraph Server["Server (Next.js / Railway)"]
         EventAPI["Revenue Event API<br/>POST /api/revenue/events"]
         ExperimentAPI["Experiment Assignment API<br/>GET /api/revenue/experiment"]
         SponsorAPI["Sponsor Lead API<br/>POST /api/revenue/sponsor-leads"]
@@ -530,7 +530,7 @@ flowchart TD
 | Places search cost per session | Includes Nearby Search, Text Search, Place Details, and photos where used |
 | Photo cost per session | Track separately because photo/details usage can dominate variable cost |
 | AI curation cost per session | Include provider, model, tokens, fallback rate |
-| Infrastructure cost estimate | Vercel, Supabase, Upstash, background jobs |
+| Infrastructure cost estimate | Railway, Supabase, Upstash, background jobs |
 | Acquisition cost per activated session | Initially manual estimate until paid acquisition starts |
 | Revenue per completed session | Consumer, sponsor, affiliate, or blended |
 | Gross margin per completed session | Revenue minus variable serving cost |

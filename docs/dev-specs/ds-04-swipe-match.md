@@ -19,7 +19,7 @@ flowchart LR
         PollFallback["Polling Fallback<br/>GET /api/sessions/[id]/status"]
     end
 
-    subgraph Server["Server (Vercel Serverless)"]
+    subgraph Server["Server (Railway-hosted Next.js service)"]
         SwipeAPI["Swipe API Route<br/>POST /api/sessions/[id]/swipes"]
         StatusAPI["Status API Route<br/>GET /api/sessions/[id]/status"]
     end
@@ -44,7 +44,7 @@ flowchart LR
 
 **Where components run:**
 - **Client:** Browser — renders swipe cards, maintains WebSocket connection for realtime updates, falls back to polling if WebSocket drops
-- **Server:** Vercel serverless — receives swipe submissions, invokes Postgres RPC for atomic match detection
+- **Server:** Railway-hosted Next.js service — receives swipe submissions, invokes Postgres RPC for atomic match detection
 - **Cloud:** Supabase Postgres (swipes storage, atomic RPC function, session state), Supabase Realtime (WebSocket push to both clients)
 
 **Information flows:**

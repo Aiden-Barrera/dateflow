@@ -102,8 +102,9 @@ export async function rerankStoredCandidates(
     preferences[0].location,
     preferences[1].location,
   );
-  const latestPoolId = await getLatestPoolId(sessionId);
-  const poolItems = await getPoolItems(latestPoolId);
+  const candidatePools = await getCandidatePools(sessionId);
+  const latestPool = candidatePools[0];
+  const poolItems = await getPoolItems(latestPool.id);
   const surfacedHistory = await getSurfacedHistory(sessionId);
   const nextSurfacedCycle = getNextSurfacedCycle(surfacedHistory);
   const selectedCandidates = selectRetryCandidates(
@@ -112,6 +113,12 @@ export async function rerankStoredCandidates(
   );
 
   if (selectedCandidates.length < 12) {
+    if (candidatePools.some((pool) => pool.source === "full_regeneration")) {
+      throw new Error(
+        "Retry limit reached: this session already used its full external regeneration.",
+      );
+    }
+
     return {
       strategy: "full_regeneration",
       generationBatchId: "",
@@ -123,7 +130,7 @@ export async function rerankStoredCandidates(
 
   const generationBatchId = await createGenerationBatch(
     sessionId,
-    latestPoolId,
+    latestPool.id,
     nextSurfacedCycle,
     "pool_rerank",
   );
@@ -148,7 +155,9 @@ export async function rerankStoredCandidates(
   };
 }
 
-async function getLatestPoolId(sessionId: string): Promise<string> {
+async function getCandidatePools(
+  sessionId: string,
+): Promise<readonly SessionCandidatePoolRow[]> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("session_candidate_pools")
@@ -160,16 +169,16 @@ async function getLatestPoolId(sessionId: string): Promise<string> {
   }
 
   const pools = (data ?? []) as SessionCandidatePoolRow[];
-  const latestPool = [...pools].sort(
+  const sortedPools = [...pools].sort(
     (left, right) =>
       new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
-  )[0];
+  );
 
-  if (!latestPool) {
+  if (!sortedPools[0]) {
     throw new Error(`No candidate pool found for session ${sessionId}`);
   }
 
-  return latestPool.id;
+  return sortedPools;
 }
 
 async function getPoolItems(poolId: string): Promise<readonly SessionCandidatePoolItem[]> {

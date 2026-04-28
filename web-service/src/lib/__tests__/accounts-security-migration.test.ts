@@ -15,6 +15,15 @@ const migrationPath = join(
   "migrations",
   "20260414154220_secure_accounts_and_session_accounts.sql",
 );
+const rlsPoliciesMigrationPath = join(
+  currentDir,
+  "..",
+  "..",
+  "..",
+  "supabase",
+  "migrations",
+  "20260428140000_add_account_rls_policies.sql",
+);
 
 function readMigration(): string {
   return readFileSync(migrationPath, "utf8");
@@ -37,5 +46,17 @@ describe("20260414154220_secure_accounts_and_session_accounts.sql", () => {
       "ADD CONSTRAINT session_accounts_session_id_role_key",
     );
     expect(migration).toContain("UNIQUE (session_id, role)");
+  });
+});
+
+describe("20260428140000_add_account_rls_policies.sql", () => {
+  it("adds account-scoped RLS policies for account history tables", () => {
+    const migration = readFileSync(rlsPoliciesMigrationPath, "utf8");
+
+    expect(migration).toContain("CREATE POLICY accounts_select_own");
+    expect(migration).toContain("CREATE POLICY accounts_delete_own");
+    expect(migration).toContain("CREATE POLICY session_accounts_select_own");
+    expect(migration).toContain("CREATE POLICY session_accounts_delete_own");
+    expect(migration).toContain("auth.uid()");
   });
 });

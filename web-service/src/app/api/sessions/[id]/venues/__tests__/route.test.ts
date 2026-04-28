@@ -10,7 +10,13 @@ vi.mock("../../../../../../lib/services/venue-generation-service", () => ({
   getVenues: (...args: unknown[]) => mockGetVenues(...args),
 }));
 
+const mockGetSwipesForRole = vi.fn();
+vi.mock("../../../../../../lib/services/swipe-service", () => ({
+  getSwipesForRole: (...args: unknown[]) => mockGetSwipesForRole(...args),
+}));
+
 import { GET } from "../route";
+import { buildSessionRoleCookieValue } from "../../../../../../lib/session-role-access";
 
 function makeRequest(url = "http://localhost:3000/api/sessions/session-123/venues") {
   return new Request(url, { method: "GET" });
@@ -58,8 +64,10 @@ const fakeVenues = [
 describe("GET /api/sessions/[id]/venues", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SESSION_ROLE_COOKIE_SECRET = "test-secret";
     mockGetSession.mockResolvedValue(readySession);
     mockGetVenues.mockResolvedValue(fakeVenues);
+    mockGetSwipesForRole.mockResolvedValue([]);
   });
 
   it("returns 200 with venues for a ready session", async () => {
@@ -68,7 +76,34 @@ describe("GET /api/sessions/[id]/venues", () => {
 
     expect(response.status).toBe(200);
     expect(body.venues).toEqual(fakeVenues);
+    expect(body.viewerSwipedVenueIds).toEqual([]);
     expect(mockGetVenues).toHaveBeenCalledWith("session-123", undefined);
+  });
+
+  it("returns already-swiped venue ids for the bound viewer role", async () => {
+    mockGetSwipesForRole.mockResolvedValueOnce([
+      {
+        id: "swipe-1",
+        sessionId: "session-123",
+        venueId: "venue-1",
+        role: "a",
+        liked: true,
+        createdAt: new Date("2026-04-01T12:00:00Z"),
+      },
+    ]);
+    const cookie = buildSessionRoleCookieValue("session-123", "a").split(";")[0] ?? "";
+
+    const response = await GET(
+      new Request("http://localhost:3000/api/sessions/session-123/venues?round=1", {
+        headers: { cookie },
+      }),
+      makeParams(),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.viewerSwipedVenueIds).toEqual(["venue-1"]);
+    expect(mockGetSwipesForRole).toHaveBeenCalledWith("session-123", "a");
   });
 
   it("passes the round filter through when provided", async () => {

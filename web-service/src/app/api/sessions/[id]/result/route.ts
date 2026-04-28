@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../../lib/rate-limit";
 import { serializeMatchResult } from "../../../../../lib/services/result-serializer";
 import { getMatchResult } from "../../../../../lib/services/result-service";
 
@@ -16,8 +17,14 @@ function validateSessionId(id: string): string {
   return trimmed;
 }
 
-export async function GET(_request: Request, { params }: RouteParams) {
+export async function GET(request: Request, { params }: RouteParams) {
   const { id } = await params;
+  const rateLimited = checkRateLimit(request, {
+    key: "sessions:result",
+    limit: 30,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
 
   try {
     const sessionId = validateSessionId(id);

@@ -15,7 +15,7 @@ flowchart LR
         ResultPage["Match Result Page<br/>/plan/[id]/results"]
     end
 
-    subgraph Server["Server (Vercel Serverless)"]
+    subgraph Server["Server (Railway-hosted Next.js service)"]
         ResultAPI["Result API Route<br/>GET /api/sessions/[id]/result"]
         CalendarAPI["Calendar API Route<br/>GET /api/sessions/[id]/calendar"]
     end
@@ -41,7 +41,7 @@ flowchart LR
 
 **Where components run:**
 - **Client:** Browser — renders the match result page, triggers deep links and file downloads
-- **Server:** Vercel serverless — assembles the MatchResult from DB, generates ICS files on demand
+- **Server:** Railway-hosted Next.js service — assembles the MatchResult from DB, generates ICS files on demand
 - **Cloud:** Supabase Postgres — source of truth for session and venue data
 - **External:** Google Maps / Apple Maps are deep link targets only (no API calls from Dateflow)
 
@@ -156,7 +156,7 @@ flowchart TD
 | Component | Technology | Justification |
 |---|---|---|
 | Result page | React Server Component (Next.js) | SSR for fast load, good link preview (Open Graph) |
-| ICS generation | ical.js (npm package) | Mature library for generating valid ICS files |
+| ICS generation | Internal CalendarExportService | Generates the small MVP ICS payload directly without adding another runtime dependency |
 | Platform detection | User-Agent parsing (client-side) | Determines Google Maps vs Apple Maps deep link on the actual device opening the result page |
 | File download | Next.js API route with stream response | Serves ICS as downloadable file |
 
@@ -274,6 +274,6 @@ END:VCALENDAR
 
 | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
-| ICS formatting edge cases across calendar apps | Medium | Low — minor display issues in some calendars | Test against Google Calendar, Apple Calendar, and Outlook. Use ical.js which handles most edge cases. |
+| ICS formatting edge cases across calendar apps | Medium | Low — minor display issues in some calendars | Test the generated ICS output against Google Calendar, Apple Calendar, and Outlook before launch. |
 | Match result page feels anticlimactic | Medium | Medium — the emotional peak of the product falls flat | Invest in the reveal animation. Consider confetti, a brief summary of "why this matched," and a clear "you both picked this" message. |
 | Open Graph link previews don't render on share | Low | Low — the share link works but looks plain in iMessage/WhatsApp | Set appropriate `og:title`, `og:description`, and `og:image` meta tags on the result page. Use the venue photo as the OG image. |

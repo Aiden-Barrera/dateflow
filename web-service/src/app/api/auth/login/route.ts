@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkRateLimit } from "../../../../lib/rate-limit";
 import {
   beginAppleOAuth,
   beginGoogleOAuth,
@@ -47,6 +48,13 @@ function sanitizeRedirectTo(value: unknown): string | undefined {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = checkRateLimit(request, {
+    key: "auth:login",
+    limit: 10,
+    windowMs: 60 * 1000,
+  });
+  if (rateLimited) return rateLimited;
+
   let body: unknown;
 
   try {

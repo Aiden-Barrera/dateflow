@@ -244,4 +244,42 @@ describe("recordSwipe", () => {
       sessionStatus: "fallback_pending",
     });
   });
+
+  it("resolves no-match after the last non-empty round in a smaller generated deck", async () => {
+    mockVenueEq.mockResolvedValue({
+      data: Array.from({ length: 6 }, (_, index) => makeVenueRow(index)),
+      error: null,
+    });
+    const beforeFinalSwipe = [
+      ...["venue-1", "venue-2", "venue-3", "venue-4"].flatMap((venueId) => [
+        makeSwipeRow(venueId, "a"),
+        makeSwipeRow(venueId, "b"),
+      ]),
+      makeSwipeRow("venue-5", "a"),
+      makeSwipeRow("venue-5", "b"),
+      makeSwipeRow("venue-6", "a", false),
+    ];
+    const afterFinalSwipe = [
+      ...beforeFinalSwipe,
+      makeSwipeRow("venue-6", "b", false),
+    ];
+    mockSwipeEq
+      .mockResolvedValueOnce({ data: beforeFinalSwipe, error: null })
+      .mockResolvedValueOnce({ data: beforeFinalSwipe, error: null })
+      .mockResolvedValueOnce({ data: afterFinalSwipe, error: null });
+    mockResolveNoMatch.mockResolvedValue({
+      venueId: "venue-5",
+      reason: "highest_scored",
+    });
+
+    const result = await recordSwipe("session-1", "venue-6", "b", false);
+
+    expect(result).toEqual({
+      matched: false,
+      matchedVenueId: "venue-5",
+      roundComplete: true,
+      currentRound: 2,
+      sessionStatus: "fallback_pending",
+    });
+  });
 });

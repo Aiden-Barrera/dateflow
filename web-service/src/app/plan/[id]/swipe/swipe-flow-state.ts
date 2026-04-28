@@ -55,3 +55,17 @@ export function getSwipeFlowStatusState(status: string): SwipeFlowStatusState {
       "This session is not ready for swiping yet, but we are still watching for updates.",
   };
 }
+
+export function getResumeVenueIndex(
+  venues: readonly { readonly id: string }[],
+  swipedVenueIds: readonly string[],
+): number {
+  if (venues.length === 0) {
+    return 0;
+  }
+
+  const swiped = new Set(swipedVenueIds);
+  const firstUnswipedIndex = venues.findIndex((venue) => !swiped.has(venue.id));
+
+  return firstUnswipedIndex === -1 ? venues.length - 1 : firstUnswipedIndex;
+}
