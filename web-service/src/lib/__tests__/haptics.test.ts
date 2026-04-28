@@ -1,30 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { triggerHaptic } from "../haptics";
+import { triggerHaptic, _resetHapticWarning } from "../haptics";
 
 describe("triggerHaptic", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    _resetHapticWarning();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // Reset navigator.vibrate between tests
-    Object.defineProperty(navigator, "vibrate", {
-      value: undefined,
-      writable: true,
-      configurable: true,
-    });
+    vi.unstubAllGlobals();
   });
 
   it("calls navigator.vibrate with the given duration when supported", () => {
     const vibrateMock = vi.fn();
-    Object.defineProperty(navigator, "vibrate", {
-      value: vibrateMock,
-      writable: true,
-      configurable: true,
-    });
+    vi.stubGlobal("navigator", { vibrate: vibrateMock });
 
     triggerHaptic(10);
 
@@ -33,11 +25,7 @@ describe("triggerHaptic", () => {
   });
 
   it("logs a console.warn and does not throw when navigator.vibrate is not available", () => {
-    Object.defineProperty(navigator, "vibrate", {
-      value: undefined,
-      writable: true,
-      configurable: true,
-    });
+    vi.stubGlobal("navigator", {});
 
     expect(() => triggerHaptic(10)).not.toThrow();
     expect(warnSpy).toHaveBeenCalledWith(
@@ -45,17 +33,30 @@ describe("triggerHaptic", () => {
     );
   });
 
+  it("only warns once across multiple calls (de-dup)", () => {
+    vi.stubGlobal("navigator", {});
+
+    triggerHaptic(10);
+    triggerHaptic(10);
+    triggerHaptic(10);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("is a no-op when prefersReducedMotion is true", () => {
     const vibrateMock = vi.fn();
-    Object.defineProperty(navigator, "vibrate", {
-      value: vibrateMock,
-      writable: true,
-      configurable: true,
-    });
+    vi.stubGlobal("navigator", { vibrate: vibrateMock });
 
     triggerHaptic(10, { prefersReducedMotion: true });
 
     expect(vibrateMock).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns early in SSR context where navigator is undefined", () => {
+    vi.stubGlobal("navigator", undefined);
+
+    expect(() => triggerHaptic(10)).not.toThrow();
     expect(warnSpy).not.toHaveBeenCalled();
   });
 });

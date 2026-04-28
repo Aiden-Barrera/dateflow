@@ -3,13 +3,18 @@ type HapticOptions = {
   readonly prefersReducedMotion?: boolean;
 };
 
+// De-dup the unsupported warning so it only logs once per page load, not on
+// every swipe action. iOS users would otherwise see it flood the console.
+let hasWarnedUnsupported = false;
+
 /**
  * Triggers a short haptic pulse on Android/vibration-capable browsers.
  *
- * On iOS (Safari) `navigator.vibrate` is not implemented. Rather than
- * silently swallowing the no-op we log a single console.warn so it's
- * visible during development without crashing production.
+ * On iOS (Safari) `navigator.vibrate` is not implemented. We log a single
+ * console.warn (de-duped via module-level flag) so it's visible during
+ * development without flooding production logs.
  *
+ * Returns early in non-browser contexts (SSR) where `navigator` is undefined.
  * Respects `prefersReducedMotion` — motion-sensitive users should not
  * receive unexpected physical feedback either.
  */
@@ -19,11 +24,20 @@ export function triggerHaptic(
 ): void {
   if (prefersReducedMotion) return;
 
-  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+  // SSR guard — navigator is not defined outside the browser
+  if (typeof navigator === "undefined") return;
+
+  if (typeof navigator.vibrate === "function") {
     navigator.vibrate(durationMs);
-  } else {
+  } else if (!hasWarnedUnsupported) {
+    hasWarnedUnsupported = true;
     console.warn(
       "[haptics] navigator.vibrate not supported (iOS or non-vibrating browser)",
     );
   }
+}
+
+/** Reset the de-dup flag — exposed for testing only. */
+export function _resetHapticWarning(): void {
+  hasWarnedUnsupported = false;
 }
