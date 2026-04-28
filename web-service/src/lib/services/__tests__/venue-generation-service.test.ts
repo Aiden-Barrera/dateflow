@@ -86,6 +86,11 @@ vi.mock("../event-enrichment-service", () => ({
     mockFetchLiveEventCandidates(...args),
 }));
 
+vi.mock("../sponsored-venue-service", () => ({
+  fetchActiveSponsoredBoosts: vi.fn().mockResolvedValue(new Map()),
+  fetchPopularityBoosts: vi.fn().mockResolvedValue(new Map()),
+}));
+
 const preferences: readonly [Preference, Preference] = [
   {
     id: "pref-a",
@@ -340,7 +345,7 @@ describe("generateVenues", () => {
   });
 
   it("expands the search radius when the first tier returns too few safe candidates", async () => {
-    const few = [makeCuratedVenue(1)]; // 1 < MIN_CANDIDATES_TO_PROCEED (3)
+    const few = [makeCuratedVenue(1)]; // 1 < MIN_CANDIDATES_TO_PROCEED (12)
     const enough = Array.from({ length: 12 }, (_, i) => makeCuratedVenue(i + 1));
 
     // First call (2 km) → too few; second call (5 km) → enough
@@ -377,7 +382,7 @@ describe("generateVenues", () => {
     mockFetchLiveEventCandidates.mockResolvedValue([]);
 
     await expect(generateVenues("session-1")).rejects.toThrow(
-      "No venues found near your midpoint"
+      "Not enough venues found near your midpoint"
     );
 
     // Should have tried all 4 radius tiers

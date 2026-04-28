@@ -14,6 +14,7 @@ import {
   mapGoogleTypeToCategory,
 } from "./places-api-client";
 import { applySafetyFilter } from "./safety-filter";
+import { VENUES_PER_ROUND, FINAL_ROUND } from "../swipe-config";
 import { scoreAndCurate } from "./ai-curation-service";
 import { fetchLiveEventCandidates } from "./event-enrichment-service";
 import {
@@ -24,14 +25,21 @@ import {
 /**
  * Radius expansion ladder used when the initial search returns too few safe
  * candidates. Each tier is tried in order; generation stops at the first
- * radius that yields at least MIN_CANDIDATES_TO_PROCEED safe venues.
+ * radius that yields enough safety-filtered venues to fill the complete swipe
+ * flow before AI curation proceeds.
  *
  * 2 km → 5 km → 10 km → 20 km
  */
 const SEARCH_RADIUS_LADDER_METERS = [2_000, 5_000, 10_000, 20_000] as const;
 
-/** Minimum number of safety-filtered candidates needed to proceed to AI curation. */
-const MIN_CANDIDATES_TO_PROCEED = 3;
+/**
+ * The swipe flow requires exactly VENUES_PER_ROUND venues per round for
+ * FINAL_ROUND rounds. Rounds with fewer venues can never be marked complete
+ * by round-manager (it checks venueIds.length === VENUES_PER_ROUND), so
+ * generation must not proceed unless the combined candidate pool (Places +
+ * live events) can fill every round.
+ */
+const MIN_CANDIDATES_TO_PROCEED = VENUES_PER_ROUND * FINAL_ROUND;
 
 /** Max venues per category in a single round (prevents restaurants from filling all 4 slots). */
 const MAX_PER_CATEGORY_PER_ROUND = 2;
@@ -287,8 +295,8 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
     const maxPrice = budgetToMaxPrice(stricterBudget(preferences));
 
     // Search with radius expansion: start at 2 km and widen up to 20 km until
-    // we have enough safety-filtered candidates to run AI curation. This handles
-    // suburban and rural midpoints where the tighter radius yields too few venues.
+    // we have enough safety-filtered Places candidates. The final minimum check
+    // happens after live events are merged, since events count toward the pool.
     let placeCandidates: readonly PlaceCandidate[] = [];
     let usedRadius: number = SEARCH_RADIUS_LADDER_METERS[0];
     for (const radius of SEARCH_RADIUS_LADDER_METERS) {
@@ -323,9 +331,9 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
 
     const safeCandidates = [...placeCandidates, ...liveEventCandidates];
 
-    if (safeCandidates.length === 0) {
+    if (safeCandidates.length < MIN_CANDIDATES_TO_PROCEED) {
       throw new Error(
-        "No venues found near your midpoint. Try entering locations closer together or choosing different categories."
+        "Not enough venues found near your midpoint to fill the swipe flow. Try entering locations closer together or choosing different categories."
       );
     }
     const poolId = await createCandidatePool(sessionId, "initial_generation");

@@ -206,7 +206,7 @@ export function VenueCardContent({
   const activeSlide = slides[activeSlideIndex] ?? slides[0] ?? null;
   const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
   const mapsUrl = buildGoogleMapsUrl(venue);
-  const hasLinks = !!venue.website || true; // maps always available
+  const hasLinks = true; // maps always available
   const hasEventInfo = !!venue.scheduledAt || !!venue.eventUrl;
   const hasHours =
     venue.openingHours?.weekdayText && venue.openingHours.weekdayText.length > 0;
@@ -482,6 +482,8 @@ export function VenueCardContent({
           <div className="rounded-[1.25rem] border border-[#d9c7b5] bg-white">
             <button
               type="button"
+              aria-expanded={showHours}
+              aria-controls="venue-hours-panel"
               onClick={(e) => { e.stopPropagation(); setShowHours((v) => !v); }}
               onPointerDown={(e) => e.stopPropagation()}
               className="flex w-full items-center justify-between px-4 py-3 text-caption font-medium text-[#6a4a3a]"
@@ -493,7 +495,7 @@ export function VenueCardContent({
               <ChevronIcon direction={showHours ? "up" : "down"} />
             </button>
             {showHours ? (
-              <div className="border-t border-[#ede0d4] px-4 pb-3 pt-2 space-y-1">
+              <div id="venue-hours-panel" className="border-t border-[#ede0d4] px-4 pb-3 pt-2 space-y-1">
                 {(venue.openingHours?.weekdayText ?? []).map((line, i) => (
                   <p key={i} className="text-caption text-[#6a4a3a]">{line}</p>
                 ))}

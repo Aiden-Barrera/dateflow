@@ -28,8 +28,10 @@ CREATE TABLE sponsored_venues (
   updated_at      timestamptz NOT NULL DEFAULT now()
 );
 
--- Fast lookup by place_id during venue scoring
-CREATE INDEX idx_sponsored_venues_place_id_active
+-- Fast lookup by place_id during venue scoring.
+-- UNIQUE enforces the runtime assumption that each place_id has at most one
+-- active sponsored boost at a time, so active-row lookups are deterministic.
+CREATE UNIQUE INDEX idx_sponsored_venues_place_id_active
   ON sponsored_venues (place_id)
   WHERE active = true;
 
@@ -51,11 +53,14 @@ COMMENT ON COLUMN venues.popularity_boost IS
 -- Aggregates swipe data across all sessions to show how often each place_id
 -- is liked when shown. Used by the analytics job to refresh popularity_boost.
 
+-- Group only by place_id so that the same physical venue is always
+-- one row regardless of session-scoped name/category variations.
+-- MIN() picks a representative name/category for display purposes.
 CREATE OR REPLACE VIEW venue_global_like_rates AS
 SELECT
   v.place_id,
-  v.name,
-  v.category,
+  MIN(v.name)                                           AS name,
+  MIN(v.category)                                       AS category,
   COUNT(*)                                              AS total_swipes,
   COUNT(*) FILTER (WHERE s.liked = true)                AS total_likes,
   ROUND(
@@ -65,4 +70,4 @@ SELECT
   )                                                     AS like_rate
 FROM swipes s
 JOIN venues v ON s.venue_id = v.id
-GROUP BY v.place_id, v.name, v.category;
+GROUP BY v.place_id;

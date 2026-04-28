@@ -70,6 +70,11 @@ vi.mock("../ai-curation-service", () => ({
   scoreAndCurate: (...args: unknown[]) => mockScoreAndCurate(...args),
 }));
 
+vi.mock("../sponsored-venue-service", () => ({
+  fetchActiveSponsoredBoosts: vi.fn().mockResolvedValue(new Map()),
+  fetchPopularityBoosts: vi.fn().mockResolvedValue(new Map()),
+}));
+
 const preferences: readonly [Preference, Preference] = [
   {
     id: "pref-a",
@@ -145,11 +150,17 @@ describe("generateVenues category intent", () => {
       label: "Midpoint",
     });
 
-    const restaurantCandidate = makeCandidate({
-      placeId: "restaurant-1",
-      name: "Good Bistro",
-      types: ["restaurant", "food", "point_of_interest", "establishment"],
-    });
+    // 12 restaurant candidates (pass safety filter for RESTAURANT/BAR prefs)
+    // plus one spillover museum that should be filtered out by the safety filter.
+    // MIN_CANDIDATES_TO_PROCEED = VENUES_PER_ROUND * FINAL_ROUND = 12, so we
+    // need all 12 restaurants to remain after filtering.
+    const restaurantCandidates = Array.from({ length: 12 }, (_, i) =>
+      makeCandidate({
+        placeId: `restaurant-${i + 1}`,
+        name: `Restaurant ${i + 1}`,
+        types: ["restaurant", "food", "point_of_interest", "establishment"],
+      }),
+    );
     const spilloverMuseum = makeCandidate({
       placeId: "museum-1",
       name: "Spillover Museum",
@@ -157,11 +168,11 @@ describe("generateVenues category intent", () => {
       category: "ACTIVITY",
     });
 
-    mockSearchNearbyWithCache.mockResolvedValue([restaurantCandidate, spilloverMuseum]);
+    mockSearchNearbyWithCache.mockResolvedValue([...restaurantCandidates, spilloverMuseum]);
     mockScoreAndCurate
-      .mockResolvedValueOnce([restaurantCandidate])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce(restaurantCandidates.slice(0, 4))
+      .mockResolvedValueOnce(restaurantCandidates.slice(4, 8))
+      .mockResolvedValueOnce(restaurantCandidates.slice(8, 12));
 
     mockInsertSelectSingle
       .mockResolvedValueOnce({
@@ -188,19 +199,22 @@ describe("generateVenues category intent", () => {
     await generateVenues("session-1");
 
     const candidatePoolRows = mockUpsert.mock.calls[0][0];
-    expect(candidatePoolRows).toHaveLength(1);
-    expect(candidatePoolRows[0].place_id).toBe("restaurant-1");
+    // Safety filter removes the museum (ACTIVITY not in RESTAURANT/BAR prefs),
+    // leaving exactly 12 restaurant candidates in the pool.
+    expect(candidatePoolRows).toHaveLength(12);
+    expect(candidatePoolRows.every((r: { place_id: string }) => r.place_id !== "museum-1")).toBe(true);
 
+    // scoreAndCurate round 1 only receives the 12 restaurants, not the museum
     expect(mockScoreAndCurate).toHaveBeenNthCalledWith(
       1,
-      [
-        expect.objectContaining({
-          placeId: "restaurant-1",
-        }),
-      ],
+      expect.arrayContaining([
+        expect.objectContaining({ placeId: "restaurant-1" }),
+      ]),
       preferences,
       1,
       { lat: 30.265, lng: -97.745, label: "Midpoint" },
+      expect.any(Map),
+      expect.any(Map),
     );
   });
 });
