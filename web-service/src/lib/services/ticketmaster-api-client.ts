@@ -155,6 +155,12 @@ export async function fetchTicketmasterEventCandidates(
 
   const url = `${TM_DISCOVERY_URL}?${params.toString()}`;
 
+  console.info("[fetchTicketmasterEventCandidates] fetching", {
+    lat: location.lat,
+    lng: location.lng,
+    radiusKm,
+  });
+
   try {
     const response = await fetch(url);
 
@@ -170,6 +176,13 @@ export async function fetchTicketmasterEventCandidates(
     const candidates = events
       .map(toPlaceCandidate)
       .filter((c): c is PlaceCandidate => c !== null);
+
+    console.info("[fetchTicketmasterEventCandidates] results", {
+      eventCount: events.length,
+      candidateCount: candidates.length,
+      lat: location.lat,
+      lng: location.lng,
+    });
 
     return candidates;
   } catch (err) {

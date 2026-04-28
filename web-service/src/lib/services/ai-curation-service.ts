@@ -88,6 +88,13 @@ function summarizeAiAdjustments(
 }
 
 function roundBonus(category: Category, round: number): number {
+  // Round 1: nudge non-restaurant options up so the opening round shows variety.
+  // Restaurants dominate the Google Places pool and pass the safety filter more
+  // easily (more reviews), so a small bonus counteracts structural bias.
+  if (round === 1 && (category === "ACTIVITY" || category === "EVENT")) {
+    return 0.08;
+  }
+
   if (round === 2 && (category === "ACTIVITY" || category === "EVENT")) {
     return 0.15;
   }
@@ -193,7 +200,11 @@ function timeOfDayFit(category: Category, round: number, candidate: PlaceCandida
   }
 
   if (round === 1) {
-    return category === "RESTAURANT" || category === "BAR" ? 1 : 0.6;
+    // Reduce the gap: ACTIVITY/EVENT get 0.75 instead of 0.6 so they can
+    // compete with RESTAURANT (1.0) in the first round.
+    if (category === "RESTAURANT" || category === "BAR") return 1;
+    if (category === "ACTIVITY" || category === "EVENT") return 0.75;
+    return 0.6;
   }
 
   if (round === 2) {
@@ -246,7 +257,9 @@ export function buildDeterministicRanking(
   candidates: readonly PlaceCandidate[],
   preferences: readonly [Preference, Preference],
   round: number,
-  midpoint: Location
+  midpoint: Location,
+  sponsoredBoosts: ReadonlyMap<string, number> = new Map(),
+  popularityBoosts: ReadonlyMap<string, number> = new Map(),
 ): readonly CuratedVenueCandidate[] {
   return candidates
     .map((candidate) => {
@@ -272,11 +285,16 @@ export function buildDeterministicRanking(
         composite: baseComposite,
       };
 
+      const sponsored = sponsoredBoosts.get(candidate.placeId) ?? 0;
+      const popularity = popularityBoosts.get(candidate.placeId) ?? 0;
+
       const rankingComposite = Math.min(
         1,
         baseComposite +
           roundBonus(category, round) +
-          budgetRomanticBonus(candidate, category, preferences),
+          budgetRomanticBonus(candidate, category, preferences) +
+          sponsored +
+          popularity * 0.1, // popularity is 0–1; cap its influence at 0.1
       );
 
       return {
@@ -603,13 +621,17 @@ export async function scoreAndCurate(
   candidates: readonly PlaceCandidate[],
   preferences: readonly [Preference, Preference],
   round: number,
-  midpoint: Location
+  midpoint: Location,
+  sponsoredBoosts: ReadonlyMap<string, number> = new Map(),
+  popularityBoosts: ReadonlyMap<string, number> = new Map(),
 ): Promise<readonly CuratedVenueCandidate[]> {
   const deterministicRanking = buildDeterministicRanking(
     candidates,
     preferences,
     round,
     midpoint,
+    sponsoredBoosts,
+    popularityBoosts,
   );
   const aiConfig = getAiCurationConfig();
   const startedAt = Date.now();

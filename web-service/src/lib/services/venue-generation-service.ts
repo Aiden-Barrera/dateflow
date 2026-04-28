@@ -4,7 +4,7 @@ import type {
   GenerationStrategy,
 } from "../types/candidate-pool";
 import type { BudgetLevel, Category, Preference } from "../types/preference";
-import { toVenue, type Venue, type VenueRow } from "../types/venue";
+import { toVenue, type Venue, type VenueRow, type PlaceCandidate, type CuratedVenueCandidate } from "../types/venue";
 import { getBothPreferences } from "./preference-service";
 import { calculateMidpoint, distanceBetween } from "./midpoint-calculator";
 import { buildWhyPicked } from "./venue-why-picked";
@@ -14,10 +14,72 @@ import {
   mapGoogleTypeToCategory,
 } from "./places-api-client";
 import { applySafetyFilter } from "./safety-filter";
+import { VENUES_PER_ROUND, FINAL_ROUND } from "../swipe-config";
 import { scoreAndCurate } from "./ai-curation-service";
 import { fetchLiveEventCandidates } from "./event-enrichment-service";
+import {
+  fetchActiveSponsoredBoosts,
+  fetchPopularityBoosts,
+} from "./sponsored-venue-service";
 
-const SEARCH_RADIUS_METERS = 2_000;
+/**
+ * Radius expansion ladder used when the initial search returns too few safe
+ * candidates. Each tier is tried in order; generation stops at the first
+ * radius that yields enough safety-filtered venues to fill the complete swipe
+ * flow before AI curation proceeds.
+ *
+ * 2 km → 5 km → 10 km → 20 km
+ */
+const SEARCH_RADIUS_LADDER_METERS = [2_000, 5_000, 10_000, 20_000] as const;
+
+/**
+ * The swipe flow requires exactly VENUES_PER_ROUND venues per round for
+ * FINAL_ROUND rounds. Rounds with fewer venues can never be marked complete
+ * by round-manager (it checks venueIds.length === VENUES_PER_ROUND), so
+ * generation must not proceed unless the combined candidate pool (Places +
+ * live events) can fill every round.
+ */
+const MIN_CANDIDATES_TO_PROCEED = VENUES_PER_ROUND * FINAL_ROUND;
+
+/** Max venues per category in a single round (prevents restaurants from filling all 4 slots). */
+const MAX_PER_CATEGORY_PER_ROUND = 2;
+
+/**
+ * Picks `count` venues from a ranked list while enforcing category diversity.
+ *
+ * Takes candidates in rank order but caps each category at
+ * MAX_PER_CATEGORY_PER_ROUND. This prevents e.g. 4 restaurants appearing in
+ * round 1 when the user also selected Activity and Event.
+ *
+ * Falls back to any remaining venues if there aren't enough diverse ones.
+ */
+function pickDiverseRound(
+  ranked: readonly CuratedVenueCandidate[],
+  count: number,
+): readonly CuratedVenueCandidate[] {
+  const categoryCounts = new Map<Category, number>();
+  const picked: CuratedVenueCandidate[] = [];
+  const overflow: CuratedVenueCandidate[] = [];
+
+  for (const candidate of ranked) {
+    const current = categoryCounts.get(candidate.category) ?? 0;
+    if (current < MAX_PER_CATEGORY_PER_ROUND) {
+      picked.push(candidate);
+      categoryCounts.set(candidate.category, current + 1);
+    } else {
+      overflow.push(candidate);
+    }
+    if (picked.length === count) break;
+  }
+
+  // Fill remaining slots from overflow if diversity enforcement left gaps
+  for (const candidate of overflow) {
+    if (picked.length >= count) break;
+    picked.push(candidate);
+  }
+
+  return picked;
+}
 
 function budgetToMaxPrice(budget: BudgetLevel): number {
   if (budget === "BUDGET") return 1;
@@ -232,13 +294,29 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
     const categories = mergedCategories(preferences);
     const maxPrice = budgetToMaxPrice(stricterBudget(preferences));
 
-    const candidates = await searchNearbyWithCache(
-      midpoint,
-      SEARCH_RADIUS_METERS,
-      categories,
-      maxPrice
-    );
-    const placeCandidates = applySafetyFilter(candidates, categories);
+    // Search with radius expansion: start at 2 km and widen up to 20 km until
+    // we have enough safety-filtered Places candidates. The final minimum check
+    // happens after live events are merged, since events count toward the pool.
+    let placeCandidates: readonly PlaceCandidate[] = [];
+    let usedRadius: number = SEARCH_RADIUS_LADDER_METERS[0];
+    for (const radius of SEARCH_RADIUS_LADDER_METERS) {
+      usedRadius = radius;
+      const rawCandidates = await searchNearbyWithCache(
+        midpoint,
+        radius,
+        categories,
+        maxPrice
+      );
+      placeCandidates = applySafetyFilter(rawCandidates, categories);
+      if (placeCandidates.length >= MIN_CANDIDATES_TO_PROCEED) break;
+
+      console.info("[generateVenues] radius expansion triggered", {
+        sessionId,
+        radius,
+        safeCandidateCount: placeCandidates.length,
+        required: MIN_CANDIDATES_TO_PROCEED,
+      });
+    }
 
     const wantsLiveEvents = categories.some(
       (cat) => cat === "EVENT" || cat === "ACTIVITY",
@@ -248,10 +326,16 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
     // and the deny-listed type check is irrelevant since TM types are pre-scoped
     // to Arts & Theatre + Comedy at the API level.
     const liveEventCandidates = wantsLiveEvents
-      ? await fetchLiveEventCandidates(midpoint, SEARCH_RADIUS_METERS)
+      ? await fetchLiveEventCandidates(midpoint, usedRadius)
       : [];
 
     const safeCandidates = [...placeCandidates, ...liveEventCandidates];
+
+    if (safeCandidates.length < MIN_CANDIDATES_TO_PROCEED) {
+      throw new Error(
+        "Not enough venues found near your midpoint to fill the swipe flow. Try entering locations closer together or choosing different categories."
+      );
+    }
     const poolId = await createCandidatePool(sessionId, "initial_generation");
 
     await insertCandidatePoolItems(
@@ -280,12 +364,26 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
       "initial_pool_rank",
     );
 
+    // Fetch sponsored and popularity boosts once — non-critical, errors return empty map
+    const allPlaceIds = safeCandidates.map((c) => c.placeId);
+    const [sponsoredBoosts, popularityBoosts] = await Promise.all([
+      fetchActiveSponsoredBoosts(allPlaceIds),
+      fetchPopularityBoosts(allPlaceIds),
+    ]);
+
     const selectedRows: InsertVenueRow[] = [];
     let remaining = [...safeCandidates];
 
     for (const round of [1, 2, 3] as const) {
-      const curated = await scoreAndCurate(remaining, preferences, round, midpoint);
-      const roundPicks = curated.slice(0, 4);
+      const curated = await scoreAndCurate(
+        remaining,
+        preferences,
+        round,
+        midpoint,
+        sponsoredBoosts,
+        popularityBoosts,
+      );
+      const roundPicks = pickDiverseRound(curated, 4);
 
       roundPicks.forEach((venue, index) => {
         const distanceMeters = Math.round(

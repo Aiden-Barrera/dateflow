@@ -86,6 +86,11 @@ vi.mock("../event-enrichment-service", () => ({
     mockFetchLiveEventCandidates(...args),
 }));
 
+vi.mock("../sponsored-venue-service", () => ({
+  fetchActiveSponsoredBoosts: vi.fn().mockResolvedValue(new Map()),
+  fetchPopularityBoosts: vi.fn().mockResolvedValue(new Map()),
+}));
+
 const preferences: readonly [Preference, Preference] = [
   {
     id: "pref-a",
@@ -337,5 +342,53 @@ describe("generateVenues", () => {
     await generateVenues("session-1");
 
     expect(mockFetchLiveEventCandidates).not.toHaveBeenCalled();
+  });
+
+  it("expands the search radius when the first tier returns too few safe candidates", async () => {
+    const few = [makeCuratedVenue(1)]; // 1 < MIN_CANDIDATES_TO_PROCEED (12)
+    const enough = Array.from({ length: 12 }, (_, i) => makeCuratedVenue(i + 1));
+
+    // First call (2 km) → too few; second call (5 km) → enough
+    mockSearchNearbyWithCache
+      .mockResolvedValueOnce(few)
+      .mockResolvedValue(enough);
+
+    // Safety filter passes everything through
+    mockApplySafetyFilter.mockImplementation((candidates: unknown) => candidates);
+
+    await generateVenues("session-1");
+
+    expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      2000,
+      expect.anything(),
+      expect.anything()
+    );
+    expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      5000,
+      expect.anything(),
+      expect.anything()
+    );
+    // Should not expand further once we have enough
+    expect(mockSearchNearbyWithCache).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws and sets generation_failed when all radii return no safe candidates", async () => {
+    mockSearchNearbyWithCache.mockResolvedValue([]);
+    mockApplySafetyFilter.mockReturnValue([]);
+    mockFetchLiveEventCandidates.mockResolvedValue([]);
+
+    await expect(generateVenues("session-1")).rejects.toThrow(
+      "Not enough venues found near your midpoint"
+    );
+
+    // Should have tried all 4 radius tiers
+    expect(mockSearchNearbyWithCache).toHaveBeenCalledTimes(4);
+
+    // Final status update must be generation_failed (not ready_to_swipe)
+    expect(mockUpdate).toHaveBeenLastCalledWith({ status: "generation_failed" });
   });
 });
