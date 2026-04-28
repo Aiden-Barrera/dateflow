@@ -460,9 +460,6 @@ export function SwipeFlow({
 
     try {
       const swipeResult = await postSwipe(role, swipedVenue.id, liked);
-      if (advanceStrategy === "after_request_success") {
-        setIndex(swipedIndex + 1);
-      }
       if (demoMode) {
         const currentRoundSwipes = roundSwipesRef.current[round] ?? [];
         roundSwipesRef.current[round] = [
@@ -474,6 +471,10 @@ export function SwipeFlow({
       if (swipeResult.matched || swipeResult.sessionStatus === "matched") {
         router.push(`/plan/${sessionId}/results`);
         return;
+      }
+
+      if (advanceStrategy === "after_request_success") {
+        setIndex(swipedIndex + 1);
       }
 
       if (!hasNextVenue && swipeResult.roundComplete && swipeResult.currentRound < 3) {

@@ -222,6 +222,8 @@ export function VenueCardContent({
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [showHours, setShowHours] = useState(false);
   const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
+  const programmaticThumbnailScrollRef = useRef(false);
+  const thumbnailScrollFrameRef = useRef<number | null>(null);
   const slides = getVenueSlides(venue);
   const activeSlide = slides[activeSlideIndex] ?? slides[0] ?? null;
   const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
@@ -233,11 +235,16 @@ export function VenueCardContent({
 
   function moveToSlide(nextIndex: number) {
     if (slides.length <= 1) return;
+    programmaticThumbnailScrollRef.current = true;
     setActiveSlideIndex(clampSlideIndex(nextIndex, slides.length));
   }
 
   useEffect(() => {
-    if (!thumbnailStripRef.current || slides.length <= 1) {
+    if (
+      !programmaticThumbnailScrollRef.current ||
+      !thumbnailStripRef.current ||
+      slides.length <= 1
+    ) {
       return;
     }
 
@@ -250,7 +257,17 @@ export function VenueCardContent({
       block: "nearest",
       inline: "center",
     });
+
+    programmaticThumbnailScrollRef.current = false;
   }, [activeSlideIndex, slides.length]);
+
+  useEffect(() => {
+    return () => {
+      if (thumbnailScrollFrameRef.current !== null) {
+        cancelAnimationFrame(thumbnailScrollFrameRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="relative h-full overflow-hidden">
@@ -407,15 +424,28 @@ export function VenueCardContent({
               ref={thumbnailStripRef}
               className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
               onScroll={(event) => {
-                const nextIndex = getActivePhotoStripIndex(
-                  event.currentTarget.scrollLeft,
-                  event.currentTarget.clientWidth,
-                  slides.length,
-                );
+                if (programmaticThumbnailScrollRef.current) {
+                  return;
+                }
 
-                setActiveSlideIndex((currentIndex) =>
-                  currentIndex === nextIndex ? currentIndex : nextIndex,
-                );
+                if (thumbnailScrollFrameRef.current !== null) {
+                  cancelAnimationFrame(thumbnailScrollFrameRef.current);
+                }
+
+                const { currentTarget } = event;
+                thumbnailScrollFrameRef.current = requestAnimationFrame(() => {
+                  thumbnailScrollFrameRef.current = null;
+
+                  const nextIndex = getActivePhotoStripIndex(
+                    currentTarget.scrollLeft,
+                    currentTarget.clientWidth,
+                    slides.length,
+                  );
+
+                  setActiveSlideIndex((currentIndex) =>
+                    currentIndex === nextIndex ? currentIndex : nextIndex,
+                  );
+                });
               }}
             >
               {slides.map((slide, i) => (
