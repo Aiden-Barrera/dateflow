@@ -10,15 +10,23 @@ flowchart TD
     DS04["DS-04: Swipe & Match System<br/>(Depends on DS-03)"]
     DS05["DS-05: Post-Match Actions<br/>(Depends on DS-04)"]
     DS06["DS-06: Session History<br/>(Depends on DS-01)"]
+    DS07["DS-07: Monetization & Revenue Intelligence<br/>(Supplemental)"]
 
     DS01 --> DS02
     DS02 --> DS03
     DS03 --> DS04
     DS04 --> DS05
     DS01 --> DS06
+    DS01 --> DS07
+    DS02 --> DS07
+    DS03 --> DS07
+    DS04 --> DS07
+    DS05 --> DS07
+    DS06 --> DS07
 
     style DS01 fill:#2d6a4f,color:#fff
     style DS06 fill:#1b4332,color:#fff
+    style DS07 fill:#99582a,color:#fff
 ```
 
 ## Specifications
@@ -32,10 +40,11 @@ flowchart TD
 | [DS-04](./ds-04-swipe-match.md) | Swipe & Match System | Dependent | DS-03 | US-10, US-11, US-13 |
 | [DS-05](./ds-05-post-match-actions.md) | Post-Match Actions | Dependent | DS-04 | US-08, US-09 |
 | [DS-06](./ds-06-session-history.md) | Session History | Dependent | DS-01 | US-14 |
+| [DS-07](./ds-07-monetization-revenue-intelligence.md) | Monetization & Revenue Intelligence | Strategic / Supplemental | DS-01 through DS-06 | US-15, US-16, US-17, US-18 |
 
 ## Global Class Registry
 
-All 27 classes across all specs, tracked here to prevent cross-spec inconsistencies.
+All 34 classes across all specs, tracked here to prevent cross-spec inconsistencies.
 
 | Class | Spec | Type | Purpose |
 |---|---|---|---|
@@ -66,6 +75,13 @@ All 27 classes across all specs, tracked here to prevent cross-spec inconsistenc
 | Account | DS-06 | Entity | Lightweight user account |
 | AccountService | DS-06 | Service | Authentication and account management |
 | SessionHistoryService | DS-06 | Service | Past session retrieval for a user |
+| RevenueEvent | DS-07 | Entity | Normalized monetization, funnel, and guardrail event |
+| RevenueExperiment | DS-07 | Entity | Defines a monetization learning test and variants |
+| ExperimentAssignment | DS-07 | Entity | Stable assignment of a session to an experiment variant |
+| MonetizationStrategy | DS-07 | Value Object | Structured description of a revenue model being evaluated |
+| PricingIntent | DS-07 | Entity | Willingness-to-pay signal before or after billing exists |
+| SponsorLead | DS-07 | Entity | Manual venue-side monetization interest |
+| UnitEconomicsSnapshot | DS-07 | Derived View | Approximate revenue, cost, and gross margin per session |
 
 ## Global Session Status Machine
 
@@ -102,3 +118,7 @@ stateDiagram-v2
 | POST | `/api/auth/register` | DS-06 | Create a lightweight account |
 | POST | `/api/auth/login` | DS-06 | Authenticate and get session token |
 | GET | `/api/sessions/history` | DS-06 | List past sessions for authenticated user |
+| POST | `/api/revenue/events` | DS-07 | Record monetization, funnel, and trust guardrail events |
+| GET | `/api/revenue/experiment` | DS-07 | Return stable experiment assignment for a session |
+| POST | `/api/revenue/pricing-intents` | DS-07 | Record willingness-to-pay signals |
+| POST | `/api/revenue/sponsor-leads` | DS-07 | Capture venue sponsor pilot leads |
