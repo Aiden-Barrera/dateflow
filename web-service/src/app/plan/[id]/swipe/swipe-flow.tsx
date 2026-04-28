@@ -11,6 +11,7 @@ import type { Venue } from "../../../../lib/types/venue";
 import { SwipeDeckCard } from "./swipe-deck-card";
 import { SwipeCardSkeleton } from "./swipe-card-skeleton";
 import { FallbackEndingScreen } from "./fallback-ending-screen";
+import { getSwipeAdvanceStrategy } from "./swipe-advance";
 import {
   acceptFallbackDecision,
   getFallbackStartOverHref,
@@ -452,16 +453,16 @@ export function SwipeFlow({
     const swipedVenue = currentVenue;
     const swipedIndex = index;
     const hasNextVenue = swipedIndex < venues.length - 1;
+    const advanceStrategy = getSwipeAdvanceStrategy(hasNextVenue);
 
     setSubmitting(true);
     setToast(null);
 
-    if (hasNextVenue) {
-      setIndex(swipedIndex + 1);
-    }
-
     try {
       const swipeResult = await postSwipe(role, swipedVenue.id, liked);
+      if (advanceStrategy === "after_request_success") {
+        setIndex(swipedIndex + 1);
+      }
       if (demoMode) {
         const currentRoundSwipes = roundSwipesRef.current[round] ?? [];
         roundSwipesRef.current[round] = [
@@ -508,9 +509,6 @@ export function SwipeFlow({
         }
       }
     } catch (error) {
-      if (hasNextVenue) {
-        setIndex(swipedIndex);
-      }
       setToast(error instanceof Error ? error.message : "Failed to record swipe.");
       throw error instanceof Error ? error : new Error("Failed to record swipe.");
     } finally {
