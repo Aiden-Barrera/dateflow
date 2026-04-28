@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSpring, animated } from "@react-spring/web";
 import type { Venue } from "../../../../lib/types/venue";
+import { triggerHaptic } from "../../../../lib/haptics";
 import {
   isSwipeCommitted,
   computeSpringTarget,
@@ -62,17 +63,16 @@ export function SwipeCardCanvas({
   const pointerRef = useRef<PointerTracking | null>(null);
   const animatingSwipeRef = useRef<SwipeAnimation | null>(null);
   const [animatingSwipe, setAnimatingSwipe] = useState<SwipeAnimation | null>(null);
-  const [isSettled, setIsSettled] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   // ── Top card spring ───────────────────────────────────────────────────────
   const [cardSpring, cardApi] = useSpring(() => ({
     x: 0,
-    y: 28,
+    y: 16,
     rotation: 0,
-    opacity: 0.78,
-    scale: 0.965,
-    config: { tension: 280, friction: 26 },
+    opacity: 0,
+    scale: 0.96,
+    config: { tension: 300, friction: 28 },
   }));
 
   // ── Back-card springs (opacity 0 at rest → animate in as top card drags) ─
@@ -95,7 +95,6 @@ export function SwipeCardCanvas({
     let second: ReturnType<typeof requestAnimationFrame> | null = null;
     const first = requestAnimationFrame(() => {
       second = requestAnimationFrame(() => {
-        setIsSettled(true);
         cardApi.start({ x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 });
       });
     });
@@ -142,7 +141,7 @@ export function SwipeCardCanvas({
       card2Api.start({ y: 0, scale: 1, opacity: 1, config: { tension: 220, friction: 22 } });
       card3Api.start({ y: 20, scale: 0.96, opacity: 0.7, config: { tension: 180, friction: 22 } });
 
-      if (!prefersReducedMotion) window.navigator?.vibrate?.(12);
+      triggerHaptic(10, { prefersReducedMotion });
 
       try {
         await onSwipe(liked);
@@ -364,10 +363,12 @@ export function SwipeCardCanvas({
           x: cardSpring.x,
           y: cardSpring.y,
           rotate: cardSpring.rotation,
-          opacity: !isSettled ? 0.78 : cardSpring.opacity,
+          opacity: cardSpring.opacity,
           scale: cardSpring.scale,
-          filter: !isSettled ? "blur(6px)" : "none",
-          touchAction: "pan-y",
+          filter: "none",
+          touchAction: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
           willChange: "transform",
         }}
         tabIndex={0}

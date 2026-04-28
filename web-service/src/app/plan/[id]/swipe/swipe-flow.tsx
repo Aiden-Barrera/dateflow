@@ -9,6 +9,7 @@ import { createSessionStatusSync } from "../../../../lib/session-status-sync";
 import type { BudgetLevel, Category, Role } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
 import { SwipeDeckCard } from "./swipe-deck-card";
+import { SwipeCardSkeleton } from "./swipe-card-skeleton";
 import { FallbackEndingScreen } from "./fallback-ending-screen";
 import {
   acceptFallbackDecision,
@@ -598,14 +599,11 @@ export function SwipeFlow({
   if (status === "loading") {
     return (
       <SwipeShell creatorName={creatorName}>
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="max-w-sm text-center">
-            <p className="text-caption font-semibold uppercase tracking-[0.24em] text-secondary">
-              Swipe deck
-            </p>
-            <h1 className="mt-3 text-h1 font-semibold">Loading your venues</h1>
-            <p className="mt-3 text-body text-white/70">{statusMessage}</p>
-          </div>
+        <div className="mx-auto max-w-md">
+          <p className="mb-4 text-center text-caption font-semibold uppercase tracking-[0.24em] text-white/60">
+            {statusMessage}
+          </p>
+          <SwipeCardSkeleton />
         </div>
       </SwipeShell>
     );
@@ -712,7 +710,7 @@ export function SwipeFlow({
             onClick={() => {
               setShowDeckInfo((current) => !current);
             }}
-            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/70 shadow-sm transition-colors duration-200 hover:text-text"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/70 shadow-sm transition-colors duration-200 hover:text-text"
           >
             <InfoIcon />
           </button>
@@ -767,7 +765,7 @@ function SwipeShell({
   readonly creatorName: string;
 }) {
   return (
-    <main className="bg-shared-wine relative min-h-dvh overflow-hidden px-6 pb-10 pt-8 text-white sm:px-8">
+    <main className="bg-shared-wine relative min-h-dvh overflow-hidden px-6 pb-10 pt-8 text-white sm:px-8" style={{ overscrollBehaviorY: "contain" }}>
       <div
         className="pointer-events-none absolute -left-20 top-12 h-72 w-72 rounded-full blur-3xl"
         style={{ background: "var(--color-primary-muted)" }}

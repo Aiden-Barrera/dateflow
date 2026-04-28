@@ -1,0 +1,10 @@
+{
+  "name": "Dateflow",
+  "short_name": "Dateflow",
+  "description": "AI-powered first date planning. From 'we should hang out' to 'we have a plan' in under 2 minutes.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf6f0",
+  "theme_color": "#d03d6a",
+  "orientation": "portrait"
+}
