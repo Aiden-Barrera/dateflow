@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BudgetIcon } from "./budget-icon";
 import { CategoryIcon } from "./category-icon";
+import { resolveSubmittedLocation } from "../lib/location-resolution";
 import { getSupabaseClient } from "../lib/supabase";
 import {
   getPartnerPresenceChannelName,
@@ -132,30 +133,19 @@ export function HookScreen({
     // If the user typed a location instead of using GPS, geocode it now so we
     // always store real coordinates rather than a (0, 0) placeholder.
     let resolvedLocation: Location;
-    if (location !== null) {
-      resolvedLocation = location;
-    } else {
-      const trimmedLocation = locationLabel.trim();
-      setGeocoding(true);
-      try {
-        const response = await fetch(`/api/geocode?q=${encodeURIComponent(trimmedLocation)}`);
-        type GeocodeResult = { lat: number; lng: number; label: string; error?: string };
-        const data = (await response.json()) as GeocodeResult;
-
-        if (!response.ok || data.error) {
-          setError(data.error ?? "Location not found. Try a different city or zip code.");
-          setGeocoding(false);
-          return;
-        }
-
-        resolvedLocation = { lat: data.lat, lng: data.lng, label: data.label };
-      } catch {
-        setError("Couldn't look up your location. Check your connection and try again.");
-        setGeocoding(false);
-        return;
-      } finally {
-        setGeocoding(false);
-      }
+    setGeocoding(true);
+    try {
+      resolvedLocation = await resolveSubmittedLocation(location, locationLabel);
+    } catch (resolveError) {
+      setError(
+        resolveError instanceof Error
+          ? resolveError.message
+          : "Couldn't look up your location. Check your connection and try again.",
+      );
+      setGeocoding(false);
+      return;
+    } finally {
+      setGeocoding(false);
     }
 
     onContinue({

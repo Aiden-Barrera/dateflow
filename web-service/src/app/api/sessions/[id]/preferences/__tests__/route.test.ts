@@ -310,6 +310,18 @@ describe("POST /api/sessions/[id]/preferences", () => {
     expect(response.status).toBe(400);
   });
 
+  it("returns 400 when location is the unresolved (0, 0) placeholder", async () => {
+    const response = await POST(
+      makePostRequest({
+        ...validBody,
+        location: { lat: 0, lng: 0, label: "Brooklyn" },
+      }),
+      makeParams()
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("returns 400 when location label is empty", async () => {
     const response = await POST(
       makePostRequest({

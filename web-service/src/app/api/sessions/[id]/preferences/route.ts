@@ -142,6 +142,13 @@ function validateBody(body: unknown): ValidationResult {
     return { valid: false, error: "location.lng must be a number between -180 and 180" };
   }
 
+  if (lat === 0 && lng === 0) {
+    return {
+      valid: false,
+      error: "location must resolve to a real city, neighborhood, or zip code",
+    };
+  }
+
   if (typeof label !== "string" || label.trim().length === 0) {
     return { valid: false, error: "location.label is required" };
   }
