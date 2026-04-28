@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { ResultScreen } from "../result-screen";
+import { ResultScreen, buildGoogleMapsEmbedUrl } from "../result-screen";
 
 vi.mock("next/image", () => ({
   default: (props: Record<string, unknown>) => {
@@ -25,6 +25,37 @@ vi.mock("../../../../../../components/auth-sheet", () => ({
 }));
 
 describe("ResultScreen", () => {
+  it("builds a directions embed URL when an embed key is available", () => {
+    const url = buildGoogleMapsEmbedUrl(
+      {
+        name: "Cafe Blue",
+        address: "12 Main St, Austin, TX",
+        lat: 30.26,
+        lng: -97.74,
+      },
+      "embed-key",
+    );
+
+    expect(url).toContain("https://www.google.com/maps/embed/v1/place");
+    expect(url).toContain("key=embed-key");
+    expect(url).toContain("center=30.26%2C-97.74");
+    expect(url).toContain("q=Cafe+Blue+12+Main+St%2C+Austin%2C+TX");
+  });
+
+  it("returns null when no embed key is configured", () => {
+    expect(
+      buildGoogleMapsEmbedUrl(
+        {
+          name: "Cafe Blue",
+          address: "12 Main St, Austin, TX",
+          lat: 30.26,
+          lng: -97.74,
+        },
+        "",
+      ),
+    ).toBeNull();
+  });
+
   it("renders a multi-photo filmstrip when the matched venue has more than one image", () => {
     const html = renderToStaticMarkup(
       <ResultScreen

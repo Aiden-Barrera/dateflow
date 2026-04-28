@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CategoryIcon } from "../../../../components/category-icon";
 import { PriceBadge } from "../../../../components/price-badge";
 import type { Category } from "../../../../lib/types/preference";
@@ -51,6 +51,24 @@ export function clampSlideIndex(index: number, totalSlides: number): number {
   if (index < 0) return totalSlides - 1;
   if (index >= totalSlides) return 0;
   return index;
+}
+
+const PHOTO_THUMBNAIL_WIDTH_PX = 96;
+const PHOTO_THUMBNAIL_GAP_PX = 12;
+
+export function getActivePhotoStripIndex(
+  scrollLeft: number,
+  _clientWidth: number,
+  totalSlides: number,
+): number {
+  if (totalSlides <= 1) {
+    return 0;
+  }
+
+  const stride = PHOTO_THUMBNAIL_WIDTH_PX + PHOTO_THUMBNAIL_GAP_PX;
+  const leadingIndex = Math.floor(Math.max(scrollLeft, 0) / stride);
+
+  return Math.min(Math.max(leadingIndex, 0), totalSlides - 1);
 }
 
 const CATEGORY_LABELS: Record<Category, string> = {
@@ -203,6 +221,9 @@ export function VenueCardContent({
 }: VenueCardContentProps) {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [showHours, setShowHours] = useState(false);
+  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
+  const programmaticThumbnailScrollRef = useRef(false);
+  const thumbnailScrollFrameRef = useRef<number | null>(null);
   const slides = getVenueSlides(venue);
   const activeSlide = slides[activeSlideIndex] ?? slides[0] ?? null;
   const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
@@ -214,8 +235,39 @@ export function VenueCardContent({
 
   function moveToSlide(nextIndex: number) {
     if (slides.length <= 1) return;
+    programmaticThumbnailScrollRef.current = true;
     setActiveSlideIndex(clampSlideIndex(nextIndex, slides.length));
   }
+
+  useEffect(() => {
+    if (
+      !programmaticThumbnailScrollRef.current ||
+      !thumbnailStripRef.current ||
+      slides.length <= 1
+    ) {
+      return;
+    }
+
+    const activeThumbnail = thumbnailStripRef.current.children[
+      activeSlideIndex
+    ] as HTMLElement | undefined;
+
+    activeThumbnail?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+
+    programmaticThumbnailScrollRef.current = false;
+  }, [activeSlideIndex, slides.length]);
+
+  useEffect(() => {
+    return () => {
+      if (thumbnailScrollFrameRef.current !== null) {
+        cancelAnimationFrame(thumbnailScrollFrameRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="relative h-full overflow-hidden">
@@ -368,7 +420,34 @@ export function VenueCardContent({
                 ))}
               </div>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div
+              ref={thumbnailStripRef}
+              className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              onScroll={(event) => {
+                if (programmaticThumbnailScrollRef.current) {
+                  return;
+                }
+
+                if (thumbnailScrollFrameRef.current !== null) {
+                  cancelAnimationFrame(thumbnailScrollFrameRef.current);
+                }
+
+                const { currentTarget } = event;
+                thumbnailScrollFrameRef.current = requestAnimationFrame(() => {
+                  thumbnailScrollFrameRef.current = null;
+
+                  const nextIndex = getActivePhotoStripIndex(
+                    currentTarget.scrollLeft,
+                    currentTarget.clientWidth,
+                    slides.length,
+                  );
+
+                  setActiveSlideIndex((currentIndex) =>
+                    currentIndex === nextIndex ? currentIndex : nextIndex,
+                  );
+                });
+              }}
+            >
               {slides.map((slide, i) => (
                 <button
                   type="button"
@@ -630,4 +709,3 @@ function ClockIcon() {
     </svg>
   );
 }
-

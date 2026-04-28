@@ -46,6 +46,29 @@ const CATEGORY_LABELS: Record<Category, string> = {
   EVENT: "Event",
 };
 
+type MappableVenue = Pick<
+  MatchResult["venue"],
+  "name" | "address" | "lat" | "lng"
+>;
+
+export function buildGoogleMapsEmbedUrl(
+  venue: MappableVenue,
+  apiKey: string,
+): string | null {
+  if (!apiKey) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    key: apiKey,
+    q: `${venue.name} ${venue.address}`,
+    center: `${venue.lat},${venue.lng}`,
+    zoom: "15",
+  });
+
+  return `https://www.google.com/maps/embed/v1/place?${params.toString()}`;
+}
+
 export function ResultScreen({
   matchedWithName,
   matchResult,
@@ -58,6 +81,10 @@ export function ResultScreen({
   const galleryImages = getVenueGalleryImages(venue);
   const heroImage = galleryImages[0] ?? null;
   const venueTypeLabel = getVenueTypeLabel(venue);
+  const embedMapUrl = buildGoogleMapsEmbedUrl(
+    venue,
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY ?? "",
+  );
   const [directionsUrl, setDirectionsUrl] = useState(() =>
     getResultDirectionsHref(venue, ""),
   );
@@ -307,7 +334,7 @@ export function ResultScreen({
               </div>
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 space-y-4">
               <a
                 href={directionsUrl}
                 target="_blank"
@@ -328,6 +355,31 @@ export function ResultScreen({
                 calendarHref={`/api/sessions/${matchResult.sessionId}/calendar`}
               />
             </div>
+
+            {embedMapUrl ? (
+              <section className="mt-6" aria-label="Venue map">
+                <div className="overflow-hidden rounded-[1.5rem] border border-white/12 bg-white/[0.06] shadow-[0_24px_56px_rgba(0,0,0,0.35)] backdrop-blur-md">
+                  <div className="flex items-center justify-between gap-3 border-b border-white/10 px-5 py-4">
+                    <p className="text-caption font-semibold uppercase tracking-[0.2em] text-white/65">
+                      Venue map
+                    </p>
+                    <span className="text-caption text-white/65">
+                      Opens full directions above
+                    </span>
+                  </div>
+                  <div className="aspect-[4/3] min-h-[260px] w-full bg-white/[0.04]">
+                    <iframe
+                      title={`${venue.name} map`}
+                      src={embedMapUrl}
+                      className="h-full w-full border-0"
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              </section>
+            ) : null}
 
             {galleryImages.length > 1 ? (
               <section className="mt-6" aria-label="Photo gallery">

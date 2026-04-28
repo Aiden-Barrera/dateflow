@@ -15,14 +15,15 @@
 - Session creation and preference capture are implemented
 - Venue generation is implemented, including Google Places search, midpoint scoring, caching, and fallback ranking
 - Swipe rounds and match detection are implemented
-- Match result page and calendar export are implemented
-- Fallback decision API exists, but the no-match / fallback decision UI is still incomplete
-- Session history and auth are still not built
+- Match result page, calendar export, and date-time proposal coordination are implemented
+- Fallback decision API and dedicated fallback swipe states exist, but the no-match flow is still being polished
+- Auth and session history are partially implemented, including `/history` and auth/session-linking routes
 
 **Most likely current work**
 - DS-04 and DS-05 polish
-- Fallback / no-match UX completion
-- DS-06 account and history work
+- Fallback / no-match UX polish
+- DS-06 account and history polish
+- Post-match date-time coordination polish
 
 ---
 
@@ -162,9 +163,9 @@ dateflow/
 | **DS-03 Venue Generation** | ✅ Built | Midpoint, Google Places, caching, AI/deterministic ranking, candidate pools |
 | **DS-03a Candidate Pool Regeneration** | ✅ Built | Retry and regeneration support exists |
 | **DS-04 Swipe & Match** | ✅ Built | Round-based swiping, match detection, status sync |
-| **DS-05 Post-Match** | ✅ Partially built | Match result UI and calendar export exist |
+| **DS-05 Post-Match** | ✅ Partially built | Match result UI, calendar export, and date-time proposal flow exist |
 | **Fallback / No-Match UX** | ⚠️ Partial | Backend is present, final user-facing no-match flow is not complete |
-| **DS-06 Session History / Accounts** | ⬜ Not started | No auth or session history UI yet |
+| **DS-06 Session History / Accounts** | ⚠️ Partial | Auth routes, account linking, and `/history` UI exist, but ownership enforcement and broader polish are still in progress |
 
 ---
 
@@ -205,7 +206,7 @@ dateflow/
 ### Result
 
 - Match reveal lives under `/plan/[id]/results`
-- Directions and calendar export are supported
+- Directions, calendar export, and date-time proposal coordination are supported
 
 ---
 
@@ -260,6 +261,8 @@ Current schema is no longer just `sessions` and `preferences`.
 - `venues`
 - `swipes`
 - `candidate_pools`
+- `accounts`
+- `session_accounts`
 
 ### Migration order
 
@@ -274,6 +277,12 @@ Current schema is no longer just `sessions` and `preferences`.
 9. `20260414154220_secure_accounts_and_session_accounts.sql`
 10. `20260421151535_enrich_venues.sql`
 11. `20260421202552_add_retry_coordination_fields.sql`
+12. `20260423201000_add_retry_preferences_to_sessions.sql`
+13. `20260424232519_add_schedule_fields_to_preferences.sql`
+14. `20260425050000_add_live_event_fields_to_venues.sql`
+15. `20260425060000_add_venue_source_type_constraints.sql`
+16. `20260425070000_add_confirmed_date_time_to_sessions.sql`
+17. `20260426120000_add_accept_coordination_to_sessions.sql`
 
 ---
 
@@ -289,6 +298,9 @@ Current schema is no longer just `sessions` and `preferences`.
 - [`web-service/src/app/plan/[id]/swipe/swipe-flow.tsx`](web-service/src/app/plan/[id]/swipe/swipe-flow.tsx)
 - [`web-service/src/app/plan/[id]/swipe/swipe-deck-card.tsx`](web-service/src/app/plan/[id]/swipe/swipe-deck-card.tsx)
 - [`web-service/src/app/plan/[id]/results/result-screen.tsx`](web-service/src/app/plan/[id]/results/result-screen.tsx)
+- [`web-service/src/app/plan/[id]/results/date-time-planner.tsx`](web-service/src/app/plan/[id]/results/date-time-planner.tsx)
+- [`web-service/src/app/history/page.tsx`](web-service/src/app/history/page.tsx)
+- [`web-service/src/components/auth-sheet.tsx`](web-service/src/components/auth-sheet.tsx)
 
 ### Core services
 
@@ -301,6 +313,9 @@ Current schema is no longer just `sessions` and `preferences`.
 - [`web-service/src/lib/services/fallback-decision-service.ts`](web-service/src/lib/services/fallback-decision-service.ts)
 - [`web-service/src/lib/services/result-service.ts`](web-service/src/lib/services/result-service.ts)
 - [`web-service/src/lib/services/calendar-export-service.ts`](web-service/src/lib/services/calendar-export-service.ts)
+- [`web-service/src/lib/services/date-proposal-service.ts`](web-service/src/lib/services/date-proposal-service.ts)
+- [`web-service/src/lib/services/account-service.ts`](web-service/src/lib/services/account-service.ts)
+- [`web-service/src/lib/services/session-history-service.ts`](web-service/src/lib/services/session-history-service.ts)
 
 ### External integrations
 
@@ -366,6 +381,7 @@ Notes:
 cd web-service
 bun install
 bun run dev
+bun run start
 bun run test
 bun run lint
 bun run build
@@ -410,8 +426,8 @@ bun run test -- --watch
 
 ## Known Gaps
 
-- No user-facing fallback / no-match screen yet
-- No auth, accounts, or session history
+- Fallback / no-match flow is present but still incomplete around final UX polish
+- Auth and session history are present but still incomplete, and some routes still carry ownership-enforcement TODOs
 - Some docs in `README.md` and older planning notes still describe an earlier implementation stage
 - `next.config.ts` is intentionally minimal right now because current external `Image` usage is `unoptimized`
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSpring, animated } from "@react-spring/web";
 import type { Venue } from "../../../../lib/types/venue";
 import { triggerHaptic } from "../../../../lib/haptics";
@@ -62,7 +62,16 @@ export function SwipeCardCanvas({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const pointerRef = useRef<PointerTracking | null>(null);
   const animatingSwipeRef = useRef<SwipeAnimation | null>(null);
-  const [animatingSwipe, setAnimatingSwipe] = useState<SwipeAnimation | null>(null);
+
+  // The animation state is tagged with the venue id it belongs to.  When the
+  // card advances to the next venue (no remount, key={round}), the venue.id
+  // changes and animatingSwipe automatically resolves to null — overlay badges
+  // hide themselves without needing setState inside any effect.
+  type ActiveSwipeAnimation = SwipeAnimation & { readonly venueId: string };
+  const [swipeAnimation, setSwipeAnimation] = useState<ActiveSwipeAnimation | null>(null);
+  const animatingSwipe = swipeAnimation?.venueId === venue.id ? swipeAnimation : null;
+  const isAnimating = Boolean(animatingSwipe);
+
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   // ── Top card spring ───────────────────────────────────────────────────────
@@ -90,7 +99,11 @@ export function SwipeCardCanvas({
     config: { tension: 180, friction: 24 },
   }));
 
-  // Settle animation on mount
+  // Track the previous venue id so we can distinguish initial mount from a
+  // within-round card advance (when key={round} keeps this component alive).
+  const prevVenueIdRef = useRef<string | null>(null);
+
+  // Settle animation on mount (initial card load for the round)
   useEffect(() => {
     let second: ReturnType<typeof requestAnimationFrame> | null = null;
     const first = requestAnimationFrame(() => {
@@ -103,6 +116,43 @@ export function SwipeCardCanvas({
       if (second !== null) cancelAnimationFrame(second);
     };
   }, [cardApi]);
+
+  // When the venue advances within the same round (no remount), the card 2
+  // preview was already animated to opacity 1 / y 0 by the swipe gesture.
+  // Snap the top-card spring to that settled position immediately so the user
+  // sees no blank flash, then reset the back-card springs to their resting
+  // positions ready for the next drag interaction.
+  //
+  // useLayoutEffect is intentional: we synchronously correct spring state
+  // before the browser paints the new venue, so there is never a frame at
+  // which the card appears in the wrong position or opacity.
+  useLayoutEffect(() => {
+    if (prevVenueIdRef.current === null) {
+      // First render — mount effect above handles the entrance animation.
+      prevVenueIdRef.current = venue.id;
+      return;
+    }
+    if (prevVenueIdRef.current === venue.id) {
+      // Same venue (StrictMode double-fire guard) — nothing to do.
+      return;
+    }
+    prevVenueIdRef.current = venue.id;
+
+    // Card advanced in-place — clear stale gesture/animation state.
+    // (animatingSwipe resolves to null automatically via venue-id mismatch —
+    //  no setSwipeAnimation call needed here.)
+    animatingSwipeRef.current = null;
+    pointerRef.current = null;
+
+    // Immediately place the top card at the fully-settled position.
+    // Card 2 was already at y:0, scale:1, opacity:1 from the swipe animation,
+    // so snapping here means the user sees no blank frame.
+    cardApi.start({ x: 0, y: 0, rotation: 0, opacity: 1, scale: 1, immediate: true });
+
+    // Reset back-card springs so the next drag starts clean.
+    card2Api.start({ y: 20, scale: 0.96, opacity: 0, immediate: true });
+    card3Api.start({ y: 36, scale: 0.93, opacity: 0, immediate: true });
+  }, [venue.id, cardApi, card2Api, card3Api]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -125,7 +175,7 @@ export function SwipeCardCanvas({
         velocityX: ptr?.velocityX ?? 0,
       };
       animatingSwipeRef.current = anim;
-      setAnimatingSwipe(anim);
+      setSwipeAnimation({ ...anim, venueId: venue.id });
       pointerRef.current = null;
 
       const flyTarget = computeSpringTarget(null, anim, prefersReducedMotion);
@@ -147,13 +197,13 @@ export function SwipeCardCanvas({
         await onSwipe(liked);
       } catch {
         animatingSwipeRef.current = null;
-        setAnimatingSwipe(null);
+        setSwipeAnimation(null);
         cardApi.start({ x: 0, y: 0, rotation: 0, opacity: 1, scale: 1 });
         card2Api.start({ y: 20, scale: 0.96, opacity: 0 });
         card3Api.start({ y: 36, scale: 0.93, opacity: 0 });
       }
     },
-    [cardApi, card2Api, card3Api, onSwipe, prefersReducedMotion, submitting],
+    [cardApi, card2Api, card3Api, onSwipe, prefersReducedMotion, submitting, venue.id],
   );
 
   // ── Pointer handlers (NO React state — zero re-renders during drag) ───────
@@ -263,8 +313,6 @@ export function SwipeCardCanvas({
       card3Api.start({ y: 36, scale: 0.93, opacity: 0 });
     }
   }
-
-  const isAnimating = Boolean(animatingSwipe);
 
   // ── Animated overlay values derived from spring (no React state) ──────────
   // These use @react-spring/web's .to() — they update the DOM directly,
@@ -383,8 +431,10 @@ export function SwipeCardCanvas({
           if (event.key === "ArrowRight") { event.preventDefault(); void triggerSwipe(true); }
         }}
       >
-        {/* Venue content — no drag props, pure presentational */}
+        {/* Venue content — keyed by venue id so internal state (photo index,
+            hours toggle) resets when the card advances within the same round. */}
         <VenueCardContent
+          key={venue.id}
           venue={venue}
           cardIndex={cardIndex}
           totalCards={totalCards}
