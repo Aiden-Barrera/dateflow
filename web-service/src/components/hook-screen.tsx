@@ -142,7 +142,6 @@ export function HookScreen({
           ? resolveError.message
           : "Couldn't look up your location. Check your connection and try again.",
       );
-      setGeocoding(false);
       return;
     } finally {
       setGeocoding(false);

@@ -310,6 +310,30 @@ describe("POST /api/sessions/[id]/preferences", () => {
     expect(response.status).toBe(400);
   });
 
+  it("returns 400 when lat is NaN", async () => {
+    const response = await POST(
+      makePostRequest({
+        ...validBody,
+        location: { lat: Number.NaN, lng: -97.7431, label: "Nowhere" },
+      }),
+      makeParams()
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 when lng is infinite", async () => {
+    const response = await POST(
+      makePostRequest({
+        ...validBody,
+        location: { lat: 30, lng: Number.POSITIVE_INFINITY, label: "Nowhere" },
+      }),
+      makeParams()
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("returns 400 when location is the unresolved (0, 0) placeholder", async () => {
     const response = await POST(
       makePostRequest({

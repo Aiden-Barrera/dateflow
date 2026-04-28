@@ -22,12 +22,26 @@ export async function resolveSubmittedLocation(
     throw new Error("Location is required.");
   }
 
-  const response = await fetchImpl(`/api/geocode?q=${encodeURIComponent(trimmedLocation)}`);
-  const data = (await response.json()) as GeocodeResult;
+  try {
+    const response = await fetchImpl(`/api/geocode?q=${encodeURIComponent(trimmedLocation)}`);
+    const data = (await response.json()) as GeocodeResult;
 
-  if (!response.ok || data.error) {
-    throw new Error(data.error ?? "Location not found. Try a different city or zip code.");
+    if (!response.ok || data.error) {
+      throw new Error(data.error ?? "Location not found. Try a different city or zip code.");
+    }
+
+    return { lat: data.lat, lng: data.lng, label: data.label };
+  } catch (error) {
+    if (error instanceof Error && error.message.trim().length > 0) {
+      const normalized = error.message.toLowerCase();
+      if (
+        normalized.includes("location not found") ||
+        normalized.includes("try a different city or zip code")
+      ) {
+        throw error;
+      }
+    }
+
+    throw new Error("Couldn't look up your location. Check your connection and try again.");
   }
-
-  return { lat: data.lat, lng: data.lng, label: data.label };
 }

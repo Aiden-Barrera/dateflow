@@ -56,4 +56,25 @@ describe("resolveSubmittedLocation", () => {
       resolveSubmittedLocation(null, "not-a-real-place", fetchSpy as typeof fetch),
     ).rejects.toThrow(/location not found/i);
   });
+
+  it("normalizes low-level fetch failures into a user-facing error", async () => {
+    const fetchSpy = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(
+      resolveSubmittedLocation(null, "07643", fetchSpy as typeof fetch),
+    ).rejects.toThrow("Couldn't look up your location. Check your connection and try again.");
+  });
+
+  it("normalizes malformed geocode payload failures into a user-facing error", async () => {
+    const fetchSpy = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => {
+        throw new SyntaxError("Unexpected end of JSON input");
+      },
+    });
+
+    await expect(
+      resolveSubmittedLocation(null, "07643", fetchSpy as typeof fetch),
+    ).rejects.toThrow("Couldn't look up your location. Check your connection and try again.");
+  });
 });
