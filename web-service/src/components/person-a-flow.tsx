@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "./button";
 import { BudgetIcon } from "./budget-icon";
 import { CategoryIcon } from "./category-icon";
+import { resolveSubmittedLocation } from "../lib/location-resolution";
 import { createSessionStatusSync } from "../lib/session-status-sync";
 import { WaitingForPartnerScreen } from "./waiting-for-partner-screen";
 import { LoadingScreen } from "./loading-screen";
@@ -72,6 +73,7 @@ export function PersonAFlow() {
   const [createdSessionStatus, setCreatedSessionStatus] =
     useState<InviteReadySessionState>("pending_b");
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [geocoding, setGeocoding] = useState(false);
 
   const canSubmit =
     name.trim().length > 0 &&
@@ -130,15 +132,10 @@ export function PersonAFlow() {
     setSubmitting(true);
     setError(null);
 
-    const resolvedLocation =
-      location ??
-      ({
-        lat: 0,
-        lng: 0,
-        label: locationLabel.trim(),
-      } satisfies Location);
-
     try {
+      setGeocoding(true);
+      const resolvedLocation = await resolveSubmittedLocation(location, locationLabel);
+
       const sessionResponse = await fetch("/api/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,6 +182,7 @@ export function PersonAFlow() {
           : "Something went wrong. Please try again.",
       );
     } finally {
+      setGeocoding(false);
       setSubmitting(false);
     }
   }
@@ -408,6 +406,9 @@ export function PersonAFlow() {
         </div>
 
         {error ? <p className="mt-4 text-body text-error">{error}</p> : null}
+        {!error && geocoding ? (
+          <p className="mt-4 text-body text-white/65">Resolving your city or zip code…</p>
+        ) : null}
 
         <div className="mt-6">
           <Button onClick={handleCreateSession} disabled={!canSubmit} loading={submitting}>

@@ -134,12 +134,19 @@ function validateBody(body: unknown): ValidationResult {
 
   const { lat, lng, label } = location as Record<string, unknown>;
 
-  if (typeof lat !== "number" || lat < -90 || lat > 90) {
+  if (typeof lat !== "number" || !Number.isFinite(lat) || lat < -90 || lat > 90) {
     return { valid: false, error: "location.lat must be a number between -90 and 90" };
   }
 
-  if (typeof lng !== "number" || lng < -180 || lng > 180) {
+  if (typeof lng !== "number" || !Number.isFinite(lng) || lng < -180 || lng > 180) {
     return { valid: false, error: "location.lng must be a number between -180 and 180" };
+  }
+
+  if (lat === 0 && lng === 0) {
+    return {
+      valid: false,
+      error: "location must resolve to a real city, neighborhood, or zip code",
+    };
   }
 
   if (typeof label !== "string" || label.trim().length === 0) {
