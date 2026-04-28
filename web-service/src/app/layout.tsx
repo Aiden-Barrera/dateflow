@@ -32,6 +32,15 @@ export const metadata: Metadata = {
   title: "Dateflow",
   description:
     "AI-powered first date planning. From 'we should hang out' to 'we have a plan' in under 2 minutes.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "Dateflow",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({

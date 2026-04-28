@@ -128,6 +128,7 @@ export function PreviewVenueCard({
             sizes="(max-width: 768px) 100vw, 480px"
             className="object-cover opacity-82"
             unoptimized
+            onContextMenu={(e) => e.preventDefault()}
           />
         ) : (
           <>
@@ -229,6 +230,7 @@ export function VenueCardContent({
             loading="eager"
             className="object-cover"
             unoptimized
+            onContextMenu={(e) => e.preventDefault()}
           />
         ) : (
           <div className="relative flex h-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.92),_transparent_42%),linear-gradient(135deg,var(--color-secondary),var(--color-primary))] p-6">
@@ -288,7 +290,7 @@ export function VenueCardContent({
       </div>
 
       {/* Info panel */}
-      <div className="space-y-4 p-6">
+      <div className="space-y-4 p-6" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
         <div className="rounded-[1.5rem] border border-[rgba(208,61,106,0.18)] bg-[rgba(208,61,106,0.05)] p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 space-y-3">
@@ -386,6 +388,7 @@ export function VenueCardContent({
                     sizes="96px"
                     className="object-cover"
                     unoptimized
+                    onContextMenu={(e) => e.preventDefault()}
                   />
                 </button>
               ))}
@@ -456,7 +459,7 @@ export function VenueCardContent({
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
               onPointerDown={(e) => e.stopPropagation()}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#d9c7b5] bg-white py-2.5 text-caption font-medium text-[#6a4a3a] transition-colors hover:bg-[#f5ebe3]"
+              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-[#d9c7b5] bg-white py-2.5 text-caption font-medium text-[#6a4a3a] transition-colors hover:bg-[#f5ebe3]"
             >
               <MapPinIcon />
               Maps
@@ -468,7 +471,7 @@ export function VenueCardContent({
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[#d9c7b5] bg-white py-2.5 text-caption font-medium text-[#6a4a3a] transition-colors hover:bg-[#f5ebe3]"
+                className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-[#d9c7b5] bg-white py-2.5 text-caption font-medium text-[#6a4a3a] transition-colors hover:bg-[#f5ebe3]"
               >
                 <GlobeIcon />
                 Website
