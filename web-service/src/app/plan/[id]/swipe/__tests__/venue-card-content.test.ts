@@ -4,7 +4,8 @@ import {
   formatDistance,
   getAgeRestrictionLabel,
   buildSwipeCardAriaLabel,
-  getActivePhotoStripIndex,
+  getWrappedSlideIndex,
+  getThumbnailStripScrollLeft,
 } from "../venue-card-content";
 
 describe("formatRatingWithCount", () => {
@@ -84,17 +85,22 @@ describe("formatDistance", () => {
   });
 });
 
-describe("getActivePhotoStripIndex", () => {
-  it("keeps the first photo active at the start of the strip", () => {
-    expect(getActivePhotoStripIndex(0, 336, 10)).toBe(0);
+describe("getWrappedSlideIndex", () => {
+  it("wraps to the last photo when moving backward from the start", () => {
+    expect(getWrappedSlideIndex(-1, 4)).toBe(3);
   });
 
-  it("advances the active photo as the thumbnail rail scrolls right", () => {
-    expect(getActivePhotoStripIndex(108, 336, 10)).toBe(1);
-    expect(getActivePhotoStripIndex(648, 336, 10)).toBe(6);
+  it("wraps to the first photo when moving forward from the end", () => {
+    expect(getWrappedSlideIndex(4, 4)).toBe(0);
+  });
+});
+
+describe("getThumbnailStripScrollLeft", () => {
+  it("keeps the first thumbnail from trying to scroll past the start", () => {
+    expect(getThumbnailStripScrollLeft(0, 336, 10)).toBe(0);
   });
 
-  it("clamps to the final photo near the end of the strip", () => {
-    expect(getActivePhotoStripIndex(9999, 336, 10)).toBe(9);
+  it("centers a middle thumbnail without vertical scroll behavior", () => {
+    expect(getThumbnailStripScrollLeft(4, 336, 10)).toBe(312);
   });
 });

@@ -414,7 +414,7 @@ export function SwipeCardCanvas({
           opacity: cardSpring.opacity,
           scale: cardSpring.scale,
           filter: "none",
-          touchAction: "none",
+          touchAction: "pan-y",
           userSelect: "none",
           WebkitUserSelect: "none",
           willChange: "transform",
