@@ -739,7 +739,7 @@ export function SwipeFlow({
         </div>
 
         <SwipeDeckCard
-          key={currentVenue.id}
+          key={round}
           venue={currentVenue}
           nextVenue={nextVenue}
           cardIndex={index + 1}
