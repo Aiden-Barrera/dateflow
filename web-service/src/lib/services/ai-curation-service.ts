@@ -64,6 +64,11 @@ type AiProviderCallResult = {
   };
 };
 
+type AiUsageReporter = (usage: {
+  readonly inputTokens: number | null;
+  readonly outputTokens: number | null;
+}) => void;
+
 function summarizeAiAdjustments(
   finalists: readonly CuratedVenueCandidate[],
   adjustments: readonly AiVenueAdjustment[],
@@ -624,6 +629,7 @@ export async function scoreAndCurate(
   midpoint: Location,
   sponsoredBoosts: ReadonlyMap<string, number> = new Map(),
   popularityBoosts: ReadonlyMap<string, number> = new Map(),
+  onUsage?: AiUsageReporter,
 ): Promise<readonly CuratedVenueCandidate[]> {
   const deterministicRanking = buildDeterministicRanking(
     candidates,
@@ -682,6 +688,7 @@ export async function scoreAndCurate(
         usage: result.usage,
         adjustments: summarizeAiAdjustments(finalists, result.adjustments),
       });
+      onUsage?.(result.usage);
 
       return mergeAiAdjustments(deterministicRanking, result.adjustments);
     }

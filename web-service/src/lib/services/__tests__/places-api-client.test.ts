@@ -125,6 +125,14 @@ describe("places-api-client", () => {
         "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200"
       );
     });
+
+    it("adds the sessionId query when photo cost attribution is needed", () => {
+      expect(
+        buildGooglePlacePhotoUrl("places/ChIJ_abc123/photos/ref123", "session-1")
+      ).toBe(
+        "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200&sessionId=session-1"
+      );
+    });
   });
 
   // ------------------------------------------------------------------

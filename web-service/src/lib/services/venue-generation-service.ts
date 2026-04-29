@@ -11,6 +11,7 @@ import { buildWhyPicked } from "./venue-why-picked";
 import { searchNearbyWithCache } from "./places-api-cached";
 import {
   buildGooglePlacePhotoUrl,
+  buildGooglePlacePhotoUrls,
   mapGoogleTypeToCategory,
 } from "./places-api-client";
 import { applySafetyFilter } from "./safety-filter";
@@ -21,6 +22,7 @@ import {
   fetchActiveSponsoredBoosts,
   fetchPopularityBoosts,
 } from "./sponsored-venue-service";
+import { recordAiUsage } from "./unit-economics-service";
 
 /**
  * Radius expansion ladder used when the initial search returns too few safe
@@ -326,7 +328,8 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         midpoint,
         radius,
         categories,
-        maxPrice
+        maxPrice,
+        sessionId,
       );
       placeCandidates = applySafetyFilter(rawCandidates, categories);
       if (placeCandidates.length >= MIN_CANDIDATES_TO_PROCEED) break;
@@ -346,6 +349,7 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           USER_LOCATION_FALLBACK_RADIUS_METERS,
           categories,
           maxPrice,
+          sessionId,
         );
         const safeUserCandidates = applySafetyFilter(rawCandidates, categories);
         placeCandidates = mergeUniqueCandidates(
@@ -388,8 +392,10 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         lng: candidate.location.lng,
         price_level: candidate.priceLevel === 0 ? 1 : candidate.priceLevel,
         rating: candidate.rating,
-        photo_urls: candidate.photoUrls ?? [],
-        photo_url: buildGooglePlacePhotoUrl(candidate.photoReference ?? null),
+        photo_urls: candidate.photoReferences
+          ? buildGooglePlacePhotoUrls(candidate.photoReferences, sessionId)
+          : candidate.photoUrls ?? [],
+        photo_url: buildGooglePlacePhotoUrl(candidate.photoReference ?? null, sessionId),
         raw_types: candidate.types,
         raw_tags: [],
         source_rank: index + 1,
@@ -421,6 +427,13 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         midpoint,
         sponsoredBoosts,
         popularityBoosts,
+        (usage) => {
+          void recordAiUsage(sessionId, {
+            requestCount: 1,
+            inputTokens: usage.inputTokens ?? 0,
+            outputTokens: usage.outputTokens ?? 0,
+          });
+        },
       );
       const roundPicks = pickDiverseRound(curated, 4);
 
@@ -440,8 +453,10 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
           lng: venue.location.lng,
           price_level: venue.priceLevel === 0 ? 1 : venue.priceLevel,
           rating: venue.rating,
-          photo_urls: venue.photoUrls ?? [],
-          photo_url: buildGooglePlacePhotoUrl(venue.photoReference ?? null),
+          photo_urls: venue.photoReferences
+            ? buildGooglePlacePhotoUrls(venue.photoReferences, sessionId)
+            : venue.photoUrls ?? [],
+          photo_url: buildGooglePlacePhotoUrl(venue.photoReference ?? null, sessionId),
           tags: venue.tags,
           round,
           position: index + 1,

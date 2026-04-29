@@ -215,6 +215,7 @@ describe("generateVenues category intent", () => {
       { lat: 30.265, lng: -97.745, label: "Midpoint" },
       expect.any(Map),
       expect.any(Map),
+      expect.any(Function),
     );
   });
 });

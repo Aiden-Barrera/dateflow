@@ -2,12 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "../route";
 
 const mockFetch = vi.fn();
+const mockRecordPlacesPhotoUsage = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
+
+vi.mock("../../../../../lib/services/unit-economics-service", () => ({
+  recordPlacesPhotoUsage: (...args: unknown[]) => mockRecordPlacesPhotoUsage(...args),
+}));
 
 describe("GET /api/places/photos", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-api-key");
+    mockRecordPlacesPhotoUsage.mockResolvedValue(undefined);
   });
 
   it("proxies a Google Places photo without exposing the API key in the returned url", async () => {
@@ -66,5 +72,25 @@ describe("GET /api/places/photos", () => {
 
     expect(response.status).toBe(503);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("records photo usage when the request includes a sessionId", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("image-bytes", {
+        status: 200,
+        headers: {
+          "content-type": "image/jpeg",
+        },
+      }),
+    );
+
+    const response = await GET(
+      new Request(
+        "http://localhost:3000/api/places/photos?name=places%2Fabc123%2Fphotos%2Fref123&sessionId=session-1",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockRecordPlacesPhotoUsage).toHaveBeenCalledWith("session-1", 1);
   });
 });

@@ -234,7 +234,8 @@ describe("generateVenues", () => {
       { lat: 30.265, lng: -97.745, label: "Midpoint" },
       2000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
-      1
+      1,
+      "session-1"
     );
     expect(mockScoreAndCurate).toHaveBeenCalledTimes(3);
     expect(mockInsert).toHaveBeenNthCalledWith(1, {
@@ -264,11 +265,11 @@ describe("generateVenues", () => {
     expect(candidatePoolRows[0].photo_url).toBeNull();
     expect(candidatePoolRows[0].photo_urls).toEqual([]);
     expect(candidatePoolRows[1].photo_url).toBe(
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1"
     );
     expect(candidatePoolRows[1].photo_urls).toEqual([
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200",
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200&sessionId=session-1",
     ]);
 
     const insertedRows = mockUpsert.mock.calls[1][0];
@@ -280,11 +281,11 @@ describe("generateVenues", () => {
     expect(insertedRows[0].photo_url).toBeNull();
     expect(insertedRows[0].photo_urls).toEqual([]);
     expect(insertedRows[1].photo_url).toBe(
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1"
     );
     expect(insertedRows[1].photo_urls).toEqual([
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200",
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200&sessionId=session-1",
     ]);
     expect(insertedRows[4].round).toBe(2);
     expect(insertedRows[8].round).toBe(3);
@@ -363,14 +364,16 @@ describe("generateVenues", () => {
       expect.anything(),
       2000,
       expect.anything(),
-      expect.anything()
+      expect.anything(),
+      "session-1"
     );
     expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
       2,
       expect.anything(),
       5000,
       expect.anything(),
-      expect.anything()
+      expect.anything(),
+      "session-1"
     );
     // Should not expand further once we have enough
     expect(mockSearchNearbyWithCache).toHaveBeenCalledTimes(2);
@@ -398,6 +401,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
     expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
       6,
@@ -405,6 +409,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
     expect(mockUpdate).toHaveBeenLastCalledWith({ status: "ready_to_swipe" });
   });
@@ -445,6 +450,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
     expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
       6,
@@ -452,6 +458,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
 
     // Final status update must be generation_failed (not ready_to_swipe)

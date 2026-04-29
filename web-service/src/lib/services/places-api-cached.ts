@@ -6,6 +6,7 @@ import {
   categoriesToGoogleTypes,
   filterDeniedFirstDateVenues,
 } from "./places-api-client";
+import { recordPlacesSearchUsage } from "./unit-economics-service";
 
 /**
  * Cache TTL: 6 hours in seconds.
@@ -30,7 +31,8 @@ export async function searchNearbyWithCache(
   location: Location,
   radius: number,
   categories: readonly Category[],
-  maxPrice: number
+  maxPrice: number,
+  sessionId?: string,
 ): Promise<readonly PlaceCandidate[]> {
   let cache: VenueCache | null = null;
   let cacheKey: string | null = null;
@@ -89,6 +91,11 @@ export async function searchNearbyWithCache(
     locationLabel: location.label,
   });
   const candidates = await searchNearby(location, radius, googleTypes, maxPrice);
+  if (sessionId) {
+    recordPlacesSearchUsage(sessionId, 1).catch((err) => {
+      console.error("[searchNearbyWithCache] Failed to record places search usage:", err);
+    });
+  }
   const filteredCandidates = filterDeniedFirstDateVenues(candidates);
 
   console.info("[searchNearbyWithCache] Google Places returned candidates", {
