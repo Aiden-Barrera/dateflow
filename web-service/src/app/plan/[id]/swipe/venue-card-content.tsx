@@ -46,19 +46,20 @@ export function getVenueSlides(venue: Venue): readonly string[] {
   return venue.photoUrl ? [venue.photoUrl] : [];
 }
 
-export function clampSlideIndex(index: number, totalSlides: number): number {
+export function getWrappedSlideIndex(index: number, totalSlides: number): number {
   if (totalSlides <= 0) return 0;
-  if (index < 0) return totalSlides - 1;
-  if (index >= totalSlides) return 0;
-  return index;
+  return ((index % totalSlides) + totalSlides) % totalSlides;
 }
+
+// Backward-compatible export still used by swipe-deck-card re-exports/tests.
+export const clampSlideIndex = getWrappedSlideIndex;
 
 const PHOTO_THUMBNAIL_WIDTH_PX = 96;
 const PHOTO_THUMBNAIL_GAP_PX = 12;
 
-export function getActivePhotoStripIndex(
-  scrollLeft: number,
-  _clientWidth: number,
+export function getThumbnailStripScrollLeft(
+  index: number,
+  clientWidth: number,
   totalSlides: number,
 ): number {
   if (totalSlides <= 1) {
@@ -66,9 +67,13 @@ export function getActivePhotoStripIndex(
   }
 
   const stride = PHOTO_THUMBNAIL_WIDTH_PX + PHOTO_THUMBNAIL_GAP_PX;
-  const leadingIndex = Math.floor(Math.max(scrollLeft, 0) / stride);
+  const centeredLeft = index * stride - (clientWidth - PHOTO_THUMBNAIL_WIDTH_PX) / 2;
+  const contentWidth =
+    totalSlides * PHOTO_THUMBNAIL_WIDTH_PX +
+    (totalSlides - 1) * PHOTO_THUMBNAIL_GAP_PX;
+  const maxScrollLeft = Math.max(contentWidth - clientWidth, 0);
 
-  return Math.min(Math.max(leadingIndex, 0), totalSlides - 1);
+  return Math.min(Math.max(centeredLeft, 0), maxScrollLeft);
 }
 
 const CATEGORY_LABELS: Record<Category, string> = {
@@ -223,7 +228,7 @@ export function VenueCardContent({
   const [showHours, setShowHours] = useState(false);
   const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
   const programmaticThumbnailScrollRef = useRef(false);
-  const thumbnailScrollFrameRef = useRef<number | null>(null);
+  const programmaticThumbnailTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const slides = getVenueSlides(venue);
   const activeSlide = slides[activeSlideIndex] ?? slides[0] ?? null;
   const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
@@ -236,7 +241,7 @@ export function VenueCardContent({
   function moveToSlide(nextIndex: number) {
     if (slides.length <= 1) return;
     programmaticThumbnailScrollRef.current = true;
-    setActiveSlideIndex(clampSlideIndex(nextIndex, slides.length));
+    setActiveSlideIndex(getWrappedSlideIndex(nextIndex, slides.length));
   }
 
   useEffect(() => {
@@ -248,23 +253,32 @@ export function VenueCardContent({
       return;
     }
 
-    const activeThumbnail = thumbnailStripRef.current.children[
-      activeSlideIndex
-    ] as HTMLElement | undefined;
+    const strip = thumbnailStripRef.current;
+    const nextScrollLeft = getThumbnailStripScrollLeft(
+      activeSlideIndex,
+      strip.clientWidth,
+      slides.length,
+    );
 
-    activeThumbnail?.scrollIntoView({
+    strip.scrollTo({
+      left: nextScrollLeft,
       behavior: "smooth",
-      block: "nearest",
-      inline: "center",
     });
 
-    programmaticThumbnailScrollRef.current = false;
+    if (programmaticThumbnailTimeoutRef.current !== null) {
+      clearTimeout(programmaticThumbnailTimeoutRef.current);
+    }
+
+    programmaticThumbnailTimeoutRef.current = setTimeout(() => {
+      programmaticThumbnailScrollRef.current = false;
+      programmaticThumbnailTimeoutRef.current = null;
+    }, 220);
   }, [activeSlideIndex, slides.length]);
 
   useEffect(() => {
     return () => {
-      if (thumbnailScrollFrameRef.current !== null) {
-        cancelAnimationFrame(thumbnailScrollFrameRef.current);
+      if (programmaticThumbnailTimeoutRef.current !== null) {
+        clearTimeout(programmaticThumbnailTimeoutRef.current);
       }
     };
   }, []);
@@ -423,30 +437,6 @@ export function VenueCardContent({
             <div
               ref={thumbnailStripRef}
               className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              onScroll={(event) => {
-                if (programmaticThumbnailScrollRef.current) {
-                  return;
-                }
-
-                if (thumbnailScrollFrameRef.current !== null) {
-                  cancelAnimationFrame(thumbnailScrollFrameRef.current);
-                }
-
-                const { currentTarget } = event;
-                thumbnailScrollFrameRef.current = requestAnimationFrame(() => {
-                  thumbnailScrollFrameRef.current = null;
-
-                  const nextIndex = getActivePhotoStripIndex(
-                    currentTarget.scrollLeft,
-                    currentTarget.clientWidth,
-                    slides.length,
-                  );
-
-                  setActiveSlideIndex((currentIndex) =>
-                    currentIndex === nextIndex ? currentIndex : nextIndex,
-                  );
-                });
-              }}
             >
               {slides.map((slide, i) => (
                 <button
