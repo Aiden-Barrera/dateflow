@@ -51,6 +51,9 @@ export function getWrappedSlideIndex(index: number, totalSlides: number): number
   return ((index % totalSlides) + totalSlides) % totalSlides;
 }
 
+// Backward-compatible export still used by swipe-deck-card re-exports/tests.
+export const clampSlideIndex = getWrappedSlideIndex;
+
 const PHOTO_THUMBNAIL_WIDTH_PX = 96;
 const PHOTO_THUMBNAIL_GAP_PX = 12;
 
@@ -65,7 +68,10 @@ export function getThumbnailStripScrollLeft(
 
   const stride = PHOTO_THUMBNAIL_WIDTH_PX + PHOTO_THUMBNAIL_GAP_PX;
   const centeredLeft = index * stride - (clientWidth - PHOTO_THUMBNAIL_WIDTH_PX) / 2;
-  const maxScrollLeft = Math.max((totalSlides - 1) * stride, 0);
+  const contentWidth =
+    totalSlides * PHOTO_THUMBNAIL_WIDTH_PX +
+    (totalSlides - 1) * PHOTO_THUMBNAIL_GAP_PX;
+  const maxScrollLeft = Math.max(contentWidth - clientWidth, 0);
 
   return Math.min(Math.max(centeredLeft, 0), maxScrollLeft);
 }

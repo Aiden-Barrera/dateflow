@@ -4,6 +4,7 @@ import {
   formatDistance,
   getAgeRestrictionLabel,
   buildSwipeCardAriaLabel,
+  clampSlideIndex,
   getWrappedSlideIndex,
   getThumbnailStripScrollLeft,
 } from "../venue-card-content";
@@ -95,6 +96,13 @@ describe("getWrappedSlideIndex", () => {
   });
 });
 
+describe("clampSlideIndex", () => {
+  it("remains a backward-compatible alias for wrapped slide navigation", () => {
+    expect(clampSlideIndex(-1, 4)).toBe(3);
+    expect(clampSlideIndex(4, 4)).toBe(0);
+  });
+});
+
 describe("getThumbnailStripScrollLeft", () => {
   it("keeps the first thumbnail from trying to scroll past the start", () => {
     expect(getThumbnailStripScrollLeft(0, 336, 10)).toBe(0);
@@ -102,5 +110,9 @@ describe("getThumbnailStripScrollLeft", () => {
 
   it("centers a middle thumbnail without vertical scroll behavior", () => {
     expect(getThumbnailStripScrollLeft(4, 336, 10)).toBe(312);
+  });
+
+  it("clamps the last thumbnail to the real horizontal scroll range", () => {
+    expect(getThumbnailStripScrollLeft(9, 336, 10)).toBe(732);
   });
 });
