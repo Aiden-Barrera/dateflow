@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CategoryIcon } from "../../../../components/category-icon";
 import type { Category } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
+import { preloadImageUrls } from "./swipe-media-preload";
 
 export function buildGoogleMapsUrl(venue: Venue): string {
   const query = encodeURIComponent(`${venue.name} ${venue.address}`);
@@ -477,6 +478,7 @@ export function VenueCardContent({
   onSwipe,
 }: VenueCardContentProps) {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const preloadedSlideUrlsRef = useRef(new Set<string>());
   const slides = getVenueSlides(venue);
   const activeSlide = slides[activeSlideIndex] ?? null;
   const mapsUrl = buildGoogleMapsUrl(venue);
@@ -489,20 +491,43 @@ export function VenueCardContent({
     () => Array.from({ length: visibleSlideCount }, (_, index) => `Show photo ${index + 1} of ${visibleSlideCount}`),
     [visibleSlideCount],
   );
+
+  useEffect(() => {
+    preloadedSlideUrlsRef.current = new Set<string>();
+  }, [venue.id]);
+
+  useEffect(() => {
+    if (slides.length <= 1) {
+      preloadImageUrls(slides, preloadedSlideUrlsRef.current);
+      return;
+    }
+
+    const prioritizedSlides = [
+      slides[activeSlideIndex],
+      slides[activeSlideIndex + 1],
+      slides[activeSlideIndex - 1],
+      ...slides,
+    ].filter((slide): slide is string => Boolean(slide));
+
+    preloadImageUrls(prioritizedSlides, preloadedSlideUrlsRef.current);
+  }, [activeSlideIndex, slides]);
+
   function moveToSlide(nextIndex: number) {
     if (slides.length <= 1) return;
     setActiveSlideIndex(getWrappedSlideIndex(nextIndex, slides.length));
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#f7f3ee]">
-      <div className="relative min-h-[720px] flex-1 overflow-hidden bg-[#dccfc4]">
+    <div className="flex h-full min-h-0 flex-col bg-[#f7f3ee]">
+      <div className="relative h-full min-h-0 flex-1 overflow-hidden bg-[#dccfc4]">
         {activeSlide ? (
           <Image
+            key={activeSlide}
             src={activeSlide}
             alt={venue.name}
             fill
             sizes="(max-width: 768px) 100vw, 480px"
+            priority
             loading="eager"
             className="object-cover"
             unoptimized
@@ -543,9 +568,9 @@ export function VenueCardContent({
           </>
         ) : null}
 
-        <div className="relative z-10 flex h-full flex-col p-5 sm:p-6">
-          <div className="space-y-5">
-            <div className="flex items-center gap-2">
+        <div className="relative z-10 flex h-full flex-col p-4 sm:p-6">
+          <div className="space-y-3 sm:space-y-5">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {Array.from({ length: visibleSlideCount }, (_, index) => (
                 <button
                   type="button"
@@ -563,44 +588,44 @@ export function VenueCardContent({
               ))}
             </div>
 
-            <div className="flex items-start justify-end gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-3 py-2 text-[0.73rem] font-medium tracking-[0.02em] text-white/96 shadow-[0_10px_26px_rgba(10,10,10,0.12)] backdrop-blur-md">
+            <div className="flex items-start justify-end gap-2 sm:gap-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-2.5 py-1.5 text-[0.68rem] font-medium tracking-[0.02em] text-white/96 shadow-[0_10px_26px_rgba(10,10,10,0.12)] backdrop-blur-md sm:px-3 sm:py-2 sm:text-[0.73rem]">
                 <span>{getDeckLabel(cardIndex, totalCards)}</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-auto space-y-4 pt-[24rem]">
-            <div className="max-w-[84%]">
-              <h2 className="text-[clamp(2rem,6.15vw,3.55rem)] font-semibold leading-[0.92] tracking-[-0.078em] text-white [text-wrap:balance]">
+          <div className="mt-auto space-y-3 pt-24 sm:space-y-4 sm:pt-[24rem]">
+            <div className="max-w-[100%] sm:max-w-[84%]">
+              <h2 className="text-[clamp(1.65rem,6vw,3.55rem)] font-semibold leading-[0.94] tracking-[-0.06em] text-white [text-wrap:balance] sm:tracking-[-0.078em]">
                 {venue.name}
               </h2>
             </div>
 
-            <div className="flex max-w-[82%] flex-wrap gap-2">
+            <div className="flex max-w-[100%] flex-wrap gap-1.5 sm:max-w-[82%] sm:gap-2">
               {photoTags.slice(0, 3).map((tag) => (
                 <TagChip key={tag.id} tag={tag} venue={venue} />
               ))}
             </div>
 
-            <div className="flex items-center justify-center gap-5 pt-6">
+            <div className="flex items-center justify-center gap-4 pt-4 sm:gap-5 sm:pt-6">
               <button
                 type="button"
                 aria-label="Pass venue"
                 onClick={() => onSwipe(false)}
                 disabled={submitting || isAnimating}
-                className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-white text-[#ea4a83] shadow-[0_18px_40px_rgba(16,12,14,0.24)] transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-[#ea4a83] shadow-[0_18px_40px_rgba(16,12,14,0.24)] transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-[88px] sm:w-[88px]"
               >
-                <PassIcon className="h-10 w-10" />
+                <PassIcon className="h-7 w-7 sm:h-10 sm:w-10" />
               </button>
               <button
                 type="button"
                 aria-label="Like venue"
                 onClick={() => onSwipe(true)}
                 disabled={submitting || isAnimating}
-                className="flex h-[98px] w-[98px] items-center justify-center rounded-full bg-[#ef4a84] text-white shadow-[0_22px_44px_rgba(239,74,132,0.42)] transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-18 w-18 items-center justify-center rounded-full bg-[#ef4a84] text-white shadow-[0_22px_44px_rgba(239,74,132,0.42)] transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-[98px] sm:w-[98px]"
               >
-                <HeartIcon className="h-10 w-10" />
+                <HeartIcon className="h-8 w-8 sm:h-10 sm:w-10" />
               </button>
             </div>
 
@@ -651,7 +676,7 @@ function TagChip({
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
-        className="inline-flex min-h-[46px] items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-4 py-2.5 text-sm font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md transition-colors hover:bg-[rgba(145,124,105,0.58)]"
+        className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-3 py-2 text-[0.78rem] font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md transition-colors hover:bg-[rgba(145,124,105,0.58)] sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm"
       >
         {content}
       </a>
@@ -659,7 +684,7 @@ function TagChip({
   }
 
   return (
-    <div className="inline-flex min-h-[46px] items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-4 py-2.5 text-sm font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md">
+    <div className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-3 py-2 text-[0.78rem] font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm">
       {content}
     </div>
   );
