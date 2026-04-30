@@ -265,11 +265,11 @@ describe("generateVenues", () => {
     expect(candidatePoolRows[0].photo_url).toBeNull();
     expect(candidatePoolRows[0].photo_urls).toEqual([]);
     expect(candidatePoolRows[1].photo_url).toBe(
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1"
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
     );
     expect(candidatePoolRows[1].photo_urls).toEqual([
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1",
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200&sessionId=session-1",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200",
     ]);
 
     const insertedRows = mockUpsert.mock.calls[1][0];
@@ -281,11 +281,11 @@ describe("generateVenues", () => {
     expect(insertedRows[0].photo_url).toBeNull();
     expect(insertedRows[0].photo_urls).toEqual([]);
     expect(insertedRows[1].photo_url).toBe(
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1"
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200"
     );
     expect(insertedRows[1].photo_urls).toEqual([
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200&sessionId=session-1",
-      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200&sessionId=session-1",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2&maxHeightPx=1200",
+      "/api/places/photos?name=places%2Fplace-2%2Fphotos%2Fphoto-2-b&maxHeightPx=1200",
     ]);
     expect(insertedRows[4].round).toBe(2);
     expect(insertedRows[8].round).toBe(3);

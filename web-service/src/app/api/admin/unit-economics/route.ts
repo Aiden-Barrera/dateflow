@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getUnitEconomicsSnapshot,
   listUnitEconomicsSnapshots,
-} from "../../../../lib/services/unit-economics-service";
+} from "@/lib/services/unit-economics-service";
 
 function hasValidInternalToken(request: Request): boolean {
   const secret = process.env.CRON_SECRET;

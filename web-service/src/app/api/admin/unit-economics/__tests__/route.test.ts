@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockGetUnitEconomicsSnapshot = vi.fn();
 const mockListUnitEconomicsSnapshots = vi.fn();
 
-vi.mock("/src/lib/services/unit-economics-service", () => ({
+vi.mock("@/lib/services/unit-economics-service", () => ({
   getUnitEconomicsSnapshot: (...args: unknown[]) => mockGetUnitEconomicsSnapshot(...args),
   listUnitEconomicsSnapshots: (...args: unknown[]) => mockListUnitEconomicsSnapshots(...args),
 }));

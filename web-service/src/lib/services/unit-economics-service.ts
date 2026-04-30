@@ -1,6 +1,7 @@
 import { getSupabaseServerClient } from "../supabase-server";
 
 const UNIT_ECONOMICS_TABLE = "unit_economics_snapshots";
+const INCREMENT_UNIT_ECONOMICS_RPC = "increment_unit_economics_snapshot";
 
 const COST_ESTIMATES_CENTS = {
   placesSearchRequest: 2,
@@ -55,6 +56,14 @@ type ListSnapshotOptions = {
   readonly limit?: number;
 };
 
+type IncrementSnapshotRpcRow = UnitEconomicsSnapshotRow;
+
+function validateNonNegativeInteger(value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative integer`);
+  }
+}
+
 function buildDefaultSnapshot(sessionId: string): UnitEconomicsSnapshot {
   return {
     sessionId,
@@ -93,66 +102,6 @@ function fromRow(row: UnitEconomicsSnapshotRow): UnitEconomicsSnapshot {
   };
 }
 
-function toRow(snapshot: UnitEconomicsSnapshot): UnitEconomicsSnapshotRow {
-  return {
-    session_id: snapshot.sessionId,
-    places_search_requests: snapshot.placesSearchRequests,
-    places_photo_requests: snapshot.placesPhotoRequests,
-    ai_requests: snapshot.aiRequests,
-    ai_input_tokens: snapshot.aiInputTokens,
-    ai_output_tokens: snapshot.aiOutputTokens,
-    places_search_cost_cents: snapshot.placesSearchCostCents,
-    places_photo_cost_cents: snapshot.placesPhotoCostCents,
-    ai_cost_cents: snapshot.aiCostCents,
-    infra_cost_cents: snapshot.infraCostCents,
-    acquisition_cost_cents: snapshot.acquisitionCostCents,
-    revenue_cents: snapshot.revenueCents,
-    gross_margin_cents: snapshot.grossMarginCents,
-    last_computed_at: snapshot.lastComputedAt,
-  };
-}
-
-function recomputeSnapshot(
-  current: UnitEconomicsSnapshot,
-  delta: SnapshotDelta,
-): UnitEconomicsSnapshot {
-  const placesSearchRequests = current.placesSearchRequests + (delta.placesSearchRequests ?? 0);
-  const placesPhotoRequests = current.placesPhotoRequests + (delta.placesPhotoRequests ?? 0);
-  const aiRequests = current.aiRequests + (delta.aiRequests ?? 0);
-  const aiInputTokens = current.aiInputTokens + (delta.aiInputTokens ?? 0);
-  const aiOutputTokens = current.aiOutputTokens + (delta.aiOutputTokens ?? 0);
-  const placesSearchCostCents =
-    placesSearchRequests * COST_ESTIMATES_CENTS.placesSearchRequest;
-  const placesPhotoCostCents =
-    placesPhotoRequests * COST_ESTIMATES_CENTS.placesPhotoRequest;
-  const aiCostCents = aiRequests * COST_ESTIMATES_CENTS.aiRequest;
-  const infraCostCents =
-    placesSearchRequests > 0 || placesPhotoRequests > 0 || aiRequests > 0
-      ? COST_ESTIMATES_CENTS.infraActiveSession
-      : current.infraCostCents;
-  const totalCostCents =
-    placesSearchCostCents +
-    placesPhotoCostCents +
-    aiCostCents +
-    infraCostCents +
-    (current.acquisitionCostCents ?? 0);
-
-  return {
-    ...current,
-    placesSearchRequests,
-    placesPhotoRequests,
-    aiRequests,
-    aiInputTokens,
-    aiOutputTokens,
-    placesSearchCostCents,
-    placesPhotoCostCents,
-    aiCostCents,
-    infraCostCents,
-    grossMarginCents: current.revenueCents - totalCostCents,
-    lastComputedAt: new Date().toISOString(),
-  };
-}
-
 async function selectSnapshot(sessionId: string): Promise<UnitEconomicsSnapshot> {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
@@ -171,19 +120,34 @@ async function selectSnapshot(sessionId: string): Promise<UnitEconomicsSnapshot>
   return fromRow(data);
 }
 
-async function upsertSnapshot(snapshot: UnitEconomicsSnapshot): Promise<UnitEconomicsSnapshot> {
+async function incrementSnapshot(
+  sessionId: string,
+  delta: Required<SnapshotDelta>,
+): Promise<UnitEconomicsSnapshot> {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
-    .from(UNIT_ECONOMICS_TABLE)
-    .upsert(toRow(snapshot), { onConflict: "session_id" })
-    .select()
-    .single<UnitEconomicsSnapshotRow>();
+  const { data, error } = await supabase.rpc(INCREMENT_UNIT_ECONOMICS_RPC, {
+    input_session_id: sessionId,
+    input_places_search_requests: delta.placesSearchRequests,
+    input_places_photo_requests: delta.placesPhotoRequests,
+    input_ai_requests: delta.aiRequests,
+    input_ai_input_tokens: delta.aiInputTokens,
+    input_ai_output_tokens: delta.aiOutputTokens,
+    input_places_search_cost_cents: COST_ESTIMATES_CENTS.placesSearchRequest,
+    input_places_photo_cost_cents: COST_ESTIMATES_CENTS.placesPhotoRequest,
+    input_ai_cost_cents: COST_ESTIMATES_CENTS.aiRequest,
+    input_infra_cost_cents: COST_ESTIMATES_CENTS.infraActiveSession,
+  });
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return fromRow(data);
+  const row = (data?.[0] ?? null) as IncrementSnapshotRpcRow | null;
+  if (!row) {
+    throw new Error("Failed to increment unit economics snapshot");
+  }
+
+  return fromRow(row);
 }
 
 export async function getUnitEconomicsSnapshot(
@@ -196,20 +160,30 @@ export async function recordPlacesSearchUsage(
   sessionId: string,
   requestCount = 1,
 ): Promise<UnitEconomicsSnapshot> {
-  const current = await selectSnapshot(sessionId);
-  return upsertSnapshot(
-    recomputeSnapshot(current, { placesSearchRequests: requestCount }),
-  );
+  validateNonNegativeInteger(requestCount, "requestCount");
+
+  return incrementSnapshot(sessionId, {
+    placesSearchRequests: requestCount,
+    placesPhotoRequests: 0,
+    aiRequests: 0,
+    aiInputTokens: 0,
+    aiOutputTokens: 0,
+  });
 }
 
 export async function recordPlacesPhotoUsage(
   sessionId: string,
   requestCount = 1,
 ): Promise<UnitEconomicsSnapshot> {
-  const current = await selectSnapshot(sessionId);
-  return upsertSnapshot(
-    recomputeSnapshot(current, { placesPhotoRequests: requestCount }),
-  );
+  validateNonNegativeInteger(requestCount, "requestCount");
+
+  return incrementSnapshot(sessionId, {
+    placesSearchRequests: 0,
+    placesPhotoRequests: requestCount,
+    aiRequests: 0,
+    aiInputTokens: 0,
+    aiOutputTokens: 0,
+  });
 }
 
 export async function recordAiUsage(
@@ -220,14 +194,21 @@ export async function recordAiUsage(
     readonly outputTokens?: number;
   },
 ): Promise<UnitEconomicsSnapshot> {
-  const current = await selectSnapshot(sessionId);
-  return upsertSnapshot(
-    recomputeSnapshot(current, {
-      aiRequests: usage.requestCount ?? 1,
-      aiInputTokens: usage.inputTokens ?? 0,
-      aiOutputTokens: usage.outputTokens ?? 0,
-    }),
-  );
+  const requestCount = usage.requestCount ?? 1;
+  const inputTokens = usage.inputTokens ?? 0;
+  const outputTokens = usage.outputTokens ?? 0;
+
+  validateNonNegativeInteger(requestCount, "usage.requestCount");
+  validateNonNegativeInteger(inputTokens, "usage.inputTokens");
+  validateNonNegativeInteger(outputTokens, "usage.outputTokens");
+
+  return incrementSnapshot(sessionId, {
+    placesSearchRequests: 0,
+    placesPhotoRequests: 0,
+    aiRequests: requestCount,
+    aiInputTokens: inputTokens,
+    aiOutputTokens: outputTokens,
+  });
 }
 
 export async function listUnitEconomicsSnapshots(

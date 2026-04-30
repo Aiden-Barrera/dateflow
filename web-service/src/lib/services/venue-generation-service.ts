@@ -428,10 +428,15 @@ export async function generateVenues(sessionId: string): Promise<readonly Venue[
         sponsoredBoosts,
         popularityBoosts,
         (usage) => {
-          void recordAiUsage(sessionId, {
+          recordAiUsage(sessionId, {
             requestCount: 1,
             inputTokens: usage.inputTokens ?? 0,
             outputTokens: usage.outputTokens ?? 0,
+          }).catch((error) => {
+            console.error("[generateVenues] Failed to record AI usage:", {
+              sessionId,
+              error,
+            });
           });
         },
       );

@@ -46,8 +46,10 @@ export function getGooglePlacesReadiness(): {
 
 export function buildGooglePlacePhotoUrl(
   photoReference: string | null,
-  sessionId?: string,
+  _sessionId?: string,
 ): string | null {
+  void _sessionId;
+
   if (!photoReference) {
     return null;
   }
@@ -55,9 +57,7 @@ export function buildGooglePlacePhotoUrl(
   const photoPath = photoReference.startsWith("places/")
     ? photoReference
     : `places/${photoReference}`;
-  const photoQuery =
-    `name=${encodeURIComponent(photoPath)}&maxHeightPx=${DEFAULT_PHOTO_MAX_HEIGHT_PX}` +
-    (sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : "");
+  const photoQuery = `name=${encodeURIComponent(photoPath)}&maxHeightPx=${DEFAULT_PHOTO_MAX_HEIGHT_PX}`;
   return `${PLACES_PHOTO_ROUTE}?${photoQuery}`;
 }
 

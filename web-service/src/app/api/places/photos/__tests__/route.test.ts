@@ -74,7 +74,7 @@ describe("GET /api/places/photos", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it("records photo usage when the request includes a sessionId", async () => {
+  it("records photo usage when the request referer includes a session id", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response("image-bytes", {
         status: 200,
@@ -86,11 +86,39 @@ describe("GET /api/places/photos", () => {
 
     const response = await GET(
       new Request(
-        "http://localhost:3000/api/places/photos?name=places%2Fabc123%2Fphotos%2Fref123&sessionId=session-1",
+        "http://localhost:3000/api/places/photos?name=places%2Fabc123%2Fphotos%2Fref123",
+        {
+          headers: {
+            referer: "http://localhost:3000/plan/123e4567-e89b-42d3-a456-426614174000/swipe",
+          },
+        },
       ),
     );
 
     expect(response.status).toBe(200);
-    expect(mockRecordPlacesPhotoUsage).toHaveBeenCalledWith("session-1", 1);
+    expect(mockRecordPlacesPhotoUsage).toHaveBeenCalledWith(
+      "123e4567-e89b-42d3-a456-426614174000",
+      1,
+    );
+  });
+
+  it("ignores malformed session ids instead of recording photo usage", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("image-bytes", {
+        status: 200,
+        headers: {
+          "content-type": "image/jpeg",
+        },
+      }),
+    );
+
+    const response = await GET(
+      new Request(
+        "http://localhost:3000/api/places/photos?name=places%2Fabc123%2Fphotos%2Fref123&sessionId=not-a-uuid",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockRecordPlacesPhotoUsage).not.toHaveBeenCalled();
   });
 });
