@@ -79,25 +79,13 @@ const CATEGORY_LABELS: Record<Category, string> = {
   EVENT: "Event",
 };
 
-type VenueTagGroup = {
-  readonly id: string;
-  readonly tags: readonly string[];
-};
-
-type VenueUtilityChip = {
-  readonly id: string;
-  readonly label: string;
-  readonly href?: string;
-  readonly detail?: string;
-  readonly tone?: "neutral" | "success";
-};
-
 type VenuePhotoTag = {
   readonly id: string;
   readonly label: string;
   readonly href?: string;
   readonly icon?: "category" | "map" | "website" | "status";
   readonly detail?: string;
+  readonly tone?: "brand" | "gold" | "vibe" | "maps" | "website";
 };
 
 export function formatRatingWithCount(
@@ -153,17 +141,10 @@ function titleCaseTag(tag: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function buildCategoryTag(category: Category): string {
-  switch (category) {
-    case "RESTAURANT":
-      return "Dinner-worthy";
-    case "BAR":
-      return "Cocktail pick";
-    case "ACTIVITY":
-      return "Easy icebreaker";
-    case "EVENT":
-      return "Planned night out";
-  }
+function formatPriceLevel(priceLevel: number): string | null {
+  if (!priceLevel || priceLevel <= 0) return null;
+  const clamped = Math.max(1, Math.min(4, priceLevel));
+  return "$".repeat(clamped);
 }
 
 function formatAddressTag(address: string): string | null {
@@ -190,209 +171,125 @@ function formatScheduleTag(venue: Venue): string | null {
   return formatEventDateTime(venue.scheduledAt);
 }
 
-function buildVenueTagGroups(venue: Venue): readonly VenueTagGroup[] {
-  const displayTags = getDisplayTags(venue.tags).map(titleCaseTag);
-  const categoryFlavor = displayTags[0] ?? buildCategoryTag(venue.category);
-  const tasteSignal =
-    displayTags[1] ??
-    (venue.whyPicked ? titleCaseTag(venue.whyPicked.split(/[.!?]/)[0] ?? "") : null) ??
-    "Legendary spot";
-
-  const groups: VenueTagGroup[] = [
-    {
-      id: "intro",
-      tags: [
-        CATEGORY_LABELS[venue.category],
-        typeof venue.distanceMeters === "number"
-          ? formatDistance(venue.distanceMeters)
-          : categoryFlavor,
-      ].filter(Boolean),
-    },
-    {
-      id: "social-proof",
-      tags: [
-        formatRatingWithCount(venue.rating, venue.userRatingCount),
-        formatHoursTag(venue) ?? categoryFlavor,
-      ].filter(Boolean),
-    },
-    {
-      id: "location",
-      tags: [formatAddressTag(venue.address), venue.website ? "Website ready" : "Open in maps"]
-        .filter(Boolean) as string[],
-    },
-    {
-      id: "taste",
-      tags: [
-        tasteSignal,
-        venue.editorialSummary ? titleCaseTag(venue.editorialSummary) : null,
-      ]
-        .filter((tag): tag is string => Boolean(tag && tag.length <= 48))
-        .slice(0, 2),
-    },
-  ];
-
-  if (venue.sourceType === "ticketmaster") {
-    groups[1] = {
-      id: "event-proof",
-      tags: [formatScheduleTag(venue), venue.durationMinutes ? `${venue.durationMinutes} min` : null]
-        .filter(Boolean) as string[],
-    };
-  }
-
-  return groups.filter((group) => group.tags.length > 0);
-}
-
-function getSlideTagGroup(
-  venue: Venue,
-  slideIndex: number,
-): VenueTagGroup | null {
-  const groups = buildVenueTagGroups(venue);
-  if (groups.length === 0) return null;
-  return groups[Math.min(slideIndex, groups.length - 1)] ?? groups[0] ?? null;
-}
-
-function getDeckLabel(cardIndex: number, totalCards: number): string {
-  return `${cardIndex} of ${totalCards}`;
-}
-
-function getUtilityChips(
-  venue: Venue,
-  mapsUrl: string,
-): readonly VenueUtilityChip[] {
-  const chips: VenueUtilityChip[] = [
-    { id: "maps", label: "Maps", href: mapsUrl },
-  ];
-
-  if (venue.website) {
-    chips.push({ id: "website", label: "Website", href: venue.website });
-  }
-
-  const hoursLabel = formatHoursTag(venue);
-  if (hoursLabel) {
-    chips.push({
-      id: "hours",
-      label: hoursLabel,
-      detail: formatHoursDetail(venue) ?? undefined,
-      tone: venue.openingHours?.openNow ? "success" : "neutral",
-    });
-  } else if (typeof venue.distanceMeters === "number") {
-    chips.push({ id: "distance", label: formatDistance(venue.distanceMeters) });
-  } else {
-    chips.push({ id: "rating", label: formatRatingWithCount(venue.rating, venue.userRatingCount) });
-  }
-
-  return chips.slice(0, 3);
-}
-
 function buildPhotoTagSets(
   venue: Venue,
   mapsUrl: string,
 ): readonly (readonly VenuePhotoTag[])[] {
+  const usedLabels = new Set<string>();
+
+  function dedup(tags: VenuePhotoTag[]): VenuePhotoTag[] {
+    return tags.filter((tag) => {
+      if (!tag.label || usedLabels.has(tag.label)) return false;
+      usedLabels.add(tag.label);
+      return true;
+    });
+  }
+
   const displayTags = getDisplayTags(venue.tags).map(titleCaseTag);
-  const tagSets: VenuePhotoTag[][] = [];
+  const tagSets: (readonly VenuePhotoTag[])[] = [];
 
-  tagSets.push(
-    [
-      {
-        id: "category",
-        label: CATEGORY_LABELS[venue.category],
-        icon: "category",
-      },
-      typeof venue.distanceMeters === "number"
-        ? {
-            id: "distance",
-            label: formatDistance(venue.distanceMeters),
-          }
-        : displayTags[0]
-          ? {
-              id: "taste-intro",
-              label: displayTags[0],
-            }
+  // Set 0 — First impression: category + price level + distance
+  const priceLabel = formatPriceLevel(venue.priceLevel);
+  const introSet = dedup(
+    (
+      [
+        { id: "category", label: CATEGORY_LABELS[venue.category], icon: "category" as const, tone: "brand" as const },
+        priceLabel ? { id: "price", label: priceLabel, tone: "gold" as const } : null,
+        typeof venue.distanceMeters === "number"
+          ? { id: "distance", label: formatDistance(venue.distanceMeters) }
           : null,
-    ].filter((tag): tag is VenuePhotoTag => Boolean(tag)),
+      ] as (VenuePhotoTag | null)[]
+    ).filter((t): t is VenuePhotoTag => t !== null),
   );
+  if (introSet.length > 0) tagSets.push(introSet.slice(0, 3));
 
-  const socialProofTags: VenuePhotoTag[] = [
-    {
-      id: "rating",
-      label: formatRatingWithCount(venue.rating, venue.userRatingCount),
-    },
-  ];
-  if (formatHoursTag(venue)) {
-    socialProofTags.push({
-      id: "hours",
-      label: formatHoursTag(venue)!,
-      detail: formatHoursDetail(venue) ?? undefined,
-      icon: "status",
-    });
-  }
-  tagSets.push(socialProofTags);
-
-  const locationTags: VenuePhotoTag[] = [
-    {
-      id: "maps",
-      label: "Maps",
-      href: mapsUrl,
-      icon: "map",
-    },
-  ];
-  if (formatAddressTag(venue.address)) {
-    locationTags.push({
-      id: "address",
-      label: formatAddressTag(venue.address)!,
-    });
-  }
-  tagSets.push(locationTags);
-
-  if (venue.website) {
-    const websiteTags: VenuePhotoTag[] = [
-      {
-        id: "website",
-        label: "Website",
-        href: venue.website,
-        icon: "website",
-      },
-    ];
-    if (displayTags[1]) {
-      websiteTags.push({
-        id: "taste-site",
-        label: displayTags[1],
-      });
-    } else if (venue.editorialSummary) {
-      websiteTags.push({
-        id: "summary",
-        label: titleCaseTag(venue.editorialSummary),
-      });
-    }
-    tagSets.push(websiteTags);
+  // Set 1 — Social proof: rating + hours (or event schedule + duration)
+  if (venue.sourceType === "ticketmaster") {
+    const scheduleLabel = formatScheduleTag(venue);
+    const eventSet = dedup(
+      (
+        [
+          scheduleLabel ? { id: "schedule", label: scheduleLabel, tone: "gold" as const } : null,
+          venue.durationMinutes ? { id: "duration", label: `${venue.durationMinutes} min` } : null,
+        ] as (VenuePhotoTag | null)[]
+      ).filter((t): t is VenuePhotoTag => t !== null),
+    );
+    if (eventSet.length > 0) tagSets.push(eventSet.slice(0, 2));
+  } else {
+    const hoursLabel = formatHoursTag(venue);
+    const socialSet = dedup(
+      (
+        [
+          { id: "rating", label: formatRatingWithCount(venue.rating, venue.userRatingCount), tone: "gold" as const },
+          hoursLabel
+            ? {
+                id: "hours",
+                label: hoursLabel,
+                detail: formatHoursDetail(venue) ?? undefined,
+                icon: "status" as const,
+              }
+            : null,
+        ] as (VenuePhotoTag | null)[]
+      ).filter((t): t is VenuePhotoTag => t !== null),
+    );
+    if (socialSet.length > 0) tagSets.push(socialSet.slice(0, 2));
   }
 
-  if (displayTags.length > 0 || venue.whyPicked) {
-    const tasteTags: VenuePhotoTag[] = [];
-    if (displayTags[0]) {
-      tasteTags.push({
-        id: "taste-1",
-        label: displayTags[0],
-      });
-    }
-    if (displayTags[1]) {
-      tasteTags.push({
-        id: "taste-2",
-        label: displayTags[1],
-      });
-    } else if (venue.whyPicked) {
-      tasteTags.push({
-        id: "why-picked",
-        label: titleCaseTag(venue.whyPicked.split(/[.!?]/)[0] ?? ""),
-      });
-    }
-    if (tasteTags.length > 0) {
-      tagSets.push(tasteTags);
-    }
+  // Set 2 — Vibe/taste: AI display tags are the most personality-rich signal
+  const whyPickedLabel = venue.whyPicked
+    ? titleCaseTag((venue.whyPicked.split(/[.!?]/)[0] ?? "").slice(0, 48))
+    : null;
+  const vibeSet = dedup(
+    (
+      [
+        displayTags[0] ? { id: "taste-0", label: displayTags[0], tone: "vibe" as const } : null,
+        displayTags[1]
+          ? { id: "taste-1", label: displayTags[1], tone: "vibe" as const }
+          : whyPickedLabel && whyPickedLabel.length > 0
+            ? { id: "why-picked", label: whyPickedLabel, tone: "vibe" as const }
+            : null,
+      ] as (VenuePhotoTag | null)[]
+    )
+      .filter((t): t is VenuePhotoTag => t !== null)
+      .filter((t) => t.label.length > 0 && t.label.length <= 52),
+  );
+  if (vibeSet.length > 0) tagSets.push(vibeSet.slice(0, 2));
+
+  // Set 3 — Practical: address neighbourhood + maps link
+  const addressLabel = formatAddressTag(venue.address);
+  const locationSet = dedup(
+    (
+      [
+        addressLabel ? { id: "address", label: addressLabel } : null,
+        { id: "maps", label: "Open in Maps", href: mapsUrl, icon: "map" as const, tone: "maps" as const },
+      ] as (VenuePhotoTag | null)[]
+    ).filter((t): t is VenuePhotoTag => t !== null),
+  );
+  if (locationSet.length > 0) tagSets.push(locationSet.slice(0, 2));
+
+  // Set 4 — Web/extras: website link + editorial summary or 3rd AI tag
+  if (venue.website || venue.editorialSummary || displayTags[2]) {
+    const extrasSet = dedup(
+      (
+        [
+          venue.website
+            ? { id: "website", label: "Visit Website", href: venue.website, icon: "website" as const, tone: "website" as const }
+            : null,
+          displayTags[2]
+            ? { id: "taste-2", label: displayTags[2] }
+            : venue.editorialSummary
+              ? { id: "summary", label: titleCaseTag(venue.editorialSummary).slice(0, 52) }
+              : null,
+        ] as (VenuePhotoTag | null)[]
+      ).filter((t): t is VenuePhotoTag => t !== null),
+    );
+    if (extrasSet.length > 0) tagSets.push(extrasSet.slice(0, 2));
   }
 
   const filtered = tagSets.filter((set) => set.length > 0);
-  return filtered.length > 0 ? filtered : [[{ id: "category-fallback", label: CATEGORY_LABELS[venue.category], icon: "category" }]];
+  return filtered.length > 0
+    ? filtered
+    : [[{ id: "category-fallback", label: CATEGORY_LABELS[venue.category], icon: "category" as const }]];
 }
 
 function getPhotoTags(
@@ -471,8 +368,8 @@ type VenueCardContentProps = {
 
 export function VenueCardContent({
   venue,
-  cardIndex,
-  totalCards,
+  cardIndex: _cardIndex,
+  totalCards: _totalCards,
   isAnimating,
   submitting,
   onSwipe,
@@ -544,7 +441,7 @@ export function VenueCardContent({
             <button
               type="button"
               aria-label="Show previous venue photo"
-              className="absolute left-0 top-0 z-20 h-[72%] w-[38%]"
+              className="absolute left-0 top-12 z-20 h-[60%] w-[38%]"
               onClick={(e) => {
                 e.stopPropagation();
                 moveToSlide(activeSlideIndex - 1);
@@ -556,7 +453,7 @@ export function VenueCardContent({
             <button
               type="button"
               aria-label="Show next venue photo"
-              className="absolute right-0 top-0 z-20 h-[72%] w-[38%]"
+              className="absolute right-0 top-12 z-20 h-[60%] w-[38%]"
               onClick={(e) => {
                 e.stopPropagation();
                 moveToSlide(activeSlideIndex + 1);
@@ -588,14 +485,9 @@ export function VenueCardContent({
               ))}
             </div>
 
-            <div className="flex items-start justify-end gap-2 sm:gap-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-2.5 py-1.5 text-[0.68rem] font-medium tracking-[0.02em] text-white/96 shadow-[0_10px_26px_rgba(10,10,10,0.12)] backdrop-blur-md sm:px-3 sm:py-2 sm:text-[0.73rem]">
-                <span>{getDeckLabel(cardIndex, totalCards)}</span>
-              </div>
-            </div>
           </div>
 
-          <div className="mt-auto space-y-3 pt-24 sm:space-y-4 sm:pt-[24rem]">
+          <div className="mt-auto space-y-3 pt-4 sm:space-y-4 sm:pt-6">
             <div className="max-w-[100%] sm:max-w-[84%]">
               <h2 className="text-[clamp(1.65rem,6vw,3.55rem)] font-semibold leading-[0.94] tracking-[-0.06em] text-white [text-wrap:balance] sm:tracking-[-0.078em]">
                 {venue.name}
@@ -636,12 +528,22 @@ export function VenueCardContent({
   );
 }
 
-function OverlayTag({ children }: { readonly children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-4 py-2.5 text-[0.8rem] font-medium text-white shadow-[0_10px_26px_rgba(12,12,12,0.12)] backdrop-blur-md">
-      {children}
-    </span>
-  );
+
+function getToneClass(tone: VenuePhotoTag["tone"]): string {
+  switch (tone) {
+    case "brand":
+      return "border border-[rgba(239,74,132,0.42)] bg-[rgba(239,74,132,0.22)]";
+    case "gold":
+      return "border border-[rgba(255,195,60,0.4)] bg-[rgba(255,195,60,0.22)]";
+    case "vibe":
+      return "border border-[rgba(220,80,130,0.34)] bg-[rgba(220,80,130,0.18)]";
+    case "maps":
+      return "border border-[rgba(255,150,40,0.6)] bg-[rgba(255,150,40,0.34)]";
+    case "website":
+      return "border border-[rgba(60,205,150,0.54)] bg-[rgba(60,205,150,0.28)]";
+    default:
+      return "border border-white/18 bg-[rgba(145,124,105,0.44)]";
+  }
 }
 
 function TagChip({
@@ -668,6 +570,8 @@ function TagChip({
     </>
   );
 
+  const toneClass = getToneClass(tag.tone);
+
   if (tag.href) {
     return (
       <a
@@ -676,7 +580,7 @@ function TagChip({
         rel="noopener noreferrer"
         onClick={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
-        className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-3 py-2 text-[0.78rem] font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md transition-colors hover:bg-[rgba(145,124,105,0.58)] sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm"
+        className={`inline-flex min-h-9 items-center gap-2 rounded-full px-3 py-2 text-[0.78rem] font-semibold text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md transition-colors sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm ${toneClass}`}
       >
         {content}
       </a>
@@ -684,7 +588,7 @@ function TagChip({
   }
 
   return (
-    <div className="inline-flex min-h-9 items-center gap-2 rounded-full border border-white/18 bg-[rgba(145,124,105,0.44)] px-3 py-2 text-[0.78rem] font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm">
+    <div className={`inline-flex min-h-9 items-center gap-2 rounded-full px-3 py-2 text-[0.78rem] font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm ${toneClass}`}>
       {content}
     </div>
   );
