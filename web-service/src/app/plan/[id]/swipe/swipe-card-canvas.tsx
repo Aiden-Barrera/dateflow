@@ -245,9 +245,9 @@ export function SwipeCardCanvas({
 
     // Resolve intent once
     if (ptr.intent === "idle") {
-      if (absY > 12 && absY > absX) {
+      if (absY > 8 && absY > absX * 1.4) {
         ptr.intent = "scrolling";
-      } else if (absX > 10 && absX >= absY) {
+      } else if (absX > 6 && absX >= absY * 0.7) {
         ptr.intent = "dragging";
         cardRef.current?.setPointerCapture(event.pointerId);
       }
@@ -364,7 +364,7 @@ export function SwipeCardCanvas({
   });
 
   return (
-    <div className="relative mx-auto h-[min(58dvh,34rem)] min-h-[29rem] w-full max-w-[23rem] sm:h-[40rem] sm:min-h-[40rem] sm:max-w-none">
+    <div className="relative mx-auto h-[min(72dvh,42rem)] min-h-[34rem] w-full max-w-[23rem] sm:h-[48rem] sm:min-h-[48rem] sm:max-w-none">
 
       {/* Card 3 — deepest, only visible during drag/swipe, same layout as top card */}
       {thirdVenue ? (

@@ -143,8 +143,13 @@ function titleCaseTag(tag: string): string {
 
 function formatPriceLevel(priceLevel: number): string | null {
   if (!priceLevel || priceLevel <= 0) return null;
-  const clamped = Math.max(1, Math.min(4, priceLevel));
-  return "$".repeat(clamped);
+  const labels: Record<number, string> = {
+    1: "$ · Budget-friendly",
+    2: "$$ · Mid-range",
+    3: "$$$ · Upscale",
+    4: "$$$$ · Fine Dining",
+  };
+  return labels[Math.max(1, Math.min(4, priceLevel))] ?? null;
 }
 
 function formatAddressTag(address: string): string | null {
@@ -441,7 +446,7 @@ export function VenueCardContent({
             <button
               type="button"
               aria-label="Show previous venue photo"
-              className="absolute left-0 top-12 z-20 h-[60%] w-[38%]"
+              className="absolute left-0 top-10 z-20 h-[65%] w-1/2"
               onClick={(e) => {
                 e.stopPropagation();
                 moveToSlide(activeSlideIndex - 1);
@@ -453,7 +458,7 @@ export function VenueCardContent({
             <button
               type="button"
               aria-label="Show next venue photo"
-              className="absolute right-0 top-12 z-20 h-[60%] w-[38%]"
+              className="absolute right-0 top-10 z-20 h-[65%] w-1/2"
               onClick={(e) => {
                 e.stopPropagation();
                 moveToSlide(activeSlideIndex + 1);
