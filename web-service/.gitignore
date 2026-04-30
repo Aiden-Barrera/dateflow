@@ -30,6 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 .mcp.json
+supabase/.temp/
 
 # env files
 .env*
