@@ -499,6 +499,55 @@ describe("scoreAndCurate", () => {
     vi.useRealTimers();
   });
 
+  it("reports provider usage metadata to a callback on successful Gemini reranks", async () => {
+    const candidates = [
+      makeCandidate("top-choice", { rating: 4.8, reviewCount: 700 }),
+      makeCandidate("second-choice", { rating: 3.9, reviewCount: 90 }),
+    ];
+    const onUsage = vi.fn();
+
+    vi.stubEnv("AI_CURATION_ENABLED", "true");
+    vi.stubEnv("AI_CURATION_PROVIDER", "gemini");
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    venues: [
+                      {
+                        placeId: "top-choice",
+                        firstDateSuitability: 0.95,
+                        tags: ["cozy"],
+                        rerankAdjustment: 0.02,
+                        whyPicked: "Intimate setting with great food — sets a relaxed tone.",
+                      },
+                    ],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+        usageMetadata: {
+          promptTokenCount: 321,
+          candidatesTokenCount: 87,
+        },
+      }),
+    });
+
+    await scoreAndCurate(candidates, preferences, 1, midpoint, new Map(), new Map(), onUsage);
+
+    expect(onUsage).toHaveBeenCalledWith({
+      inputTokens: 321,
+      outputTokens: 87,
+    });
+  });
+
   it("falls back deterministically and logs timeout failures", async () => {
     const candidates = [
       makeCandidate("top-choice", { rating: 4.8, reviewCount: 700 }),

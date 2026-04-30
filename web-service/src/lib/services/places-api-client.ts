@@ -46,7 +46,10 @@ export function getGooglePlacesReadiness(): {
 
 export function buildGooglePlacePhotoUrl(
   photoReference: string | null,
+  _sessionId?: string,
 ): string | null {
+  void _sessionId;
+
   if (!photoReference) {
     return null;
   }
@@ -60,9 +63,10 @@ export function buildGooglePlacePhotoUrl(
 
 export function buildGooglePlacePhotoUrls(
   photoReferences: readonly string[],
+  sessionId?: string,
 ): readonly string[] {
   return photoReferences
-    .map((photoReference) => buildGooglePlacePhotoUrl(photoReference))
+    .map((photoReference) => buildGooglePlacePhotoUrl(photoReference, sessionId))
     .filter((photoUrl): photoUrl is string => photoUrl !== null);
 }
 

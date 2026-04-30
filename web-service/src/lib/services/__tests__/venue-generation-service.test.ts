@@ -234,7 +234,8 @@ describe("generateVenues", () => {
       { lat: 30.265, lng: -97.745, label: "Midpoint" },
       2000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
-      1
+      1,
+      "session-1"
     );
     expect(mockScoreAndCurate).toHaveBeenCalledTimes(3);
     expect(mockInsert).toHaveBeenNthCalledWith(1, {
@@ -363,14 +364,16 @@ describe("generateVenues", () => {
       expect.anything(),
       2000,
       expect.anything(),
-      expect.anything()
+      expect.anything(),
+      "session-1"
     );
     expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
       2,
       expect.anything(),
       5000,
       expect.anything(),
-      expect.anything()
+      expect.anything(),
+      "session-1"
     );
     // Should not expand further once we have enough
     expect(mockSearchNearbyWithCache).toHaveBeenCalledTimes(2);
@@ -398,6 +401,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
     expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
       6,
@@ -405,6 +409,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
     expect(mockUpdate).toHaveBeenLastCalledWith({ status: "ready_to_swipe" });
   });
@@ -445,6 +450,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
     expect(mockSearchNearbyWithCache).toHaveBeenNthCalledWith(
       6,
@@ -452,6 +458,7 @@ describe("generateVenues", () => {
       5000,
       ["RESTAURANT", "BAR", "ACTIVITY"],
       1,
+      "session-1",
     );
 
     // Final status update must be generation_failed (not ready_to_swipe)

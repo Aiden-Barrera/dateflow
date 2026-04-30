@@ -125,6 +125,14 @@ describe("places-api-client", () => {
         "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200"
       );
     });
+
+    it("keeps proxied photo urls stable even when callers pass a session id", () => {
+      expect(
+        buildGooglePlacePhotoUrl("places/ChIJ_abc123/photos/ref123", "session-1")
+      ).toBe(
+        "/api/places/photos?name=places%2FChIJ_abc123%2Fphotos%2Fref123&maxHeightPx=1200"
+      );
+    });
   });
 
   // ------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PlaceCandidate } from "../../types/venue";
 import type { Location, Category } from "../../types/preference";
+const mockRecordPlacesSearchUsage = vi.fn();
 
 // Mock the two dependencies: VenueCache and searchNearby
 vi.mock("../venue-cache", () => {
@@ -19,6 +20,10 @@ vi.mock("../places-api-client", async (importOriginal) => {
     searchNearby: vi.fn(),
   };
 });
+
+vi.mock("../unit-economics-service", () => ({
+  recordPlacesSearchUsage: (...args: unknown[]) => mockRecordPlacesSearchUsage(...args),
+}));
 
 // Import AFTER mocks are set up
 import { searchNearbyWithCache, CACHE_TTL_SECONDS } from "../places-api-cached";
@@ -57,6 +62,7 @@ describe("searchNearbyWithCache", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRecordPlacesSearchUsage.mockResolvedValue(undefined);
     // Get the mock cache instance that VenueCache constructor returns
     mockCache = new VenueCache() as unknown as typeof mockCache;
     mockCache.buildKey.mockReturnValue("venue:cache:v3:30.27:-97.74:BAR:RESTAURANT:3");
@@ -86,7 +92,13 @@ describe("searchNearbyWithCache", () => {
     ]);
     mockCache.set.mockResolvedValueOnce(undefined);
 
-    const results = await searchNearbyWithCache(location, radius, categories, maxPrice);
+    const results = await searchNearbyWithCache(
+      location,
+      radius,
+      categories,
+      maxPrice,
+      "session-1",
+    );
 
     expect(results).toEqual(fakeCandidates);
     // searchNearby receives Google type strings, not Category enums
@@ -97,6 +109,7 @@ describe("searchNearbyWithCache", () => {
       fakeCandidates,
       CACHE_TTL_SECONDS
     );
+    expect(mockRecordPlacesSearchUsage).toHaveBeenCalledWith("session-1", 1);
   });
 
   it("filters stale cached candidates on cache hit before returning them", async () => {
