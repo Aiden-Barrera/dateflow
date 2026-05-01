@@ -11,7 +11,9 @@ import type { Venue } from "../../../../lib/types/venue";
 import { SwipeDeckCard } from "./swipe-deck-card";
 import { SwipeCardSkeleton } from "./swipe-card-skeleton";
 import { FallbackEndingScreen } from "./fallback-ending-screen";
-import { getSwipeAdvanceStrategy } from "./swipe-advance";
+import { getSwipeAdvanceStrategy, shouldAdvanceSwipeCard } from "./swipe-advance";
+import { getSwipeCommitPlan } from "./swipe-commit-plan";
+import { getRoundPhotoPreloadUrls, preloadImageUrls } from "./swipe-media-preload";
 import {
   acceptFallbackDecision,
   getFallbackStartOverHref,
@@ -101,6 +103,8 @@ export function SwipeFlow({
   const loadingFallbackRef = useRef(false);
   const roundSwipesRef = useRef<Record<number, DemoRoundSwipe[]>>({});
   const demoRoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const preloadedImageUrlsRef = useRef(new Set<string>());
+  const swipeQueueRef = useRef<Promise<void>>(Promise.resolve());
   const [toast, setToast] = useState<string | null>(
     demoMode ? "Demo preview is on. Your partner will respond after each round." : null,
   );
@@ -406,6 +410,13 @@ export function SwipeFlow({
   }, [bootstrap]);
 
   useEffect(() => {
+    preloadImageUrls(
+      getRoundPhotoPreloadUrls(venues, index),
+      preloadedImageUrlsRef.current,
+    );
+  }, [index, venues]);
+
+  useEffect(() => {
     return () => {
       if (demoRoundTimerRef.current) {
         clearTimeout(demoRoundTimerRef.current);
@@ -431,6 +442,32 @@ export function SwipeFlow({
     }
 
     return body as SwipeApiResult;
+  }
+
+  function enqueueSwipeRequest(
+    nextRole: Role,
+    venueId: string,
+    liked: boolean,
+  ): Promise<SwipeApiResult> {
+    const request = swipeQueueRef.current.then(
+      () => postSwipe(nextRole, venueId, liked),
+      () => postSwipe(nextRole, venueId, liked),
+    );
+
+    swipeQueueRef.current = request.then(
+      () => undefined,
+      () => undefined,
+    );
+
+    return request;
+  }
+
+  async function recoverSwipeDeck(message: string) {
+    loadedRoundRef.current = null;
+    setStatus("loading");
+    setStatusMessage("Re-syncing your swipe deck...");
+    setToast(message);
+    await bootstrap();
   }
 
   async function runDemoPartnerRound(
@@ -470,35 +507,53 @@ export function SwipeFlow({
   }
 
   async function handleSwipe(liked: boolean) {
-    if (!currentVenue || submitting) {
+    if (!currentVenue) {
       return;
     }
 
     const swipedVenue = currentVenue;
     const swipedIndex = index;
     const hasNextVenue = swipedIndex < venues.length - 1;
+    const commitPlan = getSwipeCommitPlan(hasNextVenue);
     const advanceStrategy = getSwipeAdvanceStrategy(hasNextVenue);
-
-    setSubmitting(true);
     setToast(null);
 
+    if (commitPlan.advanceBeforeRequest && shouldAdvanceSwipeCard(advanceStrategy, "before_request")) {
+      setIndex(swipedIndex + 1);
+    }
+
+    if (demoMode) {
+      const currentRoundSwipes = roundSwipesRef.current[round] ?? [];
+      roundSwipesRef.current[round] = [
+        ...currentRoundSwipes,
+        { venueId: swipedVenue.id, liked },
+      ];
+    }
+
     try {
-      const swipeResult = await postSwipe(role, swipedVenue.id, liked);
-      if (demoMode) {
-        const currentRoundSwipes = roundSwipesRef.current[round] ?? [];
-        roundSwipesRef.current[round] = [
-          ...currentRoundSwipes,
-          { venueId: swipedVenue.id, liked },
-        ];
+      const queuedSwipeRequest = enqueueSwipeRequest(role, swipedVenue.id, liked);
+
+      if (!commitPlan.awaitRequestInGesture) {
+        void queuedSwipeRequest.then((swipeResult) => {
+          if (swipeResult.matched || swipeResult.sessionStatus === "matched") {
+            router.push(`/plan/${sessionId}/results`);
+          }
+        }).catch(async (error) => {
+          const message = error instanceof Error ? error.message : "Failed to record swipe.";
+          await recoverSwipeDeck(message);
+        });
+        return;
+      }
+
+      setSubmitting(true);
+      const swipeResult = await queuedSwipeRequest;
+      if (hasNextVenue && shouldAdvanceSwipeCard(advanceStrategy, "after_request_success")) {
+        setIndex(swipedIndex + 1);
       }
 
       if (swipeResult.matched || swipeResult.sessionStatus === "matched") {
         router.push(`/plan/${sessionId}/results`);
         return;
-      }
-
-      if (advanceStrategy === "after_request_success") {
-        setIndex(swipedIndex + 1);
       }
 
       if (!hasNextVenue && swipeResult.roundComplete && swipeResult.currentRound < 3) {
@@ -534,10 +589,17 @@ export function SwipeFlow({
         }
       }
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "Failed to record swipe.");
+      const message = error instanceof Error ? error.message : "Failed to record swipe.";
+      if (commitPlan.advanceBeforeRequest) {
+        await recoverSwipeDeck(message);
+      } else {
+        setToast(message);
+      }
       throw error instanceof Error ? error : new Error("Failed to record swipe.");
     } finally {
-      setSubmitting(false);
+      if (commitPlan.awaitRequestInGesture) {
+        setSubmitting(false);
+      }
     }
   }
 
@@ -715,10 +777,10 @@ export function SwipeFlow({
 
   return (
     <SwipeShell creatorName={creatorName}>
-      <div className="mx-auto w-full max-w-md">
-        <div className="relative mb-4 flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3 py-2 text-caption font-medium text-white/70 shadow-sm">
-            <span className="rounded-full bg-secondary-muted px-2.5 py-1 font-semibold text-secondary">
+      <div className="mx-auto w-full max-w-[23rem] sm:max-w-md">
+        <div className="relative mb-3 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] px-2.5 py-1.5 text-[0.68rem] font-medium text-white/70 shadow-sm sm:gap-2 sm:px-3 sm:py-2 sm:text-caption">
+            <span className="rounded-full bg-secondary-muted px-2 py-1 font-semibold text-secondary sm:px-2.5">
               {progressLabel}
             </span>
             <span className="h-4 w-px bg-muted" />
@@ -733,7 +795,7 @@ export function SwipeFlow({
             onClick={() => {
               setShowDeckInfo((current) => !current);
             }}
-            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/70 shadow-sm transition-colors duration-200 hover:text-text"
+            className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/[0.08] text-white/70 shadow-sm transition-colors duration-200 hover:text-text sm:h-11 sm:w-11"
           >
             <InfoIcon />
           </button>
@@ -746,7 +808,7 @@ export function SwipeFlow({
           ) : null}
         </div>
 
-        <div className="mb-5 flex gap-2">
+        <div className="mb-3 flex gap-2 sm:mb-5">
           {[1, 2, 3].map((step) => (
             <div
               key={step}
@@ -788,7 +850,7 @@ function SwipeShell({
   readonly creatorName: string;
 }) {
   return (
-    <main className="bg-shared-wine relative min-h-dvh overflow-hidden px-6 pb-10 pt-8 text-white sm:px-8" style={{ overscrollBehaviorY: "contain" }}>
+    <main className="bg-shared-wine relative min-h-dvh overflow-hidden px-4 pb-4 pt-4 text-white sm:px-8 sm:pb-10 sm:pt-8" style={{ overscrollBehaviorY: "contain" }}>
       <div
         className="pointer-events-none absolute -left-20 top-12 h-72 w-72 rounded-full blur-3xl"
         style={{ background: "var(--color-primary-muted)" }}
@@ -801,9 +863,9 @@ function SwipeShell({
       />
 
       <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex items-center justify-between gap-4">
+        <div className="mb-4 flex items-center justify-between gap-3 sm:mb-8 sm:gap-4">
           <Logo />
-          <div className="rounded-full border border-white/15 bg-white/[0.06] px-3 py-2 text-caption font-medium text-white/70 backdrop-blur-sm">
+          <div className="rounded-full border border-white/15 bg-white/[0.06] px-2.5 py-1.5 text-[0.68rem] font-medium text-white/70 backdrop-blur-sm sm:px-3 sm:py-2 sm:text-caption">
             {creatorName}
             {"'"}s invite
           </div>

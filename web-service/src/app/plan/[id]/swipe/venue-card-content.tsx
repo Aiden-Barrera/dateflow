@@ -1,13 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CategoryIcon } from "../../../../components/category-icon";
-import { PriceBadge } from "../../../../components/price-badge";
 import type { Category } from "../../../../lib/types/preference";
 import type { Venue } from "../../../../lib/types/venue";
-
-// ─── Link helpers ──────────────────────────────────────────────────────────────
+import { preloadImageUrls } from "./swipe-media-preload";
 
 export function buildGoogleMapsUrl(venue: Venue): string {
   const query = encodeURIComponent(`${venue.name} ${venue.address}`);
@@ -24,7 +22,6 @@ export function formatEventDateTime(date: Date): string {
     hour12: true,
   });
 }
-// ─── Venue slide / tag helpers (re-exported via swipe-deck-card for tests) ───
 
 const INTERNAL_TAGS = new Set<string>([
   "unscored",
@@ -51,7 +48,6 @@ export function getWrappedSlideIndex(index: number, totalSlides: number): number
   return ((index % totalSlides) + totalSlides) % totalSlides;
 }
 
-// Backward-compatible export still used by swipe-deck-card re-exports/tests.
 export const clampSlideIndex = getWrappedSlideIndex;
 
 const PHOTO_THUMBNAIL_WIDTH_PX = 96;
@@ -83,7 +79,14 @@ const CATEGORY_LABELS: Record<Category, string> = {
   EVENT: "Event",
 };
 
-// ─── Exported pure helpers (tested) ──────────────────────────────────────────
+type VenuePhotoTag = {
+  readonly id: string;
+  readonly label: string;
+  readonly href?: string;
+  readonly icon?: "category" | "map" | "website" | "status";
+  readonly detail?: string;
+  readonly tone?: "brand" | "gold" | "vibe" | "maps" | "website";
+};
 
 export function formatRatingWithCount(
   rating: number,
@@ -130,7 +133,179 @@ export function buildSwipeCardAriaLabel(
   return restriction ? `${base}, ${restriction} only` : base;
 }
 
-// ─── Preview card for cards 2 & 3 in the stack ───────────────────────────────
+function titleCaseTag(tag: string): string {
+  return tag
+    .trim()
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatPriceLevel(priceLevel: number): string | null {
+  if (!priceLevel || priceLevel <= 0) return null;
+  const labels: Record<number, string> = {
+    1: "$ · Budget-friendly",
+    2: "$$ · Mid-range",
+    3: "$$$ · Upscale",
+    4: "$$$$ · Fine Dining",
+  };
+  return labels[Math.max(1, Math.min(4, priceLevel))] ?? null;
+}
+
+function formatAddressTag(address: string): string | null {
+  const trimmed = address.trim();
+  if (!trimmed) return null;
+  const primary = trimmed.split("·")[0]?.split(",")[0]?.trim();
+  return primary ? `Near ${primary}` : null;
+}
+
+function formatHoursTag(venue: Venue): string | null {
+  if (!venue.openingHours) return null;
+  return venue.openingHours.openNow ? "Open now" : "Closed for now";
+}
+
+function formatHoursDetail(venue: Venue): string | null {
+  const lines = venue.openingHours?.weekdayText ?? [];
+  if (lines.length === 0) return null;
+  const firstLine = lines[0]?.split(":")?.slice(1)?.join(":")?.trim();
+  return firstLine && firstLine.length > 0 ? firstLine : null;
+}
+
+function formatScheduleTag(venue: Venue): string | null {
+  if (!venue.scheduledAt) return null;
+  return formatEventDateTime(venue.scheduledAt);
+}
+
+function buildPhotoTagSets(
+  venue: Venue,
+  mapsUrl: string,
+): readonly (readonly VenuePhotoTag[])[] {
+  const usedLabels = new Set<string>();
+
+  function dedup(tags: VenuePhotoTag[]): VenuePhotoTag[] {
+    return tags.filter((tag) => {
+      if (!tag.label || usedLabels.has(tag.label)) return false;
+      usedLabels.add(tag.label);
+      return true;
+    });
+  }
+
+  const displayTags = getDisplayTags(venue.tags).map(titleCaseTag);
+  const tagSets: (readonly VenuePhotoTag[])[] = [];
+
+  // Set 0 — First impression: category + price level + distance
+  const priceLabel = formatPriceLevel(venue.priceLevel);
+  const introSet = dedup(
+    (
+      [
+        { id: "category", label: CATEGORY_LABELS[venue.category], icon: "category" as const, tone: "brand" as const },
+        priceLabel ? { id: "price", label: priceLabel, tone: "gold" as const } : null,
+        typeof venue.distanceMeters === "number"
+          ? { id: "distance", label: formatDistance(venue.distanceMeters) }
+          : null,
+      ] as (VenuePhotoTag | null)[]
+    ).filter((t): t is VenuePhotoTag => t !== null),
+  );
+  if (introSet.length > 0) tagSets.push(introSet.slice(0, 3));
+
+  // Set 1 — Social proof: rating + hours (or event schedule + duration)
+  if (venue.sourceType === "ticketmaster") {
+    const scheduleLabel = formatScheduleTag(venue);
+    const eventSet = dedup(
+      (
+        [
+          scheduleLabel ? { id: "schedule", label: scheduleLabel, tone: "gold" as const } : null,
+          venue.durationMinutes ? { id: "duration", label: `${venue.durationMinutes} min` } : null,
+        ] as (VenuePhotoTag | null)[]
+      ).filter((t): t is VenuePhotoTag => t !== null),
+    );
+    if (eventSet.length > 0) tagSets.push(eventSet.slice(0, 2));
+  } else {
+    const hoursLabel = formatHoursTag(venue);
+    const socialSet = dedup(
+      (
+        [
+          { id: "rating", label: formatRatingWithCount(venue.rating, venue.userRatingCount), tone: "gold" as const },
+          hoursLabel
+            ? {
+                id: "hours",
+                label: hoursLabel,
+                detail: formatHoursDetail(venue) ?? undefined,
+                icon: "status" as const,
+              }
+            : null,
+        ] as (VenuePhotoTag | null)[]
+      ).filter((t): t is VenuePhotoTag => t !== null),
+    );
+    if (socialSet.length > 0) tagSets.push(socialSet.slice(0, 2));
+  }
+
+  // Set 2 — Vibe/taste: AI display tags are the most personality-rich signal
+  const whyPickedLabel = venue.whyPicked
+    ? titleCaseTag((venue.whyPicked.split(/[.!?]/)[0] ?? "").slice(0, 48))
+    : null;
+  const vibeSet = dedup(
+    (
+      [
+        displayTags[0] ? { id: "taste-0", label: displayTags[0], tone: "vibe" as const } : null,
+        displayTags[1]
+          ? { id: "taste-1", label: displayTags[1], tone: "vibe" as const }
+          : whyPickedLabel && whyPickedLabel.length > 0
+            ? { id: "why-picked", label: whyPickedLabel, tone: "vibe" as const }
+            : null,
+      ] as (VenuePhotoTag | null)[]
+    )
+      .filter((t): t is VenuePhotoTag => t !== null)
+      .filter((t) => t.label.length > 0 && t.label.length <= 52),
+  );
+  if (vibeSet.length > 0) tagSets.push(vibeSet.slice(0, 2));
+
+  // Set 3 — Practical: address neighbourhood + maps link
+  const addressLabel = formatAddressTag(venue.address);
+  const locationSet = dedup(
+    (
+      [
+        addressLabel ? { id: "address", label: addressLabel } : null,
+        { id: "maps", label: "Open in Maps", href: mapsUrl, icon: "map" as const, tone: "maps" as const },
+      ] as (VenuePhotoTag | null)[]
+    ).filter((t): t is VenuePhotoTag => t !== null),
+  );
+  if (locationSet.length > 0) tagSets.push(locationSet.slice(0, 2));
+
+  // Set 4 — Web/extras: website link + editorial summary or 3rd AI tag
+  if (venue.website || venue.editorialSummary || displayTags[2]) {
+    const extrasSet = dedup(
+      (
+        [
+          venue.website
+            ? { id: "website", label: "Visit Website", href: venue.website, icon: "website" as const, tone: "website" as const }
+            : null,
+          displayTags[2]
+            ? { id: "taste-2", label: displayTags[2] }
+            : venue.editorialSummary
+              ? { id: "summary", label: titleCaseTag(venue.editorialSummary).slice(0, 52) }
+              : null,
+        ] as (VenuePhotoTag | null)[]
+      ).filter((t): t is VenuePhotoTag => t !== null),
+    );
+    if (extrasSet.length > 0) tagSets.push(extrasSet.slice(0, 2));
+  }
+
+  const filtered = tagSets.filter((set) => set.length > 0);
+  return filtered.length > 0
+    ? filtered
+    : [[{ id: "category-fallback", label: CATEGORY_LABELS[venue.category], icon: "category" as const }]];
+}
+
+function getPhotoTags(
+  venue: Venue,
+  activeSlideIndex: number,
+  mapsUrl: string,
+): readonly VenuePhotoTag[] {
+  const sets = buildPhotoTagSets(venue, mapsUrl);
+  const safeIndex = activeSlideIndex % sets.length;
+  return sets[safeIndex] ?? sets[0] ?? [];
+}
 
 export function PreviewVenueCard({
   venue,
@@ -138,74 +313,54 @@ export function PreviewVenueCard({
   readonly venue: Venue;
 }) {
   const slides = getVenueSlides(venue);
-  const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
+  const previewSlide = slides[0] ?? null;
+  const previewTags = getPhotoTags(venue, 0, buildGoogleMapsUrl(venue)).slice(0, 2);
 
   return (
-    <div className="flex h-full flex-col bg-white/72">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),rgba(255,255,255,0.95))]">
-        {slides.length > 0 ? (
+    <div className="relative flex h-full flex-col overflow-hidden bg-[#f4efe9]">
+      <div className="absolute inset-0">
+        {previewSlide ? (
           <Image
-            src={slides[0]}
+            src={previewSlide}
             alt=""
             fill
             sizes="(max-width: 768px) 100vw, 480px"
-            className="object-cover opacity-82"
+            className="object-cover"
             unoptimized
             onContextMenu={(e) => e.preventDefault()}
           />
         ) : (
-          <>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.85),_transparent_42%),linear-gradient(135deg,var(--color-secondary-muted),rgba(255,255,255,0.96))]" />
-            <div className="absolute -right-10 top-5 h-24 w-24 rounded-[1.7rem] border border-white/20 bg-white/20 backdrop-blur-sm" />
-            <div className="absolute left-5 top-6 h-16 w-14 rounded-[1rem] border border-white/18 bg-white/18 backdrop-blur-sm" />
-          </>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.88),_transparent_36%),linear-gradient(160deg,#d7c7b6_0%,#8d6f62_100%)]" />
         )}
-        <div className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.94))]" />
-        <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/88 px-3 py-2 text-caption text-[#6a4a3a] shadow-sm">
-          <CategoryIcon category={venue.category} />
-          {CATEGORY_LABELS[venue.category]}
-        </div>
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,13,12,0.06)_0%,rgba(15,13,12,0.16)_44%,rgba(15,13,12,0.76)_100%)]" />
       </div>
-      <div className="space-y-4 px-5 py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-body font-semibold text-[#2a1a1c]">{venue.name}</p>
-            <p className="mt-1 text-caption text-[#6a4a3a]">{venue.address}</p>
-          </div>
-          <div className="origin-top-right scale-[0.92] opacity-88">
-            <PriceBadge priceLevel={venue.priceLevel} />
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#d9c7b5] bg-white px-2.5 py-1 text-caption text-[#6a4a3a]">
-            <StarIcon />
-            {venue.rating.toFixed(1)}
-          </div>
-          {getDisplayTags(venue.tags).slice(0, 2).map((tag, index) => (
-            <div
-              key={`${tag}-${index}`}
-              className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-2.5 py-1 text-caption text-[#8a2346]"
-            >
-              {tag}
-            </div>
-          ))}
-          {ageLabel ? (
+
+      <div className="relative flex h-full flex-col justify-between p-5 text-white">
+        <div className="flex gap-2">
+          {Array.from({ length: Math.max(slides.length, 3) }, (_, index) => (
             <span
-              aria-label={`Age restriction: ${ageLabel}`}
-              className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-2.5 py-1 text-caption font-semibold text-amber-700"
-            >
-              {ageLabel}
-            </span>
-          ) : null}
+              key={index}
+              className={`h-1 flex-1 rounded-full ${
+                index === 0 ? "bg-white/92" : "bg-white/28"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-[1.65rem] font-semibold leading-[0.96] tracking-[-0.05em]">
+            {venue.name}
+          </p>
+          <div className="flex max-w-[14rem] flex-wrap items-start gap-2">
+            {previewTags.map((tag) => (
+              <TagChip key={tag.id} tag={tag} venue={venue} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-// ─── Main card content ────────────────────────────────────────────────────────
-// Purely presentational — no drag state. Overlays (tint, badges) are rendered
-// as animated.div siblings in SwipeCardCanvas using spring interpolation.
 
 type VenueCardContentProps = {
   readonly venue: Venue;
@@ -218,396 +373,222 @@ type VenueCardContentProps = {
 
 export function VenueCardContent({
   venue,
-  cardIndex,
-  totalCards,
+  cardIndex: _cardIndex,
+  totalCards: _totalCards,
   isAnimating,
   submitting,
   onSwipe,
 }: VenueCardContentProps) {
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
-  const [showHours, setShowHours] = useState(false);
-  const thumbnailStripRef = useRef<HTMLDivElement | null>(null);
-  const programmaticThumbnailScrollRef = useRef(false);
-  const programmaticThumbnailTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const preloadedSlideUrlsRef = useRef(new Set<string>());
   const slides = getVenueSlides(venue);
-  const activeSlide = slides[activeSlideIndex] ?? slides[0] ?? null;
-  const ageLabel = getAgeRestrictionLabel(venue.ageRestriction);
+  const activeSlide = slides[activeSlideIndex] ?? null;
   const mapsUrl = buildGoogleMapsUrl(venue);
-  const hasLinks = true; // maps always available
-  const hasEventInfo = !!venue.scheduledAt || !!venue.eventUrl;
-  const hasHours =
-    venue.openingHours?.weekdayText && venue.openingHours.weekdayText.length > 0;
-
-  function moveToSlide(nextIndex: number) {
-    if (slides.length <= 1) return;
-    programmaticThumbnailScrollRef.current = true;
-    setActiveSlideIndex(getWrappedSlideIndex(nextIndex, slides.length));
-  }
+  const photoTags = useMemo(
+    () => getPhotoTags(venue, activeSlideIndex, mapsUrl),
+    [activeSlideIndex, mapsUrl, venue],
+  );
+  const visibleSlideCount = slides.length > 0 ? slides.length : 4;
+  const progressLabels = useMemo(
+    () => Array.from({ length: visibleSlideCount }, (_, index) => `Show photo ${index + 1} of ${visibleSlideCount}`),
+    [visibleSlideCount],
+  );
 
   useEffect(() => {
-    if (
-      !programmaticThumbnailScrollRef.current ||
-      !thumbnailStripRef.current ||
-      slides.length <= 1
-    ) {
+    preloadedSlideUrlsRef.current = new Set<string>();
+  }, [venue.id]);
+
+  useEffect(() => {
+    if (slides.length <= 1) {
+      preloadImageUrls(slides, preloadedSlideUrlsRef.current);
       return;
     }
 
-    const strip = thumbnailStripRef.current;
-    const nextScrollLeft = getThumbnailStripScrollLeft(
-      activeSlideIndex,
-      strip.clientWidth,
-      slides.length,
-    );
+    const prioritizedSlides = [
+      slides[activeSlideIndex],
+      slides[activeSlideIndex + 1],
+      slides[activeSlideIndex - 1],
+      ...slides,
+    ].filter((slide): slide is string => Boolean(slide));
 
-    strip.scrollTo({
-      left: nextScrollLeft,
-      behavior: "smooth",
-    });
+    preloadImageUrls(prioritizedSlides, preloadedSlideUrlsRef.current);
+  }, [activeSlideIndex, slides]);
 
-    if (programmaticThumbnailTimeoutRef.current !== null) {
-      clearTimeout(programmaticThumbnailTimeoutRef.current);
-    }
-
-    programmaticThumbnailTimeoutRef.current = setTimeout(() => {
-      programmaticThumbnailScrollRef.current = false;
-      programmaticThumbnailTimeoutRef.current = null;
-    }, 220);
-  }, [activeSlideIndex, slides.length]);
-
-  useEffect(() => {
-    return () => {
-      if (programmaticThumbnailTimeoutRef.current !== null) {
-        clearTimeout(programmaticThumbnailTimeoutRef.current);
-      }
-    };
-  }, []);
+  function moveToSlide(nextIndex: number) {
+    if (slides.length <= 1) return;
+    setActiveSlideIndex(getWrappedSlideIndex(nextIndex, slides.length));
+  }
 
   return (
-    <div className="relative h-full overflow-hidden">
-      {/* Photo area */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-[linear-gradient(135deg,var(--color-secondary-muted),var(--color-primary-muted))]">
+    <div className="flex h-full min-h-0 flex-col bg-[#f7f3ee]">
+      <div className="relative h-full min-h-0 flex-1 overflow-hidden bg-[#dccfc4]">
         {activeSlide ? (
           <Image
+            key={activeSlide}
             src={activeSlide}
             alt={venue.name}
             fill
             sizes="(max-width: 768px) 100vw, 480px"
+            priority
             loading="eager"
             className="object-cover"
             unoptimized
             onContextMenu={(e) => e.preventDefault()}
           />
         ) : (
-          <div className="relative flex h-full items-end overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.92),_transparent_42%),linear-gradient(135deg,var(--color-secondary),var(--color-primary))] p-6">
-            <div className="absolute -right-10 top-8 h-28 w-28 rounded-[2rem] border border-white/18 bg-white/10 backdrop-blur-sm" />
-            <div className="absolute left-6 top-8 h-18 w-16 rounded-[1.2rem] border border-white/18 bg-white/10 backdrop-blur-sm" />
-            <div className="relative max-w-[14rem] rounded-[1.35rem] border border-white/18 bg-white/14 px-4 py-3 text-white backdrop-blur">
-              <p className="text-caption font-semibold uppercase tracking-[0.18em] text-white/74">
-                Photo unavailable
-              </p>
-              <p className="mt-2 text-body text-white/88">
-                The venue details are real. A live photo can slot in when one is available.
-              </p>
-            </div>
-          </div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_transparent_36%),linear-gradient(160deg,#d7c7b6_0%,#8d6f62_100%)]" />
         )}
 
-        <div className="absolute inset-x-0 bottom-0 h-18 bg-[linear-gradient(180deg,transparent,rgba(28,25,23,0.26))]" />
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(115deg, rgba(255,255,255,0) 18%, rgba(255,255,255,0.22) 44%, rgba(255,255,255,0) 58%)",
-            opacity: 0.35,
-          }}
-        />
-
-        <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-caption font-medium text-[#2a1a1c] shadow-sm">
-          <CategoryIcon category={venue.category} />
-          {CATEGORY_LABELS[venue.category]}
-        </div>
-
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(15,13,12,0.08)_0%,rgba(15,13,12,0.12)_20%,rgba(15,13,12,0.34)_56%,rgba(15,13,12,0.88)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_center,rgba(255,255,255,0.22),transparent_42%)]" />
         {slides.length > 1 ? (
           <>
             <button
               type="button"
               aria-label="Show previous venue photo"
-              className="absolute left-6 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/20 text-white shadow-[0_10px_24px_rgba(15,23,42,0.24)] backdrop-blur-md transition-colors hover:bg-black/32"
-              onClick={(e) => { e.stopPropagation(); moveToSlide(activeSlideIndex - 1); }}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <ChevronIcon direction="left" />
-            </button>
+              className="absolute left-0 top-10 z-20 h-[65%] w-1/2"
+              onClick={(e) => {
+                e.stopPropagation();
+                moveToSlide(activeSlideIndex - 1);
+              }}
+            />
             <button
               type="button"
               aria-label="Show next venue photo"
-              className="absolute right-6 top-1/2 z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/20 text-white shadow-[0_10px_24px_rgba(15,23,42,0.24)] backdrop-blur-md transition-colors hover:bg-black/32"
-              onClick={(e) => { e.stopPropagation(); moveToSlide(activeSlideIndex + 1); }}
-              onPointerDown={(e) => e.stopPropagation()}
-            >
-              <ChevronIcon direction="right" />
-            </button>
-            <div className="absolute right-4 top-4 z-20 rounded-full border border-white/28 bg-black/20 px-3 py-1.5 text-caption font-medium text-white shadow-[0_10px_24px_rgba(15,23,42,0.22)] backdrop-blur-md">
-              {activeSlideIndex + 1} / {slides.length}
-            </div>
+              className="absolute right-0 top-10 z-20 h-[65%] w-1/2"
+              onClick={(e) => {
+                e.stopPropagation();
+                moveToSlide(activeSlideIndex + 1);
+              }}
+            />
           </>
         ) : null}
-      </div>
 
-      {/* Info panel */}
-      <div className="space-y-4 p-6" style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
-        <div className="rounded-[1.5rem] border border-[rgba(208,61,106,0.18)] bg-[rgba(208,61,106,0.05)] p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 space-y-3">
-              <div>
-                <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#8a2346]">
-                  Venue {cardIndex} of {totalCards}
-                </p>
-                <h2 className="mt-2 text-[clamp(1.4rem,4vw,2.5rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-[#2a1a1c]">
-                  {venue.name}
-                </h2>
-                <p className="mt-2 text-body text-[#6a4a3a]">{venue.address}</p>
-                {venue.editorialSummary ? (
-                  <p className="mt-2 line-clamp-2 text-body italic text-[#8a6a5a]">
-                    {venue.editorialSummary}
-                  </p>
-                ) : null}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <InfoPill>
-                  <StarIcon />
-                  {formatRatingWithCount(venue.rating, venue.userRatingCount)}
-                </InfoPill>
-                <InfoPill>
-                  <CategoryIcon category={venue.category} />
-                  {CATEGORY_LABELS[venue.category]}
-                </InfoPill>
-                {typeof venue.distanceMeters === "number" ? (
-                  <InfoPill>{formatDistance(venue.distanceMeters)}</InfoPill>
-                ) : null}
-                {venue.openingHours ? (
-                  <InfoPill>
-                    <span
-                      className={`inline-block h-2 w-2 rounded-full ${
-                        venue.openingHours.openNow ? "bg-[#10a37f]" : "bg-[#c2410c]"
-                      }`}
-                      aria-hidden="true"
-                    />
-                    {venue.openingHours.openNow ? "Open now" : "Closed"}
-                  </InfoPill>
-                ) : null}
-                <InfoPill>{`Round ${venue.round}`}</InfoPill>
-                {ageLabel ? (
-                  <span
-                    aria-label={`Age restriction: ${ageLabel}`}
-                    className="inline-flex items-center rounded-full border border-amber-400 bg-amber-50 px-3 py-1.5 text-caption font-semibold text-amber-700"
-                  >
-                    {ageLabel}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-            <div className="sm:hidden">
-              <PriceBadge priceLevel={venue.priceLevel} />
-            </div>
-          </div>
-        </div>
-
-        {slides.length > 1 ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#6a4a3a]">
-                Venue photos
-              </p>
-              <div className="flex items-center gap-1.5">
-                {slides.map((slide, i) => (
-                  <button
-                    type="button"
-                    key={`${slide}-${i}`}
-                    aria-label={`Show photo ${i + 1} of ${slides.length}`}
-                    className={`rounded-full transition-all duration-200 ${
-                      i === activeSlideIndex ? "h-1.5 w-5 bg-primary" : "h-1.5 w-1.5 bg-muted"
-                    }`}
-                    onClick={() => moveToSlide(i)}
-                  />
-                ))}
-              </div>
-            </div>
-            <div
-              ref={thumbnailStripRef}
-              className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {slides.map((slide, i) => (
+        <div className="relative z-10 flex h-full flex-col p-4 sm:p-6">
+          <div className="space-y-3 sm:space-y-5">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {Array.from({ length: visibleSlideCount }, (_, index) => (
                 <button
                   type="button"
-                  key={`${slide}-thumb-${i}`}
-                  aria-label={`Show photo ${i + 1} of ${slides.length}`}
-                  className={`relative h-20 min-w-24 overflow-hidden rounded-[1.1rem] border bg-[#f5ebe3] shadow-[0_10px_24px_rgba(45,42,38,0.08)] ${
-                    i === activeSlideIndex
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-[#d9c7b5]"
+                  key={index}
+                  aria-label={progressLabels[index]}
+                  className={`h-1 flex-1 rounded-full transition-all ${
+                    index === activeSlideIndex ? "bg-white/95" : "bg-white/24"
                   }`}
-                  onClick={() => moveToSlide(i)}
-                >
-                  <Image
-                    src={slide}
-                    alt={`${venue.name} photo ${i + 1}`}
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                    unoptimized
-                    onContextMenu={(e) => e.preventDefault()}
-                  />
-                </button>
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveToSlide(index);
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                />
               ))}
             </div>
+
           </div>
-        ) : null}
 
-        <div className="flex flex-wrap gap-2">
-          {getDisplayTags(venue.tags).slice(0, 3).map((tag, index) => (
-            <span
-              key={`${tag}-${index}`}
-              className="rounded-full border border-[rgba(208,61,106,0.3)] bg-[rgba(208,61,106,0.08)] px-3 py-1.5 text-caption font-medium text-[#8a2346]"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
+          <div className="mt-auto space-y-3 pt-4 sm:space-y-4 sm:pt-6">
+            <div className="max-w-[100%] sm:max-w-[84%]">
+              <h2 className="text-[clamp(1.65rem,6vw,3.55rem)] font-semibold leading-[0.94] tracking-[-0.06em] text-white [text-wrap:balance] sm:tracking-[-0.078em]">
+                {venue.name}
+              </h2>
+            </div>
 
-        {/* Event date / Get Tickets */}
-        {hasEventInfo ? (
-          <div className="rounded-[1.25rem] border border-[rgba(208,100,61,0.25)] bg-[rgba(208,100,61,0.06)] p-4">
-            {venue.scheduledAt ? (
-              <div className="flex items-center gap-2">
-                <CalendarIcon />
-                <span className="text-body font-medium text-[#6a3020]">
-                  {formatEventDateTime(venue.scheduledAt)}
-                </span>
-                {venue.durationMinutes ? (
-                  <span className="ml-auto rounded-full border border-[rgba(208,100,61,0.3)] px-2.5 py-1 text-caption text-[#8a4020]">
-                    {venue.durationMinutes >= 60
-                      ? `${Math.floor(venue.durationMinutes / 60)}h${venue.durationMinutes % 60 ? ` ${venue.durationMinutes % 60}m` : ""}`
-                      : `${venue.durationMinutes}m`}
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
-            {venue.eventUrl ? (
-              <a
-                href={venue.eventUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#c0392b] text-caption font-semibold text-white transition-colors hover:bg-[#a93226]"
+            <div className="flex max-w-[100%] flex-wrap gap-1.5 sm:max-w-[82%] sm:gap-2">
+              {photoTags.slice(0, 3).map((tag) => (
+                <TagChip key={tag.id} tag={tag} venue={venue} />
+              ))}
+            </div>
+
+            <div className="flex items-center justify-center gap-4 pt-4 sm:gap-5 sm:pt-6">
+              <button
+                type="button"
+                aria-label="Pass venue"
+                onClick={() => onSwipe(false)}
+                disabled={submitting || isAnimating}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-[#ea4a83] shadow-[0_18px_40px_rgba(16,12,14,0.24)] transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-[88px] sm:w-[88px]"
               >
-                <TicketIcon />
-                Get Tickets
-              </a>
-            ) : null}
-          </div>
-        ) : null}
-
-        {venue.whyPicked ? (
-          <div className="rounded-[1.25rem] border border-[rgba(208,61,106,0.25)] bg-[rgba(208,61,106,0.08)] p-4">
-            <p className="text-caption font-semibold uppercase tracking-[0.16em] text-[#8a2346]">
-              Why we picked this
-            </p>
-            <p className="mt-2 text-body text-[#2a1a1c]">{venue.whyPicked}</p>
-          </div>
-        ) : null}
-
-        {/* Links: website + Google Maps */}
-        {hasLinks ? (
-          <div className="flex gap-2">
-            <a
-              href={mapsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-[#d9c7b5] bg-white py-2.5 text-caption font-medium text-[#6a4a3a] transition-colors hover:bg-[#f5ebe3]"
-            >
-              <MapPinIcon />
-              Maps
-            </a>
-            {venue.website ? (
-              <a
-                href={venue.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-xl border border-[#d9c7b5] bg-white py-2.5 text-caption font-medium text-[#6a4a3a] transition-colors hover:bg-[#f5ebe3]"
+                <PassIcon className="h-7 w-7 sm:h-10 sm:w-10" />
+              </button>
+              <button
+                type="button"
+                aria-label="Like venue"
+                onClick={() => onSwipe(true)}
+                disabled={submitting || isAnimating}
+                className="flex h-18 w-18 items-center justify-center rounded-full bg-[#ef4a84] text-white shadow-[0_22px_44px_rgba(239,74,132,0.42)] transition-transform duration-200 hover:scale-[1.03] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60 sm:h-[98px] sm:w-[98px]"
               >
-                <GlobeIcon />
-                Website
-              </a>
-            ) : null}
-          </div>
-        ) : null}
+                <HeartIcon className="h-8 w-8 sm:h-10 sm:w-10" />
+              </button>
+            </div>
 
-        {/* Opening hours expandable */}
-        {hasHours ? (
-          <div className="rounded-[1.25rem] border border-[#d9c7b5] bg-white">
-            <button
-              type="button"
-              aria-expanded={showHours}
-              aria-controls="venue-hours-panel"
-              onClick={(e) => { e.stopPropagation(); setShowHours((v) => !v); }}
-              onPointerDown={(e) => e.stopPropagation()}
-              className="flex w-full items-center justify-between px-4 py-3 text-caption font-medium text-[#6a4a3a]"
-            >
-              <span className="flex items-center gap-2">
-                <ClockIcon />
-                Hours
-              </span>
-              <ChevronIcon direction={showHours ? "up" : "down"} />
-            </button>
-            {showHours ? (
-              <div id="venue-hours-panel" className="border-t border-[#ede0d4] px-4 pb-3 pt-2 space-y-1">
-                {(venue.openingHours?.weekdayText ?? []).map((line, i) => (
-                  <p key={i} className="text-caption text-[#6a4a3a]">{line}</p>
-                ))}
-              </div>
-            ) : null}
           </div>
-        ) : null}
-
-        {/* Action buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => onSwipe(false)}
-            disabled={submitting || isAnimating}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#dc3545] bg-[#dc3545] text-body font-semibold text-white transition-all duration-200 hover:bg-[#c42a3c] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <PassIcon />
-            Pass
-          </button>
-          <button
-            type="button"
-            onClick={() => onSwipe(true)}
-            disabled={submitting || isAnimating}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#10a37f] bg-[#10a37f] text-body font-semibold text-white transition-all duration-200 hover:bg-[#0e8e6f] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white/80 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <HeartIcon />
-            Like
-          </button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Shared icons ─────────────────────────────────────────────────────────────
 
-function InfoPill({ children }: { readonly children: React.ReactNode }) {
+function getToneClass(tone: VenuePhotoTag["tone"]): string {
+  switch (tone) {
+    case "brand":
+      return "border border-[rgba(239,74,132,0.42)] bg-[rgba(239,74,132,0.22)]";
+    case "gold":
+      return "border border-[rgba(255,195,60,0.4)] bg-[rgba(255,195,60,0.22)]";
+    case "vibe":
+      return "border border-[rgba(220,80,130,0.34)] bg-[rgba(220,80,130,0.18)]";
+    case "maps":
+      return "border border-[rgba(255,150,40,0.6)] bg-[rgba(255,150,40,0.34)]";
+    case "website":
+      return "border border-[rgba(60,205,150,0.54)] bg-[rgba(60,205,150,0.28)]";
+    default:
+      return "border border-white/18 bg-[rgba(145,124,105,0.44)]";
+  }
+}
+
+function TagChip({
+  tag,
+  venue,
+}: {
+  readonly tag: VenuePhotoTag;
+  readonly venue: Venue;
+}) {
+  const content = (
+    <>
+      {tag.icon === "category" ? <CategoryIcon category={venue.category} /> : null}
+      {tag.icon === "map" ? <MapPinIcon /> : null}
+      {tag.icon === "website" ? <GlobeIcon /> : null}
+      {tag.icon === "status" ? <StatusDot /> : null}
+      {tag.detail ? (
+        <span className="flex flex-col leading-none">
+          <span>{tag.label}</span>
+          <span className="mt-1 text-[0.73rem] text-white/74">{tag.detail}</span>
+        </span>
+      ) : (
+        <span>{tag.label}</span>
+      )}
+    </>
+  );
+
+  const toneClass = getToneClass(tag.tone);
+
+  if (tag.href) {
+    return (
+      <a
+        href={tag.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        className={`inline-flex min-h-9 items-center gap-2 rounded-full px-3 py-2 text-[0.78rem] font-semibold text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md transition-colors sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm ${toneClass}`}
+      >
+        {content}
+      </a>
+    );
+  }
+
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(208,61,106,0.25)] bg-white px-3 py-1.5 text-caption font-medium text-[#8a2346]">
-      {children}
+    <div className={`inline-flex min-h-9 items-center gap-2 rounded-full px-3 py-2 text-[0.78rem] font-medium text-white shadow-[0_10px_24px_rgba(12,12,12,0.12)] backdrop-blur-md sm:min-h-[46px] sm:px-4 sm:py-2.5 sm:text-sm ${toneClass}`}>
+      {content}
     </div>
   );
 }
@@ -620,82 +601,49 @@ export function StarIcon() {
   );
 }
 
-function PassIcon() {
-  return (
-    <svg className="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9.25" />
-      <path d="M8.5 8.5 15.5 15.5" />
-      <path d="M15.5 8.5 8.5 15.5" />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg className="h-[22px] w-[22px]" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 20.5c-.5 0-.98-.19-1.35-.53-2.5-2.3-4.6-4.2-6.07-6.08C3.14 12.04 2.5 10.4 2.5 8.75c0-2.9 2.24-5.25 5-5.25 1.77 0 3.38.92 4.25 2.33.87-1.41 2.48-2.33 4.25-2.33 2.76 0 5 2.35 5 5.25 0 1.65-.64 3.29-2.08 5.14-1.47 1.88-3.57 3.78-6.07 6.08-.37.34-.85.53-1.35.53Z" />
-    </svg>
-  );
-}
-
-function ChevronIcon({ direction }: { readonly direction: "left" | "right" | "up" | "down" }) {
-  const paths = {
-    left: "m15 18-6-6 6-6",
-    right: "m9 18 6-6-6-6",
-    up: "m18 15-6-6-6 6",
-    down: "m6 9 6 6 6-6",
-  };
-  return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={paths[direction]} />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
-function TicketIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
-      <line x1="9" y1="9" x2="9" y2="15" strokeDasharray="2 2" />
-    </svg>
-  );
-}
-
 function MapPinIcon() {
   return (
-    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <circle cx="12" cy="10" r="3" />
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path
+        d="M12 21s-6-4.35-6-10a6 6 0 1 1 12 0c0 5.65-6 10-6 10Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="11" r="2.2" />
     </svg>
   );
 }
 
 function GlobeIcon() {
   return (
-    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" strokeLinecap="round" />
     </svg>
   );
 }
 
-function ClockIcon() {
+function StatusDot() {
   return (
-    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
+    <span
+      className="h-3.5 w-3.5 rounded-full bg-[#5fd06d] shadow-[0_0_0_4px_rgba(95,208,109,0.16)]"
+      aria-hidden="true"
+    />
+  );
+}
+
+function PassIcon({ className = "h-5 w-5" }: { readonly className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" aria-hidden="true">
+      <path d="m7 7 10 10M17 7 7 17" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HeartIcon({ className = "h-5 w-5" }: { readonly className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 20.4 4.55 13.1a4.75 4.75 0 0 1 6.72-6.7L12 7.13l.73-.73a4.75 4.75 0 0 1 6.72 6.7L12 20.4Z" />
     </svg>
   );
 }

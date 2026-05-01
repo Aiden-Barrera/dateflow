@@ -15,6 +15,8 @@ import {
 } from "./use-swipe-physics";
 import { VenueCardContent } from "./venue-card-content";
 
+const SWIPE_EXIT_DURATION_MS = 240;
+
 function clamp(v: number, min: number, max: number) {
   return Math.min(Math.max(v, min), max);
 }
@@ -143,6 +145,9 @@ export function SwipeCardCanvas({
     //  no setSwipeAnimation call needed here.)
     animatingSwipeRef.current = null;
     pointerRef.current = null;
+    cardApi.stop();
+    card2Api.stop();
+    card3Api.stop();
 
     // Immediately place the top card at the fully-settled position.
     // Card 2 was already at y:0, scale:1, opacity:1 from the swipe animation,
@@ -194,6 +199,7 @@ export function SwipeCardCanvas({
       triggerHaptic(10, { prefersReducedMotion });
 
       try {
+        await new Promise((resolve) => window.setTimeout(resolve, SWIPE_EXIT_DURATION_MS));
         await onSwipe(liked);
       } catch {
         animatingSwipeRef.current = null;
@@ -239,9 +245,9 @@ export function SwipeCardCanvas({
 
     // Resolve intent once
     if (ptr.intent === "idle") {
-      if (absY > 12 && absY > absX) {
+      if (absY > 8 && absY > absX * 1.4) {
         ptr.intent = "scrolling";
-      } else if (absX > 10 && absX >= absY) {
+      } else if (absX > 6 && absX >= absY * 0.7) {
         ptr.intent = "dragging";
         cardRef.current?.setPointerCapture(event.pointerId);
       }
@@ -285,7 +291,12 @@ export function SwipeCardCanvas({
     if (!ptr || ptr.pointerId !== event.pointerId) return;
 
     if (cardRef.current?.hasPointerCapture(event.pointerId)) {
-      cardRef.current.releasePointerCapture(event.pointerId);
+      try {
+        cardRef.current.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture may already be released by the browser on pointerup
+        // or pointercancel, especially while the card is transitioning.
+      }
     }
 
     const finalDrag: SwipeDragState = {
@@ -353,7 +364,7 @@ export function SwipeCardCanvas({
   });
 
   return (
-    <div className="relative min-h-[640px]">
+    <div className="relative mx-auto h-[min(72dvh,42rem)] min-h-[34rem] w-full max-w-[23rem] sm:h-[48rem] sm:min-h-[48rem] sm:max-w-none">
 
       {/* Card 3 — deepest, only visible during drag/swipe, same layout as top card */}
       {thirdVenue ? (
@@ -404,7 +415,7 @@ export function SwipeCardCanvas({
       {/* Card 1 — top interactive card, fully opaque to prevent bleedthrough */}
       <animated.div
         ref={cardRef}
-        className={`relative overflow-hidden rounded-[2rem] border border-white/30 bg-white shadow-[0_24px_80px_rgba(45,42,38,0.18)] ${
+        className={`absolute inset-0 overflow-hidden rounded-[2rem] border border-white/30 bg-white shadow-[0_24px_80px_rgba(45,42,38,0.18)] ${
           submitting ? "pointer-events-none" : "cursor-grab active:cursor-grabbing"
         }`}
         style={{
