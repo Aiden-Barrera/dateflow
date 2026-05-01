@@ -451,9 +451,6 @@ export function VenueCardContent({
                 e.stopPropagation();
                 moveToSlide(activeSlideIndex - 1);
               }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
             />
             <button
               type="button"
@@ -463,9 +460,6 @@ export function VenueCardContent({
                 e.stopPropagation();
                 moveToSlide(activeSlideIndex + 1);
               }}
-              onPointerDown={(e) => e.stopPropagation()}
-              onMouseDown={(e) => e.stopPropagation()}
-              onTouchStart={(e) => e.stopPropagation()}
             />
           </>
         ) : null}
